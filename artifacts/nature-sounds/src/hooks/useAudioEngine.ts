@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS } from "../sounds";
 
-const CROSSFADE_DURATION = 3; // seconds
+const CROSSFADE_DURATION = 15; // seconds
 
 export type TrackState = {
   isPlaying: boolean;
