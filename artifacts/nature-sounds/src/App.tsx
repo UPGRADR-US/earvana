@@ -168,7 +168,7 @@ function CoverflowCarousel({
 
   return (
     <div className="relative w-full touch-none"
-      style={{ height: "clamp(125px, 26vw, 200px)", perspective: "900px", perspectiveOrigin: "50% 50%" }}
+      style={{ height: "clamp(145px, 31vw, 225px)", perspective: "900px", perspectiveOrigin: "50% 50%" }}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       {CATEGORIES.map((cat, i) => {
         const offset    = i - centerIdx;
@@ -194,14 +194,6 @@ function CoverflowCarousel({
                   style={{ width: 8, height: 8, background: "#00ff55", boxShadow: "0 0 6px #00ff55" }} />
               )}
 
-              {isCentered && !isSelected && (
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-[5px]"
-                  style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.5))" }}>
-                  <span style={{ fontSize: "clamp(7px,1vw,9px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em" }}>
-                    tap to open
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         );
@@ -292,7 +284,7 @@ function Home() {
       </div>
 
       {/* Middle area */}
-      <div className="relative flex-1 z-10 overflow-hidden flex flex-col">
+      <div className="relative flex-1 z-10 flex flex-col" style={{ overflow: "clip" }}>
 
         {/* Volume meter spans the full right side */}
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
