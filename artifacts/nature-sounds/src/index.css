@@ -97,5 +97,18 @@
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+  #root {
+    width: 100%;
+    max-width: 430px;
+    min-height: 100dvh;
+    position: relative;
+    overflow: hidden;
   }
 }
