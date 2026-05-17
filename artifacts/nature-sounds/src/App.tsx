@@ -134,16 +134,19 @@ function cylinderItemStyle(normalOffset: number): CSSProperties {
     left: "50%",
     top: "50%",
     transform: `translate(-50%, -50%) rotateY(${angle}deg) translateZ(${CYLINDER_R}px)`,
-    // NO opacity / filter here — either breaks preserve-3d on children
-    transition: "transform 0.48s cubic-bezier(0.25,0.46,0.45,0.94)",
+    // NO opacity / filter here — either breaks preserve-3d on children.
+    // NO transition here — all animation is handled by the container's rotateY transition.
+    // Per-item transitions conflict with the container snap and create a ghost artifact.
     cursor: absAngle < 15 ? "default" : "pointer",
   };
 }
 
-// Opacity for each tile based on its angular distance — applied to the front face only
+// Opacity for each tile based on its angular distance — applied to the front face only.
+// Max is 0.95 (a 5% global dim across all images).
 function tileOpacity(normalOffset: number): number {
   const absAngle = Math.abs(normalOffset * ANGLE_STEP);
-  return absAngle < 98 ? 1 : absAngle < 155 ? 1 - ((absAngle - 98) / 57) * 0.6 : 0;
+  const base = absAngle < 98 ? 1 : absAngle < 155 ? 1 - ((absAngle - 98) / 57) * 0.6 : 0;
+  return base * 0.95;
 }
 
 // Colours for the slab edges
