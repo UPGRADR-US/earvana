@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useRef, useCallback, CSSProperties } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Play, Pause, Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
@@ -105,59 +105,37 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   );
 }
 
-// ─── Cylinder Carousel ────────────────────────────────────────────────────────
+// ─── 3D Cylinder Carousel ─────────────────────────────────────────────────────
 //
-// True 3D cylinder: each item sits on a circle via rotateY(angle) + translateZ(R).
-// With preserve-3d + perspective the browser handles all depth sorting automatically.
-// With N=11 items at 32.7° apart the front arc shows ~5 readable items and items ≥±5
-// steps (≥163°) appear as nearly edge-on slivers — the "wraps all the way around" look.
+// Each item has a FIXED absolute angle on the cylinder: rotateY(i * ANGLE_STEP).
+// ALL motion comes from a single `rotation` value on the container: rotateY(-rotation).
+// Snap target = round(rotation / ANGLE_STEP) * ANGLE_STEP — always the nearest slot,
+// always ≤ ANGLE_STEP/2 from the drag end, always correct direction. No sign bugs.
 
-const N = CATEGORIES.length;           // 11
-const ANGLE_STEP = 360 / N;            // ~32.7° between slots
-const CYLINDER_R = 212;                // px — split the difference on spacing
+const N          = CATEGORIES.length;   // 11
+const ANGLE_STEP = 360 / N;             // ~32.73°
+const CYLINDER_R = 212;                 // px
+const SLAB_DEPTH = 5;                   // px — tile physical depth
+const DRAG_SENS  = 0.38;               // deg per pixel
 
-// Slab thickness in px — gives each tile a physical "depth" look.
-// NOTE: opacity and filter are intentionally absent from cylinderItemStyle because
-// either property on a parent kills transform-style:preserve-3d on its children.
-// Instead, opacity is applied per-face (see SlabTile) and shadows via box-shadow.
-const SLAB_DEPTH = 5;
-
-function cylinderItemStyle(normalOffset: number): CSSProperties {
-  const angle    = normalOffset * ANGLE_STEP;
-  const absAngle = Math.abs(angle);
-
-  // Hide items fully around the back — no visual value there
-  if (absAngle > 155) return { display: "none", position: "absolute" };
-
-  return {
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    transform: `translate(-50%, -50%) rotateY(${angle}deg) translateZ(${CYLINDER_R}px)`,
-    // NO opacity / filter here — either breaks preserve-3d on children.
-    // NO transition here — all animation is handled by the container's rotateY transition.
-    // Per-item transitions conflict with the container snap and create a ghost artifact.
-    cursor: absAngle < 15 ? "default" : "pointer",
-  };
+// Normalise any angle to −180..+180 (shortest arc from viewer)
+function shortArc(deg: number): number {
+  const m = ((deg % 360) + 360) % 360;
+  return m > 180 ? m - 360 : m;
 }
 
-// Opacity for each tile based on its angular distance — applied to the front face only.
-// Max is 0.82 so the app background faintly shows through every image.
-function tileOpacity(normalOffset: number): number {
-  const absAngle = Math.abs(normalOffset * ANGLE_STEP);
-  const base = absAngle < 98 ? 1 : absAngle < 155 ? 1 - ((absAngle - 98) / 57) * 0.6 : 0;
-  return base * 0.82;
+// Per-face opacity — 0.75 max so the app background bleeds through.
+// Must NOT be applied to the tile container (breaks preserve-3d); faces only.
+function tileOpacity(visAngleDeg: number): number {
+  const a    = Math.abs(visAngleDeg);
+  const base = a < 98 ? 1 : a < 155 ? 1 - ((a - 98) / 57) * 0.6 : 0;
+  return base * 0.75;
 }
 
-// Colours for the slab edges
 const EDGE_RIGHT  = "linear-gradient(to right,  #22435e, #162c40)";
 const EDGE_LEFT   = "linear-gradient(to left,   #22435e, #162c40)";
 const EDGE_TOP    = "#1a3a52";
 const EDGE_BOTTOM = "#09141e";
-
-// How many degrees the cylinder rotates per pixel dragged.
-// ~0.38 deg/px means a full 360° spin takes about 950px of drag travel.
-const DRAG_SENSITIVITY = 0.38;
 
 function CylinderCarousel({
   centerIdx, selectedId, onSelect, onCenterChange, engine,
@@ -168,115 +146,132 @@ function CylinderCarousel({
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
 }) {
-  // dragAngle: live rotation offset (degrees) applied to the whole cylinder while dragging.
-  // We keep BOTH a ref (always current, used by commit) and state (triggers re-render for CSS).
-  const [dragAngle, setDragAngle]   = useState(0);
-  const dragAngleRef                = useRef(0);          // never stale — safe to read in any handler
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartX = useRef<number | null>(null);
+  // Absolute cumulative rotation (degrees). Container = rotateY(-rotation).
+  // Item i is at front when rotation ≈ i * ANGLE_STEP (mod 360).
+  // Drag left → rotation increases → right-side items come forward.
+  const [rotation,    setRotation]    = useState(centerIdx * ANGLE_STEP);
+  const rotRef                        = useRef(centerIdx * ANGLE_STEP);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const isDragging                    = useRef(false);
+  const dragStartX                    = useRef<number | null>(null);
+  const dragStartRot                  = useRef(0);
+
+  // Snap to nearest slot. Direction is always the minimum arc (≤ ANGLE_STEP/2),
+  // so it always continues in or snaps back from the drag direction — never reverses.
+  const snapToNearest = () => {
+    const target    = Math.round(rotRef.current / ANGLE_STEP) * ANGLE_STEP;
+    const newCenter = ((Math.round(target / ANGLE_STEP) % N) + N) % N;
+    rotRef.current  = target;
+    setRotation(target);
+    setIsAnimating(true);
+    onCenterChange(newCenter);
+  };
+
+  // Animated tap-to-centre: find shortest-arc path and spin there.
+  const animateTo = (i: number) => {
+    const snap      = Math.round(rotRef.current / ANGLE_STEP) * ANGLE_STEP;
+    const cur       = ((Math.round(snap / ANGLE_STEP) % N) + N) % N;
+    let   steps     = ((i - cur) % N + N) % N;
+    if (steps > N / 2) steps -= N;          // take the short arc
+    const target    = snap + steps * ANGLE_STEP;
+    rotRef.current  = target;
+    setRotation(target);
+    setIsAnimating(true);
+    onCenterChange(i);
+  };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    dragStartX.current = e.clientX;
-    dragAngleRef.current = 0;
-    setDragAngle(0);
-    setIsDragging(true);
+    setIsAnimating(false);           // interrupt any in-flight animation
+    isDragging.current   = true;
+    dragStartX.current   = e.clientX;
+    dragStartRot.current = rotRef.current;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (dragStartX.current === null) return;
-    const angle = -(e.clientX - dragStartX.current) * DRAG_SENSITIVITY;
-    dragAngleRef.current = angle;   // update ref synchronously
-    setDragAngle(angle);            // update state for rendering
+    if (!isDragging.current || dragStartX.current === null) return;
+    const r        = dragStartRot.current - (e.clientX - dragStartX.current) * DRAG_SENS;
+    rotRef.current = r;
+    setRotation(r);
   };
 
-  const commit = () => {
-    const angle    = dragAngleRef.current;
-    const steps    = Math.round(angle / ANGLE_STEP);
-    // overshoot is the small remainder after snapping (≤ ANGLE_STEP/2 ≈ 16°).
-    // By jumping to overshoot first (no visible discontinuity — the math cancels out),
-    // then animating to 0, the final spring moves in the SAME direction as the drag.
-    const overshoot = angle - steps * ANGLE_STEP;
-    const newIdx    = ((centerIdx + steps) % N + N) % N;
-
-    onCenterChange(newIdx);
-    dragAngleRef.current = overshoot;
-    setDragAngle(overshoot);   // instant jump — visually seamless
-    setIsDragging(false);      // enables the CSS transition
+  const onPointerUp = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
     dragStartX.current = null;
-
-    // Two rAFs: first lets React commit the render with isDragging=false + overshoot,
-    // second fires after the browser has painted so the transition picks up correctly.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      dragAngleRef.current = 0;
-      setDragAngle(0);          // animate from overshoot → 0 (correct direction, small arc)
-    }));
+    snapToNearest();
   };
-
-  const onPointerUp     = () => commit();
-  const onPointerCancel = () => commit();
 
   const thumbSize = "clamp(88px, 18vw, 142px)";
 
   return (
-    // Outer div: perspective host + pointer event surface
     <div className="relative w-full touch-none"
       style={{ height: "clamp(150px, 32vw, 230px)", perspective: "820px", perspectiveOrigin: "50% 50%" }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}>
+      onPointerCancel={onPointerUp}>
 
-      {/* Inner div: the 3D space.
-          The cylinder is rotated as a whole via -dragAngle so it tracks the finger
-          directly with zero latency. On release we snap to the nearest slot. */}
+      {/* Single cylinder container — its rotateY drives everything.
+          isAnimating enables the CSS transition for snap/tap; during drag it's off. */}
       <div className="absolute inset-0"
         style={{
           transformStyle: "preserve-3d",
-          transform: `rotateY(${-dragAngle}deg)`,
-          // No transition while the finger is down — follow directly.
-          // After release, spring back / snap with a short ease.
-          transition: isDragging ? "none" : "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)",
+          transform: `rotateY(${-rotation}deg)`,
+          transition: isAnimating
+            ? "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)"
+            : "none",
         }}>
+
         {CATEGORIES.map((cat, i) => {
-          // Compute the shortest angular path from center to this item
-          let offset = i - centerIdx;
-          if (offset >  N / 2) offset -= N;
-          if (offset < -N / 2) offset += N;
+          // Fixed absolute angle on the cylinder. Container rotation does all the work.
+          const itemAngle = i * ANGLE_STEP;
+          // Visual angle currently shown to the viewer (−180..+180).
+          const visAngle  = shortArc(itemAngle - rotation);
+          const absVis    = Math.abs(visAngle);
 
-          const isCentered = offset === 0;
-          const isSelected = cat.id === selectedId;
-          const hasPlaying = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
-          const itemStyle  = cylinderItemStyle(offset);
-          const faceOpacity = tileOpacity(offset);
+          if (absVis > 155) return null;   // in the back — invisible, skip rendering
 
-          // Box shadow on front face (can't use filter:drop-shadow on preserve-3d parent)
-          const frontShadow = Math.abs(offset) === 0
+          const isCentered  = absVis < ANGLE_STEP / 2;
+          const isSelected  = cat.id === selectedId;
+          const hasPlaying  = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
+          const faceOpacity = tileOpacity(visAngle);
+          const frontShadow = isCentered
             ? "0 14px 32px rgba(0,0,0,0.85), 0 3px 10px rgba(0,0,0,0.6)"
             : "0 6px 16px rgba(0,0,0,0.7)";
 
           return (
-            // Tile container — preserve-3d so slab side-faces sit in 3D space.
+            // Tile container: preserve-3d so slab faces sit in 3D space.
             // NO opacity/filter here — either breaks preserve-3d on children.
             <div key={cat.id}
-              style={{ ...itemStyle, width: thumbSize, height: thumbSize, transformStyle: "preserve-3d" }}
-              onClick={() => { if (Math.abs(dragAngle) < 4) { isCentered ? onSelect(cat.id) : onCenterChange(i); } }}>
+              style={{
+                position: "absolute", left: "50%", top: "50%",
+                transform: `translate(-50%,-50%) rotateY(${itemAngle}deg) translateZ(${CYLINDER_R}px)`,
+                width: thumbSize, height: thumbSize,
+                transformStyle: "preserve-3d",
+                cursor: isCentered ? "default" : "pointer",
+              }}
+              onClick={() => {
+                if (isDragging.current) return;
+                if (isCentered) onSelect(cat.id);
+                else animateTo(i);
+              }}>
 
-              {/* ── Slab side faces — border-radius matches the front face's rounded-xl (12px) ── */}
+              {/* Slab edges */}
               <div style={{ position:"absolute", top:0, right:0, width:SLAB_DEPTH, height:"100%",
-                transformOrigin:"right center", transform:"rotateY(90deg)", background: EDGE_RIGHT, opacity: faceOpacity,
-                borderRadius:"0 12px 12px 0" }} />
+                transformOrigin:"right center", transform:"rotateY(90deg)",
+                background:EDGE_RIGHT, opacity:faceOpacity, borderRadius:"0 12px 12px 0" }} />
               <div style={{ position:"absolute", top:0, left:0, width:SLAB_DEPTH, height:"100%",
-                transformOrigin:"left center",  transform:"rotateY(-90deg)", background: EDGE_LEFT, opacity: faceOpacity,
-                borderRadius:"12px 0 0 12px" }} />
+                transformOrigin:"left center", transform:"rotateY(-90deg)",
+                background:EDGE_LEFT, opacity:faceOpacity, borderRadius:"12px 0 0 12px" }} />
               <div style={{ position:"absolute", top:0, left:0, width:"100%", height:SLAB_DEPTH,
-                transformOrigin:"center top",    transform:"rotateX(90deg)",  background: EDGE_TOP, opacity: faceOpacity,
-                borderRadius:"12px 12px 0 0" }} />
+                transformOrigin:"center top", transform:"rotateX(90deg)",
+                background:EDGE_TOP, opacity:faceOpacity, borderRadius:"12px 12px 0 0" }} />
               <div style={{ position:"absolute", bottom:0, left:0, width:"100%", height:SLAB_DEPTH,
-                transformOrigin:"center bottom", transform:"rotateX(-90deg)", background: EDGE_BOTTOM, opacity: faceOpacity,
-                borderRadius:"0 0 12px 12px" }} />
+                transformOrigin:"center bottom", transform:"rotateX(-90deg)",
+                background:EDGE_BOTTOM, opacity:faceOpacity, borderRadius:"0 0 12px 12px" }} />
 
-              {/* ── Front face — pushed SLAB_DEPTH forward so sides span z=0→SLAB_DEPTH ── */}
+              {/* Front face — pushed forward by SLAB_DEPTH */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
                 style={{
                   transform: `translateZ(${SLAB_DEPTH}px)`,
@@ -294,7 +289,7 @@ function CylinderCarousel({
                   className="w-full h-full object-cover" draggable={false} />
                 {hasPlaying && (
                   <div className="absolute top-[6px] right-[6px] rounded-full"
-                    style={{ width: 8, height: 8, background: "#00ff55", boxShadow: "0 0 6px #00ff55" }} />
+                    style={{ width:8, height:8, background:"#00ff55", boxShadow:"0 0 6px #00ff55" }} />
                 )}
               </div>
             </div>
