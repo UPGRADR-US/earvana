@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { TRACKS } from "../sounds";
+import { TRACKS, SoundTrack } from "../sounds";
 
-const CROSSFADE_DURATION = 15; // seconds
+const DEFAULT_CROSSFADE = 15; // seconds — used when a track has no crossfadeDuration
 
 export type TrackState = {
   isPlaying: boolean;
@@ -29,6 +29,11 @@ class TrackEngine {
   trackGain: GainNode;
   buffer: AudioBuffer | null = null;
 
+  // Per-track loop settings (resolved from SoundTrack metadata)
+  crossfadeDuration: number;
+  loopStart: number;       // seconds into file; 0 = start of file
+  loopEnd: number | null;  // seconds into file; null = use full buffer duration
+
   // Two slots ping-pong for seamless crossfade looping
   sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
   gains: [GainNode | null, GainNode | null] = [null, null];
@@ -37,15 +42,25 @@ class TrackEngine {
   timeoutId: number | null = null;
   isPlaying: boolean = false;
 
-  constructor(id: string, url: string, context: AudioContext, masterGain: GainNode) {
-    this.id = id;
-    this.url = url;
+  constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
+    this.id = track.id;
+    this.url = track.file;
     this.context = context;
     this.masterGain = masterGain;
+
+    this.crossfadeDuration = track.crossfadeDuration ?? DEFAULT_CROSSFADE;
+    this.loopStart = track.loopStart ?? 0;
+    this.loopEnd = track.loopEnd ?? null;
 
     this.trackGain = this.context.createGain();
     this.trackGain.connect(this.masterGain);
     this.trackGain.gain.value = 0.5;
+  }
+
+  // Returns the effective loop region length once the buffer is loaded
+  private regionDuration(): number {
+    const end = this.loopEnd ?? this.buffer!.duration;
+    return end - this.loopStart;
   }
 
   async load(): Promise<void> {
@@ -69,12 +84,14 @@ class TrackEngine {
     gain.connect(this.trackGain);
 
     const startTime = this.context.currentTime;
-    source.start(startTime);
+    // Start playback at loopStart offset, play for regionDuration
+    source.start(startTime, this.loopStart, this.regionDuration());
 
     this.sources[0] = source;
     this.gains[0] = gain;
 
-    this.scheduleNextLoop(startTime + this.buffer.duration - CROSSFADE_DURATION);
+    // Schedule first crossfade: crossfadeDuration before the region ends
+    this.scheduleNextLoop(startTime + this.regionDuration() - this.crossfadeDuration);
   }
 
   scheduleNextLoop(targetTime: number) {
@@ -93,34 +110,34 @@ class TrackEngine {
 
     const outSlot = this.currentSlot;
     const inSlot: 0 | 1 = outSlot === 0 ? 1 : 0;
+    const xfade = this.crossfadeDuration;
 
-    // Start the incoming source
+    // Start the incoming source from loopStart, play for regionDuration
     const inSource = this.context.createBufferSource();
     inSource.buffer = this.buffer;
     const inGain = this.context.createGain();
-    // Clamp targetTime to now if it slipped past
     const crossStart = Math.max(targetTime, this.context.currentTime);
     inGain.gain.setValueAtTime(0, crossStart);
-    inGain.gain.linearRampToValueAtTime(1, crossStart + CROSSFADE_DURATION);
+    inGain.gain.linearRampToValueAtTime(1, crossStart + xfade);
     inSource.connect(inGain);
     inGain.connect(this.trackGain);
-    inSource.start(crossStart);
+    inSource.start(crossStart, this.loopStart, this.regionDuration());
 
     // Fade out the outgoing source
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
     if (outGain) {
       outGain.gain.setValueAtTime(outGain.gain.value, crossStart);
-      outGain.gain.linearRampToValueAtTime(0, crossStart + CROSSFADE_DURATION);
+      outGain.gain.linearRampToValueAtTime(0, crossStart + xfade);
     }
 
-    // Store incoming in the new slot
+    // Store incoming in the new slot and advance the pointer
     this.sources[inSlot] = inSource;
     this.gains[inSlot] = inGain;
     this.currentSlot = inSlot;
 
     // Clean up outgoing after crossfade completes
-    const cleanupDelay = (crossStart - this.context.currentTime + CROSSFADE_DURATION + 0.1) * 1000;
+    const cleanupDelay = (crossStart - this.context.currentTime + xfade + 0.1) * 1000;
     window.setTimeout(() => {
       try { outSource?.stop(); } catch { /* already stopped */ }
       outSource?.disconnect();
@@ -130,7 +147,7 @@ class TrackEngine {
     }, Math.max(cleanupDelay, 0));
 
     // Schedule the next crossfade
-    this.scheduleNextLoop(crossStart + this.buffer.duration - CROSSFADE_DURATION);
+    this.scheduleNextLoop(crossStart + this.regionDuration() - xfade);
   }
 
   pause() {
@@ -192,7 +209,7 @@ export function useAudioEngine(): AudioEngineState {
     if (!track) return;
 
     if (!enginesRef.current[trackId]) {
-      enginesRef.current[trackId] = new TrackEngine(trackId, track.file, ctx, mg);
+      enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
       enginesRef.current[trackId].setVolume(tracksState[trackId].volume);
     }
 
