@@ -142,11 +142,11 @@ function cylinderItemStyle(normalOffset: number): CSSProperties {
 }
 
 // Opacity for each tile based on its angular distance — applied to the front face only.
-// Max is 0.95 (a 5% global dim across all images).
+// Max is 0.82 so the app background faintly shows through every image.
 function tileOpacity(normalOffset: number): number {
   const absAngle = Math.abs(normalOffset * ANGLE_STEP);
   const base = absAngle < 98 ? 1 : absAngle < 155 ? 1 - ((absAngle - 98) / 57) * 0.6 : 0;
-  return base * 0.95;
+  return base * 0.82;
 }
 
 // Colours for the slab edges
@@ -191,15 +191,26 @@ function CylinderCarousel({
   };
 
   const commit = () => {
-    // Always read from the ref — never from the potentially-stale state closure
-    const angle  = dragAngleRef.current;
-    const steps  = Math.round(angle / ANGLE_STEP);
-    const newIdx = ((centerIdx + steps) % N + N) % N;
+    const angle    = dragAngleRef.current;
+    const steps    = Math.round(angle / ANGLE_STEP);
+    // overshoot is the small remainder after snapping (≤ ANGLE_STEP/2 ≈ 16°).
+    // By jumping to overshoot first (no visible discontinuity — the math cancels out),
+    // then animating to 0, the final spring moves in the SAME direction as the drag.
+    const overshoot = angle - steps * ANGLE_STEP;
+    const newIdx    = ((centerIdx + steps) % N + N) % N;
+
     onCenterChange(newIdx);
-    dragAngleRef.current = 0;
-    setDragAngle(0);
-    setIsDragging(false);
+    dragAngleRef.current = overshoot;
+    setDragAngle(overshoot);   // instant jump — visually seamless
+    setIsDragging(false);      // enables the CSS transition
     dragStartX.current = null;
+
+    // Two rAFs: first lets React commit the render with isDragging=false + overshoot,
+    // second fires after the browser has painted so the transition picks up correctly.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      dragAngleRef.current = 0;
+      setDragAngle(0);          // animate from overshoot → 0 (correct direction, small arc)
+    }));
   };
 
   const onPointerUp     = () => commit();
