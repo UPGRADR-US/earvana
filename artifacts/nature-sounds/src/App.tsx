@@ -145,6 +145,10 @@ function cylinderItemStyle(normalOffset: number): CSSProperties {
   };
 }
 
+// How many degrees the cylinder rotates per pixel dragged.
+// ~0.38 deg/px means a full 360° spin takes about 950px of drag travel.
+const DRAG_SENSITIVITY = 0.38;
+
 function CylinderCarousel({
   centerIdx, selectedId, onSelect, onCenterChange, engine,
 }: {
@@ -154,30 +158,59 @@ function CylinderCarousel({
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
 }) {
-  const swipeStart = useRef<number | null>(null);
+  // dragAngle: live rotation offset (degrees) applied to the whole cylinder while dragging
+  const [dragAngle, setDragAngle]   = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef<number | null>(null);
 
-  const onPointerDown = (e: React.PointerEvent) => { swipeStart.current = e.clientX; };
-  const onPointerUp   = (e: React.PointerEvent) => {
-    if (swipeStart.current === null) return;
-    const delta = e.clientX - swipeStart.current;
-    if (Math.abs(delta) > 40) {
-      // Wrap around: carousel is circular
-      const newIdx = ((centerIdx + (delta < 0 ? 1 : -1)) + N) % N;
-      onCenterChange(newIdx);
-    }
-    swipeStart.current = null;
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+    setIsDragging(true);
+    // Capture pointer so we still get move/up events if the finger leaves the element
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    const delta = e.clientX - dragStartX.current;
+    setDragAngle(delta * DRAG_SENSITIVITY);
+  };
+
+  const commit = (currentDragAngle: number) => {
+    // Round to nearest slot and update centerIdx
+    const steps  = Math.round(currentDragAngle / ANGLE_STEP);
+    const newIdx = ((centerIdx - steps) % N + N) % N;
+    onCenterChange(newIdx);
+    setDragAngle(0);
+    setIsDragging(false);
+    dragStartX.current = null;
+  };
+
+  const onPointerUp     = (e: React.PointerEvent) => commit(dragAngle);
+  const onPointerCancel = ()                       => commit(0);
 
   const thumbSize = "clamp(88px, 18vw, 142px)";
 
   return (
-    // Outer div: perspective host + event capture
+    // Outer div: perspective host + pointer event surface
     <div className="relative w-full touch-none"
       style={{ height: "clamp(150px, 32vw, 230px)", perspective: "820px", perspectiveOrigin: "50% 50%" }}
-      onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}>
 
-      {/* Inner div: the actual 3D space — preserve-3d enables automatic depth sorting */}
-      <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
+      {/* Inner div: the 3D space.
+          The cylinder is rotated as a whole via -dragAngle so it tracks the finger
+          directly with zero latency. On release we snap to the nearest slot. */}
+      <div className="absolute inset-0"
+        style={{
+          transformStyle: "preserve-3d",
+          transform: `rotateY(${-dragAngle}deg)`,
+          // No transition while the finger is down — follow directly.
+          // After release, spring back / snap with a short ease.
+          transition: isDragging ? "none" : "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)",
+        }}>
         {CATEGORIES.map((cat, i) => {
           // Compute the shortest angular path from center to this item
           let offset = i - centerIdx;
@@ -191,7 +224,12 @@ function CylinderCarousel({
 
           return (
             <div key={cat.id} style={{ ...itemStyle, width: thumbSize, height: thumbSize }}
-              onClick={() => isCentered ? onSelect(cat.id) : onCenterChange(i)}>
+              onClick={() => {
+                // Only fire a tap if the user didn't drag
+                if (Math.abs(dragAngle) < 4) {
+                  isCentered ? onSelect(cat.id) : onCenterChange(i);
+                }
+              }}>
               <div className="w-full h-full rounded-xl overflow-hidden relative"
                 style={{
                   border: isSelected
@@ -303,8 +341,8 @@ function Home() {
         {/* Volume meter — anchored bottom-right */}
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
 
-        {/* Cylinder carousel — just below the banner, full width */}
-        <div className="flex-shrink-0 pt-3 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
+        {/* Cylinder carousel — tight up against the banner */}
+        <div className="flex-shrink-0 pt-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
