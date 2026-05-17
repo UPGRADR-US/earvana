@@ -114,7 +114,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
 const N = CATEGORIES.length;           // 11
 const ANGLE_STEP = 360 / N;            // ~32.7° between slots
-const CYLINDER_R = 230;                // px — larger radius keeps 11 items from crowding
+const CYLINDER_R = 195;                // px — tighter spacing between items
 
 function cylinderItemStyle(normalOffset: number): CSSProperties {
   const angle    = normalOffset * ANGLE_STEP;          // degrees
@@ -158,36 +158,42 @@ function CylinderCarousel({
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
 }) {
-  // dragAngle: live rotation offset (degrees) applied to the whole cylinder while dragging
+  // dragAngle: live rotation offset (degrees) applied to the whole cylinder while dragging.
+  // We keep BOTH a ref (always current, used by commit) and state (triggers re-render for CSS).
   const [dragAngle, setDragAngle]   = useState(0);
+  const dragAngleRef                = useRef(0);          // never stale — safe to read in any handler
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef<number | null>(null);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragStartX.current = e.clientX;
+    dragAngleRef.current = 0;
+    setDragAngle(0);
     setIsDragging(true);
-    // Capture pointer so we still get move/up events if the finger leaves the element
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragStartX.current === null) return;
-    const delta = e.clientX - dragStartX.current;
-    setDragAngle(-delta * DRAG_SENSITIVITY);
+    const angle = -(e.clientX - dragStartX.current) * DRAG_SENSITIVITY;
+    dragAngleRef.current = angle;   // update ref synchronously
+    setDragAngle(angle);            // update state for rendering
   };
 
-  const commit = (currentDragAngle: number) => {
-    // Round to nearest slot and update centerIdx
-    const steps  = Math.round(currentDragAngle / ANGLE_STEP);
+  const commit = () => {
+    // Always read from the ref — never from the potentially-stale state closure
+    const angle  = dragAngleRef.current;
+    const steps  = Math.round(angle / ANGLE_STEP);
     const newIdx = ((centerIdx - steps) % N + N) % N;
     onCenterChange(newIdx);
+    dragAngleRef.current = 0;
     setDragAngle(0);
     setIsDragging(false);
     dragStartX.current = null;
   };
 
-  const onPointerUp     = (e: React.PointerEvent) => commit(dragAngle);
-  const onPointerCancel = ()                       => commit(0);
+  const onPointerUp     = () => commit();
+  const onPointerCancel = () => commit();
 
   const thumbSize = "clamp(88px, 18vw, 142px)";
 
