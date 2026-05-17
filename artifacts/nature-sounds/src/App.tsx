@@ -114,7 +114,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
 const N          = CATEGORIES.length;   // 11
 const ANGLE_STEP = 360 / N;             // ~32.73°
-const CYLINDER_R = 212;                 // px
+const CYLINDER_R = 165;                 // px
 const SLAB_DEPTH = 5;                   // px — tile physical depth
 // At CYLINDER_R=212px the arc length per degree is ~3.7px, so 0.25 deg/px ≈ 1:1 finger tracking.
 const DRAG_SENS  = 0.25;               // deg per pixel
@@ -224,7 +224,7 @@ function CylinderCarousel({
     <div className="relative w-full touch-none"
       style={{
         height: "clamp(140px, 36cqw, 200px)",
-        perspective: "clamp(600px, 180cqw, 860px)",
+        perspective: "820px",
         perspectiveOrigin: "50% 50%",
         containerType: "inline-size",   // makes cqw resolve against THIS element's width
       }}
