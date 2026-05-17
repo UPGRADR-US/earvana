@@ -163,10 +163,12 @@ function CylinderCarousel({
   const snapCommitted = (dragDelta: number) => {
     const startSlot = Math.round(dragStartRot.current / ANGLE_STEP);
     const nearest   = Math.round(rotRef.current / ANGLE_STEP);
+    // Threshold ~0.75° ≈ 3px — safely below 1% of a 390px screen so a deliberate
+    // flick always commits, but a pure tap (≤2px of jitter) stays put.
     const committed =
-      dragDelta >  1 ? Math.max(nearest, startSlot + 1) :  // left  → at least +1
-      dragDelta < -1 ? Math.min(nearest, startSlot - 1) :  // right → at least −1
-                       nearest;                             // jitter → nearest
+      dragDelta >  0.75 ? Math.max(nearest, startSlot + 1) :  // left  → at least +1
+      dragDelta < -0.75 ? Math.min(nearest, startSlot - 1) :  // right → at least −1
+                          nearest;                             // tap / jitter → nearest
     const target    = committed * ANGLE_STEP;
     const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
@@ -203,12 +205,15 @@ function CylinderCarousel({
     setRotation(r);
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
     isDragging.current = false;
-    const delta = rotRef.current - dragStartRot.current;
+    // Use raw pixel delta — direction intent is clearest in screen coords.
+    // Threshold: ~4px ≈ 1% of a 390px phone screen filters tap jitter.
+    const pxDelta = dragStartX.current !== null ? dragStartX.current - e.clientX : 0;
     dragStartX.current = null;
-    snapCommitted(delta);
+    // Convert to degrees so snapCommitted can use its existing logic.
+    snapCommitted(pxDelta * DRAG_SENS);
   };
 
   const thumbSize = "clamp(88px, 18vw, 142px)";
