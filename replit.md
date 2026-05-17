@@ -1,44 +1,54 @@
-# [Project name]
+# Nature Sounds
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A calm ambient sound mixer where users can layer multiple nature audio tracks simultaneously, each looping seamlessly with crossfade so there are never any gaps or jarring cuts.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/nature-sounds run dev` — run the frontend (port assigned by workflow)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React + Vite (react-vite artifact)
+- Audio: Web Audio API (no third-party audio libraries)
+- Styling: Tailwind CSS + shadcn/ui
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/nature-sounds/src/sounds.ts` — track definitions (names, file paths, icons); edit this to add/remove tracks
+- `artifacts/nature-sounds/src/hooks/useAudioEngine.ts` — Web Audio API crossfade loop engine
+- `artifacts/nature-sounds/src/App.tsx` — main UI
+- `artifacts/nature-sounds/src/index.css` — theme / color palette
+- `artifacts/nature-sounds/public/sounds/` — drop your .mp3/.ogg audio files here
+
+## How to add audio tracks
+
+1. Drop your audio files (MP3 or OGG recommended) into `artifacts/nature-sounds/public/sounds/`
+2. Edit `artifacts/nature-sounds/src/sounds.ts` — add an entry to the `TRACKS` array with the filename matching your file
+3. The app will pick it up automatically on next reload
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Web Audio API is used instead of HTML `<audio>` elements to enable precise gain scheduling for crossfade
+- Each track has its own crossfade engine: two AudioBufferSourceNodes ping-pong with overlapping gain ramps (CROSSFADE_DURATION = 3s)
+- Audio context is created on first user interaction (browser autoplay policy requirement)
+- Per-track GainNode → master GainNode → AudioContext.destination signal chain
+- Missing or undecodable audio files show a warning state on the card without crashing
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Users open the app and play one or more ambient nature sounds — rain, forest, ocean waves, campfire, wind, thunder, stream, or night crickets. Each sound loops forever with a smooth crossfade so it sounds like a continuous, natural environment. Tracks can be layered and mixed with independent volume controls.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- User supplies their own audio track files (drop into `public/sounds/`)
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Browser autoplay policy: AudioContext must be created inside a user gesture (click). The hook handles this automatically.
+- Audio files must be in `public/sounds/` and their filenames must match the `file` field in `src/sounds.ts`
+- Crossfade timing assumes audio files are longer than CROSSFADE_DURATION (3 seconds). Very short clips will still loop but the crossfade overlap may be audible.
 
 ## Pointers
 
