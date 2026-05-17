@@ -120,7 +120,7 @@ const CYLINDER_R = 212;                // px — split the difference on spacing
 // NOTE: opacity and filter are intentionally absent from cylinderItemStyle because
 // either property on a parent kills transform-style:preserve-3d on its children.
 // Instead, opacity is applied per-face (see SlabTile) and shadows via box-shadow.
-const SLAB_DEPTH = 20;
+const SLAB_DEPTH = 5;
 
 function cylinderItemStyle(normalOffset: number): CSSProperties {
   const angle    = normalOffset * ANGLE_STEP;
@@ -248,15 +248,19 @@ function CylinderCarousel({
               style={{ ...itemStyle, width: thumbSize, height: thumbSize, transformStyle: "preserve-3d" }}
               onClick={() => { if (Math.abs(dragAngle) < 4) { isCentered ? onSelect(cat.id) : onCenterChange(i); } }}>
 
-              {/* ── Slab side faces (between z=0 and z=SLAB_DEPTH, behind the front face) ── */}
+              {/* ── Slab side faces — border-radius matches the front face's rounded-xl (12px) ── */}
               <div style={{ position:"absolute", top:0, right:0, width:SLAB_DEPTH, height:"100%",
-                transformOrigin:"right center", transform:"rotateY(90deg)", background: EDGE_RIGHT, opacity: faceOpacity }} />
+                transformOrigin:"right center", transform:"rotateY(90deg)", background: EDGE_RIGHT, opacity: faceOpacity,
+                borderRadius:"0 12px 12px 0" }} />
               <div style={{ position:"absolute", top:0, left:0, width:SLAB_DEPTH, height:"100%",
-                transformOrigin:"left center",  transform:"rotateY(-90deg)", background: EDGE_LEFT, opacity: faceOpacity }} />
+                transformOrigin:"left center",  transform:"rotateY(-90deg)", background: EDGE_LEFT, opacity: faceOpacity,
+                borderRadius:"12px 0 0 12px" }} />
               <div style={{ position:"absolute", top:0, left:0, width:"100%", height:SLAB_DEPTH,
-                transformOrigin:"center top",    transform:"rotateX(90deg)",  background: EDGE_TOP, opacity: faceOpacity }} />
+                transformOrigin:"center top",    transform:"rotateX(90deg)",  background: EDGE_TOP, opacity: faceOpacity,
+                borderRadius:"12px 12px 0 0" }} />
               <div style={{ position:"absolute", bottom:0, left:0, width:"100%", height:SLAB_DEPTH,
-                transformOrigin:"center bottom", transform:"rotateX(-90deg)", background: EDGE_BOTTOM, opacity: faceOpacity }} />
+                transformOrigin:"center bottom", transform:"rotateX(-90deg)", background: EDGE_BOTTOM, opacity: faceOpacity,
+                borderRadius:"0 0 12px 12px" }} />
 
               {/* ── Front face — pushed SLAB_DEPTH forward so sides span z=0→SLAB_DEPTH ── */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
