@@ -116,34 +116,41 @@ const N = CATEGORIES.length;           // 11
 const ANGLE_STEP = 360 / N;            // ~32.7° between slots
 const CYLINDER_R = 212;                // px — split the difference on spacing
 
+// Slab thickness in px — gives each tile a physical "depth" look.
+// NOTE: opacity and filter are intentionally absent from cylinderItemStyle because
+// either property on a parent kills transform-style:preserve-3d on its children.
+// Instead, opacity is applied per-face (see SlabTile) and shadows via box-shadow.
+const SLAB_DEPTH = 20;
+
 function cylinderItemStyle(normalOffset: number): CSSProperties {
-  const angle    = normalOffset * ANGLE_STEP;          // degrees
+  const angle    = normalOffset * ANGLE_STEP;
   const absAngle = Math.abs(angle);
 
-  // Shadow deepens as items recede to the back
-  const shadow = absAngle < 20
-    ? "drop-shadow(0 14px 28px rgba(0,0,0,0.8)) drop-shadow(0 3px 8px rgba(0,0,0,0.5))"
-    : absAngle < 90
-      ? "drop-shadow(0 8px 18px rgba(0,0,0,0.7))"
-      : "drop-shadow(0 4px 10px rgba(0,0,0,0.55))";
-
-  // Stay fully opaque through the first ~3 slots (≈98°), then fade toward the back
-  const opacity = absAngle < 98 ? 1 : absAngle < 163 ? 1 - ((absAngle - 98) / 65) * 0.65 : 0.25;
+  // Hide items fully around the back — no visual value there
+  if (absAngle > 155) return { display: "none", position: "absolute" };
 
   return {
     position: "absolute",
     left: "50%",
     top: "50%",
-    // Core cylinder transform: rotate around the Y axis then push outward by the radius.
-    // No manual translateX needed — the geometry handles positioning.
     transform: `translate(-50%, -50%) rotateY(${angle}deg) translateZ(${CYLINDER_R}px)`,
-    opacity,
-    filter: shadow,
-    transition: "transform 0.48s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.48s ease",
+    // NO opacity / filter here — either breaks preserve-3d on children
+    transition: "transform 0.48s cubic-bezier(0.25,0.46,0.45,0.94)",
     cursor: absAngle < 15 ? "default" : "pointer",
-    backfaceVisibility: "visible",
   };
 }
+
+// Opacity for each tile based on its angular distance — applied to the front face only
+function tileOpacity(normalOffset: number): number {
+  const absAngle = Math.abs(normalOffset * ANGLE_STEP);
+  return absAngle < 98 ? 1 : absAngle < 155 ? 1 - ((absAngle - 98) / 57) * 0.6 : 0;
+}
+
+// Colours for the slab edges
+const EDGE_RIGHT  = "linear-gradient(to right,  #22435e, #162c40)";
+const EDGE_LEFT   = "linear-gradient(to left,   #22435e, #162c40)";
+const EDGE_TOP    = "#1a3a52";
+const EDGE_BOTTOM = "#09141e";
 
 // How many degrees the cylinder rotates per pixel dragged.
 // ~0.38 deg/px means a full 360° spin takes about 950px of drag travel.
@@ -227,23 +234,43 @@ function CylinderCarousel({
           const isSelected = cat.id === selectedId;
           const hasPlaying = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
           const itemStyle  = cylinderItemStyle(offset);
+          const faceOpacity = tileOpacity(offset);
+
+          // Box shadow on front face (can't use filter:drop-shadow on preserve-3d parent)
+          const frontShadow = Math.abs(offset) === 0
+            ? "0 14px 32px rgba(0,0,0,0.85), 0 3px 10px rgba(0,0,0,0.6)"
+            : "0 6px 16px rgba(0,0,0,0.7)";
 
           return (
-            <div key={cat.id} style={{ ...itemStyle, width: thumbSize, height: thumbSize }}
-              onClick={() => {
-                // Only fire a tap if the user didn't drag
-                if (Math.abs(dragAngle) < 4) {
-                  isCentered ? onSelect(cat.id) : onCenterChange(i);
-                }
-              }}>
-              <div className="w-full h-full rounded-xl overflow-hidden relative"
+            // Tile container — preserve-3d so slab side-faces sit in 3D space.
+            // NO opacity/filter here — either breaks preserve-3d on children.
+            <div key={cat.id}
+              style={{ ...itemStyle, width: thumbSize, height: thumbSize, transformStyle: "preserve-3d" }}
+              onClick={() => { if (Math.abs(dragAngle) < 4) { isCentered ? onSelect(cat.id) : onCenterChange(i); } }}>
+
+              {/* ── Slab side faces (between z=0 and z=SLAB_DEPTH, behind the front face) ── */}
+              <div style={{ position:"absolute", top:0, right:0, width:SLAB_DEPTH, height:"100%",
+                transformOrigin:"right center", transform:"rotateY(90deg)", background: EDGE_RIGHT, opacity: faceOpacity }} />
+              <div style={{ position:"absolute", top:0, left:0, width:SLAB_DEPTH, height:"100%",
+                transformOrigin:"left center",  transform:"rotateY(-90deg)", background: EDGE_LEFT, opacity: faceOpacity }} />
+              <div style={{ position:"absolute", top:0, left:0, width:"100%", height:SLAB_DEPTH,
+                transformOrigin:"center top",    transform:"rotateX(90deg)",  background: EDGE_TOP, opacity: faceOpacity }} />
+              <div style={{ position:"absolute", bottom:0, left:0, width:"100%", height:SLAB_DEPTH,
+                transformOrigin:"center bottom", transform:"rotateX(-90deg)", background: EDGE_BOTTOM, opacity: faceOpacity }} />
+
+              {/* ── Front face — pushed SLAB_DEPTH forward so sides span z=0→SLAB_DEPTH ── */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden"
                 style={{
+                  transform: `translateZ(${SLAB_DEPTH}px)`,
+                  opacity: faceOpacity,
                   border: isSelected
                     ? "2px solid rgba(0,255,100,0.8)"
                     : isCentered
-                      ? "2px solid rgba(255,255,255,0.25)"
-                      : "2px solid rgba(255,255,255,0.06)",
-                  boxShadow: isSelected ? "inset 0 0 0 1px rgba(0,255,80,0.25)" : "none",
+                      ? "2px solid rgba(255,255,255,0.28)"
+                      : "2px solid rgba(255,255,255,0.07)",
+                  boxShadow: isSelected
+                    ? `${frontShadow}, inset 0 0 0 1px rgba(0,255,80,0.25)`
+                    : frontShadow,
                 }}>
                 <img src={img(cat.thumbnail)} alt={cat.name}
                   className="w-full h-full object-cover" draggable={false} />
@@ -348,7 +375,7 @@ function Home() {
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
 
         {/* Cylinder carousel — pulled up into the banner's wave bottom */}
-        <div className="flex-shrink-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-18px" }}>
+        <div className="flex-shrink-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-32px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
