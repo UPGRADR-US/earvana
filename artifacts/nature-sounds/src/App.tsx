@@ -216,11 +216,18 @@ function CylinderCarousel({
     snapCommitted(pxDelta * DRAG_SENS);
   };
 
-  const thumbSize = "clamp(88px, 18vw, 142px)";
+  // cqw = width of the nearest container ancestor (the carousel div below).
+  // This gives us sizes relative to the actual 430px column, not the full viewport.
+  const thumbSize = "clamp(82px, 22cqw, 108px)";
 
   return (
     <div className="relative w-full touch-none"
-      style={{ height: "clamp(150px, 32vw, 230px)", perspective: "820px", perspectiveOrigin: "50% 50%" }}
+      style={{
+        height: "clamp(140px, 36cqw, 200px)",
+        perspective: "clamp(600px, 180cqw, 860px)",
+        perspectiveOrigin: "50% 50%",
+        containerType: "inline-size",   // makes cqw resolve against THIS element's width
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
