@@ -174,7 +174,7 @@ class TrackEngine {
 
   setVolume(vol: number) {
     if (this.context.state === 'running') {
-        this.trackGain.gain.setTargetAtTime(vol, this.context.currentTime + 0.1);
+        this.trackGain.gain.setTargetAtTime(vol, this.context.currentTime, 0.1);
     } else {
         this.trackGain.gain.value = vol;
     }
@@ -253,7 +253,7 @@ export function useAudioEngine(): AudioEngineState {
     setMasterVolumeState(volume);
     if (masterGainRef.current && contextRef.current) {
         if (contextRef.current.state === 'running') {
-            masterGainRef.current.gain.setTargetAtTime(volume, contextRef.current.currentTime + 0.1);
+            masterGainRef.current.gain.setTargetAtTime(volume, contextRef.current.currentTime, 0.1);
         } else {
             masterGainRef.current.gain.value = volume;
         }
