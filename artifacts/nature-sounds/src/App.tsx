@@ -153,6 +153,9 @@ function CylinderCarousel({
   const rotRef                        = useRef(centerIdx * ANGLE_STEP);
   const [isAnimating, setIsAnimating] = useState(false);
   const isDragging                    = useRef(false);
+  // didDrag stays true after a drag so the click that browser fires right after
+  // pointerup doesn't accidentally trigger animateTo / onSelect.
+  const didDrag                       = useRef(false);
   const dragStartX                    = useRef<number | null>(null);
   const dragStartRot                  = useRef(0);
 
@@ -193,6 +196,7 @@ function CylinderCarousel({
   const onPointerDown = (e: React.PointerEvent) => {
     setIsAnimating(false);           // interrupt any in-flight animation
     isDragging.current   = true;
+    didDrag.current      = false;    // reset per-gesture
     dragStartX.current   = e.clientX;
     dragStartRot.current = rotRef.current;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -200,7 +204,10 @@ function CylinderCarousel({
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current || dragStartX.current === null) return;
-    const r        = dragStartRot.current - (e.clientX - dragStartX.current) * DRAG_SENS;
+    const px = e.clientX - dragStartX.current;
+    // Mark as a real drag once finger travels more than 4px
+    if (Math.abs(px) > 4) didDrag.current = true;
+    const r        = dragStartRot.current - px * DRAG_SENS;
     rotRef.current = r;
     setRotation(r);
   };
@@ -208,12 +215,11 @@ function CylinderCarousel({
   const onPointerUp = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
     isDragging.current = false;
-    // Use raw pixel delta — direction intent is clearest in screen coords.
-    // Threshold: ~4px ≈ 1% of a 390px phone screen filters tap jitter.
     const pxDelta = dragStartX.current !== null ? dragStartX.current - e.clientX : 0;
     dragStartX.current = null;
-    // Convert to degrees so snapCommitted can use its existing logic.
     snapCommitted(pxDelta * DRAG_SENS);
+    // didDrag stays true — the browser fires click right after pointerup and we
+    // need to suppress it. It is cleared inside the tile onClick handler below.
   };
 
   // cqw = width of the nearest container ancestor (the carousel div below).
@@ -273,7 +279,8 @@ function CylinderCarousel({
                 cursor: isCentered ? "default" : "pointer",
               }}
               onClick={() => {
-                if (isDragging.current) return;
+                // Suppress click that browser fires immediately after a drag gesture
+                if (didDrag.current) { didDrag.current = false; return; }
                 if (isCentered) onSelect(cat.id);
                 else animateTo(i);
               }}>
