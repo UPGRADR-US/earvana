@@ -105,44 +105,47 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   );
 }
 
-// ─── Coverflow Carousel ───────────────────────────────────────────────────────
+// ─── Cylinder Carousel ────────────────────────────────────────────────────────
+//
+// True 3D cylinder: each item sits on a circle via rotateY(angle) + translateZ(R).
+// With preserve-3d + perspective the browser handles all depth sorting automatically.
+// Items at ±144° (the two "back" slots for N=5) appear nearly edge-on — thin slivers
+// that give the "wraps all the way around" illusion without needing extra slides.
 
-function coverflowStyle(offset: number): CSSProperties {
-  const abs = Math.abs(offset);
-  const sign = Math.sign(offset);
+const N = CATEGORIES.length;           // 5
+const ANGLE_STEP = 360 / N;            // 72° between slots
+const CYLINDER_R = 180;                // px — radius of the circle
 
-  if (abs > 2) return { display: "none" };
+function cylinderItemStyle(normalOffset: number): CSSProperties {
+  const angle    = normalOffset * ANGLE_STEP;          // degrees
+  const absAngle = Math.abs(angle);
 
-  // Wider spread so all 5 thumbnails are clearly visible
-  const txVw  = sign * (abs === 0 ? 0 : abs === 1 ? 22 : 41);
-  // Gentle tilt — minimal skew so images stay readable
-  const rotY  = sign * (abs === 0 ? 0 : abs === 1 ? 22 : 35);
-  // Shallow depth — center pops slightly, edges barely recede
-  const tz    = abs === 0 ? 50 : abs === 1 ? -8 : -24;
-  // Uniform-ish sizing — edge items still shrink a bit but stay large
-  const scale = abs === 0 ? 1.12 : abs === 1 ? 0.88 : 0.78;
-  // Edge items stay fairly opaque
-  const opacity = abs === 0 ? 1 : abs === 1 ? 0.92 : 0.78;
-  const shadow  = abs === 0
-    ? "drop-shadow(0 16px 32px rgba(0,0,0,0.8)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))"
-    : abs === 1
-      ? "drop-shadow(0 8px 18px rgba(0,0,0,0.65))"
-      : "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
+  // Shadow deepens as items recede to the back
+  const shadow = absAngle < 20
+    ? "drop-shadow(0 14px 28px rgba(0,0,0,0.8)) drop-shadow(0 3px 8px rgba(0,0,0,0.5))"
+    : absAngle < 80
+      ? "drop-shadow(0 8px 18px rgba(0,0,0,0.7))"
+      : "drop-shadow(0 4px 10px rgba(0,0,0,0.55))";
+
+  // Fade items as they rotate to the back
+  const opacity = absAngle < 70 ? 1 : absAngle < 144 ? 1 - ((absAngle - 70) / 74) * 0.55 : 0.3;
 
   return {
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-50%, -50%) translateX(${txVw}vw) rotateY(${rotY}deg) translateZ(${tz}px) scale(${scale})`,
+    // Core cylinder transform: rotate around the Y axis then push outward by the radius.
+    // No manual translateX needed — the geometry handles positioning.
+    transform: `translate(-50%, -50%) rotateY(${angle}deg) translateZ(${CYLINDER_R}px)`,
     opacity,
-    zIndex: 10 - abs * 3,
     filter: shadow,
-    transition: "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.4s ease, filter 0.4s ease",
-    cursor: abs === 0 ? "default" : "pointer",
+    transition: "transform 0.48s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.48s ease",
+    cursor: absAngle < 15 ? "default" : "pointer",
+    backfaceVisibility: "visible",
   };
 }
 
-function CoverflowCarousel({
+function CylinderCarousel({
   centerIdx, selectedId, onSelect, onCenterChange, engine,
 }: {
   centerIdx: number;
@@ -158,46 +161,57 @@ function CoverflowCarousel({
     if (swipeStart.current === null) return;
     const delta = e.clientX - swipeStart.current;
     if (Math.abs(delta) > 40) {
-      const newIdx = Math.max(0, Math.min(CATEGORIES.length - 1, centerIdx + (delta < 0 ? 1 : -1)));
+      // Wrap around: carousel is circular
+      const newIdx = ((centerIdx + (delta < 0 ? 1 : -1)) + N) % N;
       onCenterChange(newIdx);
     }
     swipeStart.current = null;
   };
 
-  const thumbSize = "clamp(112px, 24vw, 185px)";
+  const thumbSize = "clamp(110px, 22vw, 175px)";
 
   return (
+    // Outer div: perspective host + event capture
     <div className="relative w-full touch-none"
-      style={{ height: "clamp(145px, 31vw, 225px)", perspective: "900px", perspectiveOrigin: "50% 50%" }}
+      style={{ height: "clamp(150px, 32vw, 230px)", perspective: "820px", perspectiveOrigin: "50% 50%" }}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
-      {CATEGORIES.map((cat, i) => {
-        const offset    = i - centerIdx;
-        const isCentered = offset === 0;
-        const isSelected = cat.id === selectedId;
-        const hasPlaying = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
-        const style = coverflowStyle(offset);
 
-        return (
-          <div key={cat.id} style={{ ...style, width: thumbSize, height: thumbSize }}
-            onClick={() => isCentered ? onSelect(cat.id) : onCenterChange(i)}>
-            <div className="w-full h-full rounded-xl overflow-hidden relative"
-              style={{
-                border: isSelected
-                  ? "2px solid rgba(0,255,100,0.75)"
-                  : isCentered ? "2px solid rgba(255,255,255,0.22)" : "2px solid rgba(255,255,255,0.07)",
-              }}>
-              <img src={img(cat.thumbnail)} alt={cat.name}
-                className="w-full h-full object-cover" draggable={false} />
+      {/* Inner div: the actual 3D space — preserve-3d enables automatic depth sorting */}
+      <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
+        {CATEGORIES.map((cat, i) => {
+          // Compute the shortest angular path from center to this item
+          let offset = i - centerIdx;
+          if (offset >  N / 2) offset -= N;
+          if (offset < -N / 2) offset += N;
 
-              {hasPlaying && (
-                <div className="absolute top-[6px] right-[6px] rounded-full"
-                  style={{ width: 8, height: 8, background: "#00ff55", boxShadow: "0 0 6px #00ff55" }} />
-              )}
+          const isCentered = offset === 0;
+          const isSelected = cat.id === selectedId;
+          const hasPlaying = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
+          const itemStyle  = cylinderItemStyle(offset);
 
+          return (
+            <div key={cat.id} style={{ ...itemStyle, width: thumbSize, height: thumbSize }}
+              onClick={() => isCentered ? onSelect(cat.id) : onCenterChange(i)}>
+              <div className="w-full h-full rounded-xl overflow-hidden relative"
+                style={{
+                  border: isSelected
+                    ? "2px solid rgba(0,255,100,0.8)"
+                    : isCentered
+                      ? "2px solid rgba(255,255,255,0.25)"
+                      : "2px solid rgba(255,255,255,0.06)",
+                  boxShadow: isSelected ? "inset 0 0 0 1px rgba(0,255,80,0.25)" : "none",
+                }}>
+                <img src={img(cat.thumbnail)} alt={cat.name}
+                  className="w-full h-full object-cover" draggable={false} />
+                {hasPlaying && (
+                  <div className="absolute top-[6px] right-[6px] rounded-full"
+                    style={{ width: 8, height: 8, background: "#00ff55", boxShadow: "0 0 6px #00ff55" }} />
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -283,15 +297,15 @@ function Home() {
           className="w-full h-auto block" draggable={false} />
       </div>
 
-      {/* Middle area */}
-      <div className="relative flex-1 z-10 flex flex-col" style={{ overflow: "clip" }}>
+      {/* Middle area — overflow:visible so the cylinder's depth axis can breathe */}
+      <div className="relative flex-1 z-10 flex flex-col" style={{ overflow: "visible" }}>
 
-        {/* Volume meter spans the full right side */}
+        {/* Volume meter — anchored bottom-right */}
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
 
-        {/* Coverflow carousel — just below the banner, full width */}
+        {/* Cylinder carousel — just below the banner, full width */}
         <div className="flex-shrink-0 pt-3 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
-          <CoverflowCarousel
+          <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
             onSelect={handleSelect}
