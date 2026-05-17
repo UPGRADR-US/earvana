@@ -173,7 +173,7 @@ function CylinderCarousel({
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragStartX.current === null) return;
     const delta = e.clientX - dragStartX.current;
-    setDragAngle(delta * DRAG_SENSITIVITY);
+    setDragAngle(-delta * DRAG_SENSITIVITY);
   };
 
   const commit = (currentDragAngle: number) => {
@@ -341,8 +341,8 @@ function Home() {
         {/* Volume meter — anchored bottom-right */}
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
 
-        {/* Cylinder carousel — tight up against the banner */}
-        <div className="flex-shrink-0 pt-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
+        {/* Cylinder carousel — pulled up into the banner's wave bottom */}
+        <div className="flex-shrink-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-18px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
