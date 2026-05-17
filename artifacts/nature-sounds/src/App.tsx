@@ -233,10 +233,10 @@ function Home() {
 
   return (
     <div
-      className="relative w-full overflow-hidden select-none"
+      className="relative flex flex-col w-full overflow-hidden select-none"
       style={{ height: "100dvh" }}
     >
-      {/* Full-screen background */}
+      {/* Full-screen background — sits behind everything */}
       <img
         src={img("TR-bg.png")}
         alt=""
@@ -244,34 +244,35 @@ function Home() {
         draggable={false}
       />
 
-      {/* Top Banner */}
-      <img
-        src={img("TopBanner.png")}
-        alt="tinnitus relief by earvana"
-        className="absolute top-0 left-0 w-full z-10"
-        style={{ maxHeight: "18%", objectFit: "fill" }}
-        draggable={false}
-      />
-
-      {/* "the professional masking solution" tagline */}
-      <div
-        className="absolute right-0 z-20 text-white/60 text-right pr-4"
-        style={{
-          top: "7%",
-          fontSize: "clamp(8px, 1.4vw, 13px)",
-          fontWeight: 300,
-          letterSpacing: "0.08em",
-        }}
-      >
-        the professional masking solution
+      {/* Top Banner — natural aspect ratio, full width */}
+      <div className="relative z-10 flex-shrink-0 w-full">
+        <img
+          src={img("TopBanner.png")}
+          alt="tinnitus relief by earvana"
+          className="w-full h-auto block"
+          draggable={false}
+        />
+        {/* Tagline overlaid on right side of banner */}
+        <div
+          className="absolute right-0 bottom-[28%] text-white/60 text-right pr-4"
+          style={{
+            fontSize: "clamp(7px, 1.3vw, 13px)",
+            fontWeight: 300,
+            letterSpacing: "0.08em",
+          }}
+        >
+          the professional masking solution
+        </div>
       </div>
 
-      {/* Right-side LED volume meter */}
-      <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
+      {/* Middle area — fills remaining space, contains volume meter */}
+      <div className="relative flex-1 z-10 overflow-hidden">
+        <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
+      </div>
 
-      {/* Bottom control bar */}
+      {/* Bottom control bar — fixed height */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-10"
+        className="relative z-10 flex-shrink-0"
         style={{ height: "clamp(80px, 17vh, 140px)" }}
       >
         {/* Bar background image */}
