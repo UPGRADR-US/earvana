@@ -113,16 +113,21 @@ function coverflowStyle(offset: number): CSSProperties {
 
   if (abs > 2) return { display: "none" };
 
-  const txVw  = sign * (abs === 0 ? 0 : abs === 1 ? 18 : 33);
-  const rotY  = sign * (abs === 0 ? 0 : abs === 1 ? 50 : 68);
-  const tz    = abs === 0 ? 70 : abs === 1 ? -15 : -50;
-  const scale = abs === 0 ? 1.14 : abs === 1 ? 0.82 : 0.66;
-  const opacity = abs === 0 ? 1 : abs === 1 ? 0.88 : 0.65;
+  // Wider spread so all 5 thumbnails are clearly visible
+  const txVw  = sign * (abs === 0 ? 0 : abs === 1 ? 22 : 41);
+  // Gentle tilt — minimal skew so images stay readable
+  const rotY  = sign * (abs === 0 ? 0 : abs === 1 ? 22 : 35);
+  // Shallow depth — center pops slightly, edges barely recede
+  const tz    = abs === 0 ? 50 : abs === 1 ? -8 : -24;
+  // Uniform-ish sizing — edge items still shrink a bit but stay large
+  const scale = abs === 0 ? 1.12 : abs === 1 ? 0.88 : 0.78;
+  // Edge items stay fairly opaque
+  const opacity = abs === 0 ? 1 : abs === 1 ? 0.92 : 0.78;
   const shadow  = abs === 0
-    ? "drop-shadow(0 18px 36px rgba(0,0,0,0.85)) drop-shadow(0 4px 12px rgba(0,0,0,0.6))"
+    ? "drop-shadow(0 16px 32px rgba(0,0,0,0.8)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))"
     : abs === 1
-      ? "drop-shadow(0 10px 20px rgba(0,0,0,0.7))"
-      : "drop-shadow(0 6px 12px rgba(0,0,0,0.5))";
+      ? "drop-shadow(0 8px 18px rgba(0,0,0,0.65))"
+      : "drop-shadow(0 5px 10px rgba(0,0,0,0.5))";
 
   return {
     position: "absolute",
@@ -159,11 +164,11 @@ function CoverflowCarousel({
     swipeStart.current = null;
   };
 
-  const thumbSize = "clamp(90px, 19vw, 148px)";
+  const thumbSize = "clamp(112px, 24vw, 185px)";
 
   return (
     <div className="relative w-full touch-none"
-      style={{ height: "clamp(100px, 21vw, 160px)", perspective: "900px", perspectiveOrigin: "50% 50%" }}
+      style={{ height: "clamp(125px, 26vw, 200px)", perspective: "900px", perspectiveOrigin: "50% 50%" }}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
       {CATEGORIES.map((cat, i) => {
         const offset    = i - centerIdx;
