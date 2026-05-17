@@ -33,14 +33,14 @@ function VolumeMeter({ volume, onChange }: { volume: number; onChange: (v: numbe
   const onPU = useCallback(() => { dragging.current = false; }, []);
 
   return (
-    <div className="absolute right-0 flex items-center gap-[5px]"
-      style={{ top: 0, bottom: 0, paddingRight: "clamp(6px, 1.5vw, 14px)" }}>
+    <div className="absolute right-0 bottom-0 flex items-end gap-[5px]"
+      style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: "clamp(6px, 1vh, 12px)" }}>
       <div className="flex flex-col items-center justify-center gap-[3px] text-white/35"
-        style={{ fontSize: "clamp(5px, 0.9vw, 9px)", fontWeight: 300 }}>
+        style={{ fontSize: "clamp(5px, 0.9vw, 9px)", fontWeight: 300, height: "clamp(180px, 32vh, 260px)" }}>
         {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
       </div>
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ width: "clamp(24px, 3.2vw, 40px)", height: "100%" }}
+        style={{ width: "clamp(24px, 3.2vw, 40px)", height: "clamp(180px, 32vh, 260px)" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
@@ -278,8 +278,6 @@ function Home() {
   const handleSelect = (id: string) => setSelectedId((prev) => (prev === id ? null : id));
   const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(null); };
 
-  const contentPadRight = "clamp(60px, 10vw, 92px)";
-
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none" style={{ height: "100dvh" }}>
 
@@ -299,8 +297,8 @@ function Home() {
         {/* Volume meter spans the full right side */}
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
 
-        {/* Coverflow carousel — just below the banner */}
-        <div className="flex-shrink-0 pt-3 pb-1" style={{ paddingRight: contentPadRight, paddingLeft: "8px" }}>
+        {/* Coverflow carousel — just below the banner, full width */}
+        <div className="flex-shrink-0 pt-3 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
           <CoverflowCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
@@ -314,7 +312,7 @@ function Home() {
         {selectedId && (() => {
           const cat = CATEGORIES.find((c) => c.id === selectedId);
           return cat
-            ? <div className="flex-shrink-0" style={{ paddingRight: contentPadRight }}>
+            ? <div className="flex-shrink-0">
                 <TrackList category={cat} engine={engine} />
               </div>
             : null;
