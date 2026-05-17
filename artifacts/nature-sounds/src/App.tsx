@@ -118,17 +118,10 @@ function Home() {
       <img src={img("TR-bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
-      {/* Top Banner — sits on top of bg, bottom edge fades to transparent */}
+      {/* Top Banner — RGBA PNG; transparent wave bottom blends into the background naturally */}
       <div className="relative z-10 flex-shrink-0 w-full">
-        <img src={img("TopBanner.png")} alt="tinnitus relief by earvana"
+        <img src={img("TopBannerV2.png")} alt="tinnitus relief by earvana"
           className="w-full h-auto block" draggable={false} />
-        {/* Gradient dissolve — blends the banner's bottom edge into the background */}
-        <div className="absolute inset-x-0 bottom-0 pointer-events-none"
-          style={{ height: "35%", background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0))" }} />
-        <div className="absolute right-0 bottom-[28%] text-white/60 text-right pr-4"
-          style={{ fontSize: "clamp(7px,1.3vw,13px)", fontWeight: 300, letterSpacing: "0.08em" }}>
-          the professional masking solution
-        </div>
       </div>
 
       {/* Middle area — atmospheric space + volume meter */}
