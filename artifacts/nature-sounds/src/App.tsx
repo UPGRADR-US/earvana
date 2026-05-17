@@ -109,12 +109,12 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 //
 // True 3D cylinder: each item sits on a circle via rotateY(angle) + translateZ(R).
 // With preserve-3d + perspective the browser handles all depth sorting automatically.
-// Items at ±144° (the two "back" slots for N=5) appear nearly edge-on — thin slivers
-// that give the "wraps all the way around" illusion without needing extra slides.
+// With N=11 items at 32.7° apart the front arc shows ~5 readable items and items ≥±5
+// steps (≥163°) appear as nearly edge-on slivers — the "wraps all the way around" look.
 
-const N = CATEGORIES.length;           // 5
-const ANGLE_STEP = 360 / N;            // 72° between slots
-const CYLINDER_R = 180;                // px — radius of the circle
+const N = CATEGORIES.length;           // 11
+const ANGLE_STEP = 360 / N;            // ~32.7° between slots
+const CYLINDER_R = 230;                // px — larger radius keeps 11 items from crowding
 
 function cylinderItemStyle(normalOffset: number): CSSProperties {
   const angle    = normalOffset * ANGLE_STEP;          // degrees
@@ -123,12 +123,12 @@ function cylinderItemStyle(normalOffset: number): CSSProperties {
   // Shadow deepens as items recede to the back
   const shadow = absAngle < 20
     ? "drop-shadow(0 14px 28px rgba(0,0,0,0.8)) drop-shadow(0 3px 8px rgba(0,0,0,0.5))"
-    : absAngle < 80
+    : absAngle < 90
       ? "drop-shadow(0 8px 18px rgba(0,0,0,0.7))"
       : "drop-shadow(0 4px 10px rgba(0,0,0,0.55))";
 
-  // Fade items as they rotate to the back
-  const opacity = absAngle < 70 ? 1 : absAngle < 144 ? 1 - ((absAngle - 70) / 74) * 0.55 : 0.3;
+  // Stay fully opaque through the first ~3 slots (≈98°), then fade toward the back
+  const opacity = absAngle < 98 ? 1 : absAngle < 163 ? 1 - ((absAngle - 98) / 65) * 0.65 : 0.25;
 
   return {
     position: "absolute",
@@ -168,7 +168,7 @@ function CylinderCarousel({
     swipeStart.current = null;
   };
 
-  const thumbSize = "clamp(110px, 22vw, 175px)";
+  const thumbSize = "clamp(88px, 18vw, 142px)";
 
   return (
     // Outer div: perspective host + event capture
