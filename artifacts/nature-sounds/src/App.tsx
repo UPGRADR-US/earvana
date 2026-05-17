@@ -114,7 +114,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
 const N = CATEGORIES.length;           // 11
 const ANGLE_STEP = 360 / N;            // ~32.7° between slots
-const CYLINDER_R = 195;                // px — tighter spacing between items
+const CYLINDER_R = 212;                // px — split the difference on spacing
 
 function cylinderItemStyle(normalOffset: number): CSSProperties {
   const angle    = normalOffset * ANGLE_STEP;          // degrees
@@ -184,7 +184,7 @@ function CylinderCarousel({
     // Always read from the ref — never from the potentially-stale state closure
     const angle  = dragAngleRef.current;
     const steps  = Math.round(angle / ANGLE_STEP);
-    const newIdx = ((centerIdx - steps) % N + N) % N;
+    const newIdx = ((centerIdx + steps) % N + N) % N;
     onCenterChange(newIdx);
     dragAngleRef.current = 0;
     setDragAngle(0);
