@@ -116,7 +116,8 @@ const N          = CATEGORIES.length;   // 11
 const ANGLE_STEP = 360 / N;             // ~32.73°
 const CYLINDER_R = 212;                 // px
 const SLAB_DEPTH = 5;                   // px — tile physical depth
-const DRAG_SENS  = 0.38;               // deg per pixel
+// At CYLINDER_R=212px the arc length per degree is ~3.7px, so 0.25 deg/px ≈ 1:1 finger tracking.
+const DRAG_SENS  = 0.25;               // deg per pixel
 
 // Normalise any angle to −180..+180 (shortest arc from viewer)
 function shortArc(deg: number): number {
@@ -155,17 +156,19 @@ function CylinderCarousel({
   const dragStartX                    = useRef<number | null>(null);
   const dragStartRot                  = useRef(0);
 
-  // Snap with directional commitment: any intentional drag (> 1°) commits at
-  // least 1 step in the drag direction, so even a weak swipe always moves one image.
-  // A near-zero touch (jitter) falls back to nearest-slot rounding.
+  // Snap with directional commitment.
+  // Uses Math.round for natural large-drag behaviour (no slot-skipping),
+  // but guarantees ≥1 step in the drag direction for any intentional swipe (> 1°).
+  // Tiny jitter (≤1°) just snaps to nearest without moving.
   const snapCommitted = (dragDelta: number) => {
-    const rot    = rotRef.current;
-    const slots  = rot / ANGLE_STEP;
-    const target =
-      dragDelta >  1 ? Math.ceil(slots)  * ANGLE_STEP :   // dragged left  → advance ≥1
-      dragDelta < -1 ? Math.floor(slots) * ANGLE_STEP :   // dragged right → retreat ≥1
-                       Math.round(slots) * ANGLE_STEP;    // jitter / tap  → nearest
-    const newCenter = ((Math.round(target / ANGLE_STEP) % N) + N) % N;
+    const startSlot = Math.round(dragStartRot.current / ANGLE_STEP);
+    const nearest   = Math.round(rotRef.current / ANGLE_STEP);
+    const committed =
+      dragDelta >  1 ? Math.max(nearest, startSlot + 1) :  // left  → at least +1
+      dragDelta < -1 ? Math.min(nearest, startSlot - 1) :  // right → at least −1
+                       nearest;                             // jitter → nearest
+    const target    = committed * ANGLE_STEP;
+    const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
     setRotation(target);
     setIsAnimating(true);
