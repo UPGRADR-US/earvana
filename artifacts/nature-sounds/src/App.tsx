@@ -124,12 +124,11 @@ function shortArc(deg: number): number {
   return m > 180 ? m - 360 : m;
 }
 
-// Per-face opacity — 0.75 max so the app background bleeds through.
+// Per-face opacity — fades distant tiles to zero, full brightness for front tiles.
 // Must NOT be applied to the tile container (breaks preserve-3d); faces only.
 function tileOpacity(visAngleDeg: number): number {
-  const a    = Math.abs(visAngleDeg);
-  const base = a < 98 ? 1 : a < 155 ? 1 - ((a - 98) / 57) * 0.6 : 0;
-  return base * 0.75;
+  const a = Math.abs(visAngleDeg);
+  return a < 98 ? 1 : a < 155 ? 1 - ((a - 98) / 57) * 0.6 : 0;
 }
 
 const EDGE_RIGHT  = "linear-gradient(to right,  #22435e, #162c40)";
@@ -156,10 +155,16 @@ function CylinderCarousel({
   const dragStartX                    = useRef<number | null>(null);
   const dragStartRot                  = useRef(0);
 
-  // Snap to nearest slot. Direction is always the minimum arc (≤ ANGLE_STEP/2),
-  // so it always continues in or snaps back from the drag direction — never reverses.
-  const snapToNearest = () => {
-    const target    = Math.round(rotRef.current / ANGLE_STEP) * ANGLE_STEP;
+  // Snap with directional commitment: any intentional drag (> 1°) commits at
+  // least 1 step in the drag direction, so even a weak swipe always moves one image.
+  // A near-zero touch (jitter) falls back to nearest-slot rounding.
+  const snapCommitted = (dragDelta: number) => {
+    const rot    = rotRef.current;
+    const slots  = rot / ANGLE_STEP;
+    const target =
+      dragDelta >  1 ? Math.ceil(slots)  * ANGLE_STEP :   // dragged left  → advance ≥1
+      dragDelta < -1 ? Math.floor(slots) * ANGLE_STEP :   // dragged right → retreat ≥1
+                       Math.round(slots) * ANGLE_STEP;    // jitter / tap  → nearest
     const newCenter = ((Math.round(target / ANGLE_STEP) % N) + N) % N;
     rotRef.current  = target;
     setRotation(target);
@@ -198,8 +203,9 @@ function CylinderCarousel({
   const onPointerUp = () => {
     if (!isDragging.current) return;
     isDragging.current = false;
+    const delta = rotRef.current - dragStartRot.current;
     dragStartX.current = null;
-    snapToNearest();
+    snapCommitted(delta);
   };
 
   const thumbSize = "clamp(88px, 18vw, 142px)";
