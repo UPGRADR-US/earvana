@@ -14,7 +14,9 @@ const img = (name: string) => `${BASE}${name}`;
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
-function VolumeMeter({ volume, onChange }: { volume: number; onChange: (v: number) => void }) {
+function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
+  volume: number; onChange: (v: number) => void; bottomPad?: string;
+}) {
   const meterRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
 
@@ -34,7 +36,7 @@ function VolumeMeter({ volume, onChange }: { volume: number; onChange: (v: numbe
 
   return (
     <div className="absolute right-0 bottom-0 flex items-end gap-[5px]"
-      style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: "clamp(6px, 1vh, 12px)" }}>
+      style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: bottomPad }}>
       <div className="flex flex-col items-center justify-center gap-[3px] text-white/35"
         style={{ fontSize: "clamp(5px, 0.9vw, 9px)", fontWeight: 300, height: "clamp(180px, 32vh, 260px)" }}>
         {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
@@ -114,7 +116,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
 const N          = CATEGORIES.length;   // 11
 const ANGLE_STEP = 360 / N;             // ~32.73°
-const CYLINDER_R = 165;                 // px
+const CYLINDER_R = 198;                 // px  (165 × 1.2)
 const SLAB_DEPTH = 5;                   // px — tile physical depth
 // At CYLINDER_R=212px the arc length per degree is ~3.7px, so 0.25 deg/px ≈ 1:1 finger tracking.
 const DRAG_SENS  = 0.25;               // deg per pixel
@@ -224,12 +226,12 @@ function CylinderCarousel({
 
   // cqw = width of the nearest container ancestor (the carousel div below).
   // This gives us sizes relative to the actual 430px column, not the full viewport.
-  const thumbSize = "clamp(82px, 22cqw, 108px)";
+  const thumbSize = "clamp(98px, 26cqw, 130px)";  // 20% larger
 
   return (
     <div className="relative w-full touch-none"
       style={{
-        height: "clamp(140px, 36cqw, 200px)",
+        height: "clamp(168px, 43cqw, 240px)",  // 20% larger
         perspective: "820px",
         perspectiveOrigin: "50% 50%",
         containerType: "inline-size",   // makes cqw resolve against THIS element's width
@@ -402,10 +404,16 @@ function Home() {
           className="w-full h-auto block" draggable={false} />
       </div>
 
+      {/* Volume meter — anchored to outer container, sits just above the control bar */}
+      <VolumeMeter
+        volume={engine.masterVolume}
+        onChange={engine.setMasterVolume}
+        bottomPad="clamp(86px,18vh,152px)"
+      />
+
       {/* Carousel area — overflow:visible keeps 3D depth rendering intact.
           flex-shrink-0 so it never expands to steal track-list space. */}
       <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-        <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
         <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-32px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
