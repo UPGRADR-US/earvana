@@ -396,7 +396,7 @@ function Home() {
     <div className="relative flex flex-col w-full overflow-hidden select-none" style={{ height: "100dvh" }}>
 
       {/* Full-screen background */}
-      <img src={img("TR-bg.png")} alt=""
+      <img src={img("TR-bgV2.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
       {/* Top Banner — RGBA PNG; transparent wave bottom blends into the background naturally */}
