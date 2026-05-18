@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds — used when a track has no crossfadeDuration
-const FADE_IN_DURATION   = 10;  // seconds — global fade-in on every play()
+const FADE_IN_DURATION   = 5;   // seconds — global fade-in on every play()
 
 export type TrackState = {
   isPlaying: boolean;
@@ -203,6 +203,33 @@ export function useAudioEngine(): AudioEngineState {
   const masterGainRef = useRef<GainNode | null>(null);
   const enginesRef = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // Acquire a screen wake lock so audio keeps playing when the screen sleeps.
+  // Re-acquires automatically if the page becomes visible again while playing.
+  const acquireWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+    } catch { /* permission denied or not supported — silent fail */ }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
+  }, []);
+
+  // Re-acquire if the page visibility changes (wake lock auto-drops on hide)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
+        if (anyPlaying) acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [acquireWakeLock]);
 
   const initContext = useCallback(() => {
     if (!contextRef.current) {
@@ -248,11 +275,12 @@ export function useAudioEngine(): AudioEngineState {
       await engine.load();
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
+      acquireWakeLock();
     } catch (e) {
       console.error("Failed to play track", e);
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
     }
-  }, [initContext, tracksState]);
+  }, [initContext, tracksState, acquireWakeLock]);
 
   // Resume the last-played track with a fresh fade-in
   const resume = useCallback(async () => {
@@ -261,11 +289,10 @@ export function useAudioEngine(): AudioEngineState {
 
   const pause = useCallback((trackId: string) => {
     const engine = enginesRef.current[trackId];
-    if (engine) {
-      engine.pause();
-    }
+    if (engine) engine.pause();
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
-  }, []);
+    releaseWakeLock();
+  }, [releaseWakeLock]);
 
   const setVolume = useCallback((trackId: string, volume: number) => {
     const engine = enginesRef.current[trackId];
@@ -294,7 +321,8 @@ export function useAudioEngine(): AudioEngineState {
       Object.keys(ns).forEach(id => { ns[id].isPlaying = false; });
       return ns;
     });
-  }, []);
+    releaseWakeLock();
+  }, [releaseWakeLock]);
 
   return {
     tracks: tracksState,
