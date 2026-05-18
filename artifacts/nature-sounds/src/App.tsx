@@ -385,7 +385,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
                 : <Play style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
             <span style={{
-              fontSize: "clamp(11px,1.8vw,15px)", fontWeight: isPlaying ? 500 : 300,
+              fontSize: "clamp(15px,3.8vw,19px)", fontWeight: isPlaying ? 500 : 300,
               color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
               textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
               letterSpacing: "0.03em",
@@ -406,12 +406,14 @@ function Home() {
   const engine = useAudioEngine();
   const [durationStep, setDurationStep] = useState<number>(10);
   const [centerIdx,   setCenterIdx]   = useState<number>(2);
-  const [selectedId,  setSelectedId]  = useState<string | null>(null);
+  // Auto-open the track list for whichever category is centred — no tap required.
+  const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
 
   const isPlaying = Object.values(engine.tracks).some((t) => t.isPlaying);
 
   const handleSelect = (id: string) => setSelectedId((prev) => (prev === id ? null : id));
-  const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(null); };
+  // When a new tile snaps to centre, immediately show its track list.
+  const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(CATEGORIES[idx].id); };
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none" style={{ height: "100dvh" }}>
