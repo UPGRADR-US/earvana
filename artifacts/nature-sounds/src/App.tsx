@@ -64,8 +64,7 @@ function stepToSeconds(step: number): number { return (step + 1) * 3600; }
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${h}:${String(m).padStart(2, "0")}`;
 }
 
 function DurationSlider({
@@ -117,20 +116,22 @@ function DurationSlider({
       {step < loopStep && (
         <div className="absolute pointer-events-none"
           style={{
-            bottom: "calc(100% + 6px)",
+            /* bottom: 100% = top of trackRef; add ~24px to clear the space
+               between trackRef top and the top edge of the control bar */
+            bottom: "calc(100% + 24px)",
             left: pct(step),
             transform: "translateX(-50%)",
             whiteSpace: "nowrap",
           }}>
           <span style={{
             color: isPlaying ? "#00ff55" : "rgba(0,255,85,0.55)",
-            fontSize: "clamp(13px,3.2cqw,18px)",
+            fontSize: "clamp(22px,6cqw,32px)",
             fontWeight: 700,
             letterSpacing: "0.05em",
             fontVariantNumeric: "tabular-nums",
             textShadow: isPlaying
-              ? "0 0 10px #00ff55, 0 0 22px #00ff33"
-              : "0 0 6px rgba(0,255,85,0.3)",
+              ? "0 0 12px #00ff55, 0 0 28px #00ff33"
+              : "0 0 8px rgba(0,255,85,0.3)",
             transition: "color 0.3s, text-shadow 0.3s",
           }}>
             {formatTime(timeRemaining)}
