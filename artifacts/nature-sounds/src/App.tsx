@@ -82,7 +82,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   const loopStep = DURATION_STEPS.length - 1;
 
   return (
-    <div className="flex flex-col gap-[10px] w-full" data-testid="duration-slider">
+    <div className="flex flex-col gap-[2px] w-full" data-testid="duration-slider">
       {/* Numbers 1–10 then loop icon — all in one row */}
       <div className="flex items-center justify-between w-full px-[1px]">
         {DURATION_STEPS.map((label, i) => {
@@ -427,7 +427,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100dvh", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100svh", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background */}
       <img src={img("TR-bgV2.png")} alt=""
@@ -470,7 +470,8 @@ function Home() {
       </div>
 
       {/* Bottom control bar */}
-      <div className="relative z-10 flex-shrink-0" style={{ height: "clamp(62px,11vh,88px)" }}>
+      <div className="relative z-10 flex-shrink-0"
+        style={{ height: "calc(clamp(62px,11vh,88px) + env(safe-area-inset-bottom, 0px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
