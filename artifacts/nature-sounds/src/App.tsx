@@ -353,7 +353,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
             data-testid={`track-btn-${track.id}`}>
             <div className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
               style={{
-                width: "clamp(26px,4vw,34px)", height: "clamp(26px,4vw,34px)", transform: "translateY(2px)",
+                width: "clamp(26px,4vw,34px)", height: "clamp(26px,4vw,34px)", transform: "translateY(1px)",
               }}>
               {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)" }} />
                 : hasError  ? <AlertTriangle style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,180,0,0.7)" }} />
