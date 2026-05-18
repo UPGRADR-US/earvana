@@ -36,9 +36,9 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
 
   return (
     <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
-      style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: bottomPad }}>
+      style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", paddingBottom: bottomPad }}>
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ width: "clamp(24px, 3.2vw, 40px)", height: "clamp(180px, 32vh, 260px)" }}
+        style={{ width: "clamp(24px, 3.2cqw, 40px)", height: "clamp(180px, 32vh, 260px)" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
@@ -47,7 +47,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
           draggable={false} />
       </div>
       <div className="flex flex-col items-center justify-center gap-[3px]"
-        style={{ fontSize: "clamp(7px, 1.3vw, 11px)", fontWeight: 300, color: "rgba(255,255,255,0.6)", height: "clamp(180px, 32vh, 260px)" }}>
+        style={{ fontSize: "clamp(7px, 1.3cqw, 11px)", fontWeight: 300, color: "rgba(255,255,255,0.6)", height: "clamp(180px, 32vh, 260px)" }}>
         {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
       </div>
     </div>
@@ -88,7 +88,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
               color: step === i ? "#00ff55" : "rgba(200,220,255,0.45)",
               textShadow: step === i ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
               fontWeight: step === i ? 600 : 300,
-              fontSize: label === "♋" ? "clamp(11px,1.8vw,16px)" : "clamp(8px,1.3vw,12px)",
+              fontSize: label === "♋" ? "clamp(11px,1.8cqw,16px)" : "clamp(8px,1.3cqw,12px)",
             }}
             data-testid={`duration-step-${i}`}>{label}</button>
         ))}
@@ -99,7 +99,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         <img src={img("SliderSlot_Base.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="absolute top-0 h-full pointer-events-none"
-          style={{ left: `calc(${knobPct}% - clamp(8px,1.5vw,12px))`, width: "clamp(16px,3vw,24px)" }}>
+          style={{ left: `calc(${knobPct}% - clamp(8px,1.5cqw,12px))`, width: "clamp(16px,3cqw,24px)" }}>
           <img src={img("SliderKnob.png")} alt="" className="h-full w-auto" draggable={false} />
         </div>
       </div>
@@ -357,15 +357,15 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
             data-testid={`track-btn-${track.id}`}>
             <div className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
               style={{
-                width: "clamp(26px,4vw,34px)", height: "clamp(26px,4vw,34px)", transform: "translateY(1px)",
+                width: "clamp(26px,4cqw,34px)", height: "clamp(26px,4cqw,34px)", transform: "translateY(1px)",
               }}>
-              {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)" }} />
-                : hasError  ? <AlertTriangle style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "rgba(255,180,0,0.7)" }} />
-                : isPlaying ? <Pause style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "#00ff55" }} />
-                : <Play style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
+              {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)" }} />
+                : hasError  ? <AlertTriangle style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,180,0,0.7)" }} />
+                : isPlaying ? <Pause style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "#00ff55" }} />
+                : <Play style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
             <span className="leading-none" style={{
-              fontSize: "clamp(15px,4.0vw,20px)", fontWeight: isPlaying ? 500 : 300,
+              fontSize: "clamp(15px,4.0cqw,20px)", fontWeight: isPlaying ? 500 : 300,
               color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
               textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
               letterSpacing: "0.03em",
@@ -445,11 +445,11 @@ function Home() {
         <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
-          style={{ padding: "0 clamp(10px,2.5vw,22px)", gap: "clamp(8px,2vw,18px)" }}>
+          style={{ padding: "0 clamp(10px,2.5cqw,22px)", gap: "clamp(8px,2cqw,18px)" }}>
           {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(44px,11vw,72px)" }} data-testid="btn-play-pause">
+            style={{ width: "clamp(44px,11cqw,72px)" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
@@ -460,14 +460,14 @@ function Home() {
           {/* Loop button */}
           <button onClick={() => setLoopActive(a => !a)}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(32px,7vw,50px)" }} data-testid="btn-loop">
+            style={{ width: "clamp(32px,7cqw,50px)" }} data-testid="btn-loop">
             <img src={loopActive ? img("LoopIcon(OnCLK).png") : img("LoopIcon.png")}
               alt="Loop" className="w-full h-auto" draggable={false} />
           </button>
           {/* Settings sprocket */}
           <button onClick={() => setSprocketActive(a => !a)}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(40px,9vw,62px)" }} data-testid="btn-settings">
+            style={{ width: "clamp(40px,9cqw,62px)" }} data-testid="btn-settings">
             <img src={sprocketActive ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
               alt="Settings" className="w-full h-auto" draggable={false} />
           </button>
@@ -488,7 +488,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          {/* Max-width shell: constrains to 430px on desktop, full-width on mobile.
+              container-type lets child cqw units resolve against this column width. */}
+          <div style={{ maxWidth: "430px", width: "100%", margin: "0 auto", height: "100dvh", containerType: "inline-size" }}>
+            <Router />
+          </div>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
