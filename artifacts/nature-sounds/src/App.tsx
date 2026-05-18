@@ -343,7 +343,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
         return (
           <button key={track.id}
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
-            className="w-full flex items-center gap-3 px-4 py-[10px] text-left"
+            className="w-full flex items-center gap-3 px-4 py-[18px] text-left"
             style={{
               background: "transparent",
               transformOrigin: "top center",
@@ -361,7 +361,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
                 : <Play style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
             <span style={{
-              fontSize: "clamp(19px,5.2vw,25px)", fontWeight: isPlaying ? 500 : 300,
+              fontSize: "clamp(15px,4.0vw,20px)", fontWeight: isPlaying ? 500 : 300,
               color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
               textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
               letterSpacing: "0.03em",
