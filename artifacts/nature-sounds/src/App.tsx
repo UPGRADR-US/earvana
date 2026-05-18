@@ -355,10 +355,10 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
               style={{
                 width: "clamp(26px,4vw,34px)", height: "clamp(26px,4vw,34px)", transform: "translateY(1px)",
               }}>
-              {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)" }} />
-                : hasError  ? <AlertTriangle style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,180,0,0.7)" }} />
-                : isPlaying ? <Pause style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "#00ff55" }} />
-                : <Play style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
+              {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)" }} />
+                : hasError  ? <AlertTriangle style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "rgba(255,180,0,0.7)" }} />
+                : isPlaying ? <Pause style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "#00ff55" }} />
+                : <Play style={{ width: "clamp(18px,3.5vw,22px)", height: "clamp(18px,3.5vw,22px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
             <span className="leading-none" style={{
               fontSize: "clamp(15px,4.0vw,20px)", fontWeight: isPlaying ? 500 : 300,
