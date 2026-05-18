@@ -387,7 +387,7 @@ function Home() {
 
   const isPlaying = Object.values(engine.tracks).some((t) => t.isPlaying);
 
-  const handleSelect = (id: string) => setSelectedId((prev) => (prev === id ? null : id));
+  const handleSelect = (id: string) => setSelectedId(id);
   // When a new tile snaps to centre, immediately show its track list.
   const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(CATEGORIES[idx].id); };
 
