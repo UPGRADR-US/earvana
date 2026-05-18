@@ -37,8 +37,8 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
   return (
     <div className="absolute right-0 bottom-0 flex items-end gap-[5px]"
       style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: bottomPad }}>
-      <div className="flex flex-col items-center justify-center gap-[3px] text-white/35"
-        style={{ fontSize: "clamp(5px, 0.9vw, 9px)", fontWeight: 300, height: "clamp(180px, 32vh, 260px)" }}>
+      <div className="flex flex-col items-center justify-center gap-[3px]"
+        style={{ fontSize: "clamp(9px, 1.6vw, 14px)", fontWeight: 700, color: "rgba(255,255,255,0.75)", height: "clamp(180px, 32vh, 260px)" }}>
         {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
       </div>
       <div ref={meterRef} className="relative cursor-pointer touch-none"

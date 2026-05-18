@@ -277,12 +277,11 @@ export function useAudioEngine(): AudioEngineState {
 
   const setMasterVolume = useCallback((volume: number) => {
     setMasterVolumeState(volume);
-    if (masterGainRef.current && contextRef.current) {
-        if (contextRef.current.state === 'running') {
-            masterGainRef.current.gain.setTargetAtTime(volume, contextRef.current.currentTime, 0.1);
-        } else {
-            masterGainRef.current.gain.value = volume;
-        }
+    if (masterGainRef.current) {
+      // Cancel any automation and immediately apply the new volume level
+      const t = contextRef.current?.currentTime ?? 0;
+      masterGainRef.current.gain.cancelScheduledValues(t);
+      masterGainRef.current.gain.value = volume;
     }
   }, []);
 
