@@ -23,10 +23,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Oceans",
     thumbnail: "sounds/TR_tn_oceans.png",
     tracks: [
-      { id: "ocean_night_calm",   name: "Night Calm",   file: "sounds/ocean_night_calm.mp3",   icon: "Waves" },
-      { id: "ocean_night_active", name: "Night Active", file: "sounds/ocean_night_active.mp3", icon: "Waves" },
-      { id: "ocean_day_calm",     name: "Day Calm",     file: "sounds/ocean_day_calm.mp3",     icon: "Waves" },
-      { id: "ocean_day_active",   name: "Day Active",   file: "sounds/ocean_day_active.mp3",   icon: "Waves" },
+      { id: "ocean_night_calm",   name: "Night-Calm",   file: "sounds/ocean_night_calm.mp3",   icon: "Waves" },
+      { id: "ocean_night_active", name: "Night-Active", file: "sounds/ocean_night_active.mp3", icon: "Waves" },
+      { id: "ocean_day_calm",     name: "Day-Calm",     file: "sounds/ocean_day_calm.mp3",     icon: "Waves" },
+      { id: "ocean_day_active",   name: "Day-Active",   file: "sounds/ocean_day_active.mp3",   icon: "Waves" },
     ],
   },
   {
@@ -34,9 +34,9 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Marine",
     thumbnail: "sounds/TR_tn_marine.png",
     tracks: [
-      { id: "marine_under_waves",  name: "Under Waves",  file: "sounds/marine_under_waves.mp3",  icon: "Droplets" },
-      { id: "marine_quiet_seabed", name: "Quiet Seabed", file: "sounds/marine_quiet_seabed.mp3", icon: "Droplets" },
-      { id: "marine_whale_song",   name: "Whale Song",   file: "sounds/marine_whale_song.mp3",   icon: "Waves" },
+      { id: "marine_under_waves",  name: "Under-Waves",  file: "sounds/marine_under_waves.mp3",  icon: "Droplets" },
+      { id: "marine_quiet_seabed", name: "Quiet-Seabed", file: "sounds/marine_quiet_seabed.mp3", icon: "Droplets" },
+      { id: "marine_whale_song",   name: "Whale-Song",   file: "sounds/marine_whale_song.mp3",   icon: "Waves" },
     ],
   },
   {
@@ -46,8 +46,8 @@ export const CATEGORIES: SoundCategory[] = [
     tracks: [
       { id: "stream_fountain",    name: "Fountain",    file: "sounds/stream_fountain.mp3",    icon: "Droplets" },
       { id: "stream_brook",       name: "Brook",       file: "sounds/stream_brook.mp3",       icon: "Droplets" },
-      { id: "stream_small_river", name: "Small River", file: "sounds/stream_small_river.mp3", icon: "Droplets" },
-      { id: "stream_big_river",   name: "Big River",   file: "sounds/stream_big_river.mp3",   icon: "Droplets" },
+      { id: "stream_small_river", name: "Small-River", file: "sounds/stream_small_river.mp3", icon: "Droplets" },
+      { id: "stream_big_river",   name: "Big-River",   file: "sounds/stream_big_river.mp3",   icon: "Droplets" },
     ],
   },
   {
@@ -120,14 +120,14 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Noise",
     thumbnail: "sounds/TR_tn_noise.png",
     tracks: [
-      { id: "noise_white_static",  name: "White Static",  file: "sounds/noise_white_static.mp3",  icon: "Radio" },
-      { id: "noise_pink_static",   name: "Pink Static",   file: "sounds/noise_pink_static.mp3",   icon: "Radio" },
-      { id: "noise_green_static",  name: "Green Static",  file: "sounds/noise_green_static.mp3",  icon: "Radio" },
-      { id: "noise_brown_static",  name: "Brown Static",  file: "sounds/noise_brown_static.mp3",  icon: "Radio" },
-      { id: "noise_white_rolling", name: "White Rolling", file: "sounds/noise_white_rolling.mp3", icon: "Radio" },
-      { id: "noise_pink_rolling",  name: "Pink Rolling",  file: "sounds/noise_pink_rolling.mp3",  icon: "Radio" },
-      { id: "noise_green_rolling", name: "Green Rolling", file: "sounds/noise_green_rolling.mp3", icon: "Radio" },
-      { id: "noise_brown_rolling", name: "Brown Rolling", file: "sounds/noise_brown_rolling.mp3", icon: "Radio" },
+      { id: "noise_white_static",  name: "White-Static",  file: "sounds/noise_white_static.mp3",  icon: "Radio" },
+      { id: "noise_pink_static",   name: "Pink-Static",   file: "sounds/noise_pink_static.mp3",   icon: "Radio" },
+      { id: "noise_green_static",  name: "Green-Static",  file: "sounds/noise_green_static.mp3",  icon: "Radio" },
+      { id: "noise_brown_static",  name: "Brown-Static",  file: "sounds/noise_brown_static.mp3",  icon: "Radio" },
+      { id: "noise_white_rolling", name: "White-Rolling", file: "sounds/noise_white_rolling.mp3", icon: "Radio" },
+      { id: "noise_pink_rolling",  name: "Pink-Rolling",  file: "sounds/noise_pink_rolling.mp3",  icon: "Radio" },
+      { id: "noise_green_rolling", name: "Green-Rolling", file: "sounds/noise_green_rolling.mp3", icon: "Radio" },
+      { id: "noise_brown_rolling", name: "Brown-Rolling", file: "sounds/noise_brown_rolling.mp3", icon: "Radio" },
     ],
   },
 ];
