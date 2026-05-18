@@ -208,6 +208,16 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
+    // Stop every other playing track first — only one track at a time.
+    Object.entries(enginesRef.current).forEach(([id, eng]) => {
+      if (id !== trackId && eng.isPlaying) eng.pause();
+    });
+    setTracksState(s => {
+      const ns = { ...s };
+      Object.keys(ns).forEach(id => { if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false }; });
+      return ns;
+    });
+
     if (!enginesRef.current[trackId]) {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
       enginesRef.current[trackId].setVolume(tracksState[trackId].volume);
