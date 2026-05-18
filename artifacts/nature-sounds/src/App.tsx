@@ -37,10 +37,6 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
   return (
     <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
       style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: bottomPad }}>
-      <div className="flex flex-col items-center justify-center gap-[3px]"
-        style={{ fontSize: "clamp(9px, 1.6vw, 14px)", fontWeight: 700, color: "rgba(255,255,255,0.75)", height: "clamp(180px, 32vh, 260px)" }}>
-        {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
-      </div>
       <div ref={meterRef} className="relative cursor-pointer touch-none"
         style={{ width: "clamp(24px, 3.2vw, 40px)", height: "clamp(180px, 32vh, 260px)" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
@@ -49,6 +45,10 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
         <img src={img("VolSldr_LEDS.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill", clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
           draggable={false} />
+      </div>
+      <div className="flex flex-col items-center justify-center gap-[3px]"
+        style={{ fontSize: "clamp(7px, 1.3vw, 11px)", fontWeight: 300, color: "rgba(255,255,255,0.6)", height: "clamp(180px, 32vh, 260px)" }}>
+        {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
       </div>
     </div>
   );
