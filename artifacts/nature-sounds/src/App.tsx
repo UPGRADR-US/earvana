@@ -81,7 +81,15 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
   const loopStep = DURATION_STEPS.length - 1;
   const KNOB_W  = "clamp(16px,3.5cqw,22px)";
-  const KNOB_HW = "clamp(8px,1.75cqw,11px)"; /* half knob width for centering */
+  const KNOB_HW = "clamp(8px,1.75cqw,11px)"; /* half knob width */
+
+  /*
+   * Returns the CSS value for the CENTRE of the knob at a given percentage.
+   * This is the same calculation used for the knob's left+half-width,
+   * so labels positioned here will always sit directly above the knob.
+   */
+  const labelCenter = (pct: number) =>
+    `calc(clamp(0px, calc(${pct.toFixed(4)}% - ${KNOB_HW}), calc(100% - ${KNOB_W})) + ${KNOB_HW})`;
 
   return (
     /*
@@ -101,14 +109,16 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
        */}
       {DURATION_STEPS.map((label, i) => {
         const active  = step === i;
-        const leftPct = (i / (DURATION_STEPS.length - 1)) * 100;
+        const pct     = (i / (DURATION_STEPS.length - 1)) * 100;
+        const center  = labelCenter(pct); /* exact same x as knob centre */
         if (i === loopStep) {
           return (
             <button key={i} onClick={() => onChange(i)}
               className="absolute transition-all duration-150 pointer-events-auto"
               style={{
-                top: 0, left: `${leftPct}%`, transform: "translateX(-50%)",
+                top: 0, left: center, transform: "translateX(-50%)",
                 width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45,
+                padding: 0,
               }}
               data-testid={`duration-step-${i}`}>
               <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
@@ -119,7 +129,8 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           <button key={i} onClick={() => onChange(i)}
             className="absolute leading-none transition-all duration-150 pointer-events-auto"
             style={{
-              top: 0, left: `${leftPct}%`, transform: "translateX(-50%)",
+              top: 0, left: center, transform: "translateX(-50%)",
+              padding: 0,
               color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
               textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
               fontWeight: active ? 600 : 300,
@@ -400,14 +411,14 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
               animationDelay: `${i * 0.07}s`,
             }}
             data-testid={`track-btn-${track.id}`}>
-            <div className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
+            <div className="flex-shrink-0 flex items-center justify-start transition-all duration-200"
               style={{
                 width: "clamp(26px,4cqw,34px)", height: "clamp(26px,4cqw,34px)", transform: "translateY(1px)",
               }}>
               {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)" }} />
                 : hasError  ? <AlertTriangle style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,180,0,0.7)" }} />
                 : isPlaying ? <Pause style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "#00ff55" }} />
-                : <Play style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
+                : <Play style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,255,255,0.5)" }} />}
             </div>
             <span className="leading-none" style={{
               fontSize: "clamp(15px,4.0cqw,20px)", fontWeight: isPlaying ? 500 : 300,
