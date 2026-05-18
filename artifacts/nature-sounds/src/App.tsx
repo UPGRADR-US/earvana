@@ -125,10 +125,15 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         );
       })}
 
-      {/* Slot — mercury fill: image is full-width but clipped on the right so
-          its right edge lands exactly under the knob centre and follows travel.
-          Swaps to OnCLK variant while pointer is held down. */}
+      {/* Slot base — full-width static track, swaps to OnCLK while pointer is held */}
       <img src={img(slotActive ? "SliderSlot_Base(OnCLK).png" : "SliderSlot_Base.png")} alt=""
+        className="absolute w-full pointer-events-none"
+        style={{ top: "55%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
+        draggable={false} />
+
+      {/* Slot meter — mercury fill: full-width image clipped on the right so its
+          right edge sits exactly under the knob centre and follows travel */}
+      <img src={img("SliderSlot_Meter.png")} alt=""
         className="absolute w-full pointer-events-none"
         style={{
           top: "55%",
