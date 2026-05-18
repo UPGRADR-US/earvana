@@ -362,10 +362,6 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
     <div className="w-full overflow-y-auto"
       style={{
         maxHeight: "clamp(90px, 20vh, 180px)",
-        background: "rgba(0, 18, 45, 0.78)",
-        backdropFilter: "blur(10px)",
-        borderTop: "1px solid rgba(0,180,255,0.12)",
-        borderBottom: "1px solid rgba(0,180,255,0.08)",
       }}>
       {category.tracks.map((track: SoundTrack) => {
         const state     = engine.tracks[track.id];
@@ -377,17 +373,11 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
           <button key={track.id}
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
             className="w-full flex items-center gap-3 px-4 py-[10px] transition-colors duration-200 text-left"
-            style={{
-              background: isPlaying ? "rgba(0,255,80,0.07)" : "transparent",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-            }}
+            style={{ background: "transparent" }}
             data-testid={`track-btn-${track.id}`}>
-            <div className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-200"
+            <div className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
               style={{
                 width: "clamp(26px,4vw,34px)", height: "clamp(26px,4vw,34px)",
-                background: isPlaying ? "rgba(0,255,80,0.18)" : "rgba(255,255,255,0.06)",
-                border: `1px solid ${isPlaying ? "rgba(0,255,80,0.4)" : "rgba(255,255,255,0.1)"}`,
-                boxShadow: isPlaying ? "0 0 10px rgba(0,255,80,0.3)" : "none",
               }}>
               {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)" }} />
                 : hasError  ? <AlertTriangle style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,180,0,0.7)" }} />
