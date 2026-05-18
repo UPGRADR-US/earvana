@@ -80,7 +80,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   const knobPct = (step / (DURATION_STEPS.length - 1)) * 100;
 
   return (
-    <div className="flex flex-col gap-[5px] w-full" data-testid="duration-slider">
+    <div className="flex flex-col gap-[4px] w-full" data-testid="duration-slider">
       <div className="flex items-end justify-between w-full px-[1px]">
         {DURATION_STEPS.map((label, i) => (
           <button key={i} onClick={() => onChange(i)} className="leading-none transition-all duration-150"
@@ -94,7 +94,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         ))}
       </div>
       <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-        style={{ height: "clamp(18px,3vh,28px)" }}
+        style={{ height: "clamp(18px,2.8vh,26px)" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}>
         <img src={img("SliderSlot_Base.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
@@ -103,6 +103,10 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           <img src={img("SliderKnob.png")} alt="" className="h-full w-auto" draggable={false} />
         </div>
       </div>
+      {/* Burned-in "duration (hours)" label */}
+      <img src={img("durationtext.png")} alt="duration (hours)" className="w-full h-auto block"
+        style={{ maxHeight: "clamp(10px,1.8vh,18px)", objectFit: "contain", objectPosition: "center" }}
+        draggable={false} />
     </div>
   );
 }
@@ -382,8 +386,9 @@ function Home() {
   const engine = useAudioEngine();
   const [durationStep, setDurationStep] = useState<number>(10);
   const [centerIdx,   setCenterIdx]   = useState<number>(2);
-  // Auto-open the track list for whichever category is centred — no tap required.
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
+  const [loopActive,  setLoopActive]  = useState<boolean>(false);
+  const [sprocketActive, setSprocketActive] = useState<boolean>(false);
 
   const isPlaying    = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
@@ -409,7 +414,7 @@ function Home() {
       <VolumeMeter
         volume={engine.masterVolume}
         onChange={engine.setMasterVolume}
-        bottomPad="clamp(86px,18vh,152px)"
+        bottomPad="clamp(66px,12vh,92px)"
       />
 
       {/* Carousel area — overflow:visible keeps 3D depth rendering intact.
@@ -436,23 +441,35 @@ function Home() {
       </div>
 
       {/* Bottom control bar */}
-      <div className="relative z-10 flex-shrink-0" style={{ height: "clamp(80px,17vh,140px)" }}>
+      <div className="relative z-10 flex-shrink-0" style={{ height: "clamp(62px,11vh,88px)" }}>
         <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
-          style={{ padding: "0 clamp(12px,3vw,28px)", gap: "clamp(10px,2.5vw,24px)" }}>
+          style={{ padding: "0 clamp(10px,2.5vw,22px)", gap: "clamp(8px,2vw,18px)" }}>
+          {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(48px,12vw,80px)" }} data-testid="btn-play-pause">
+            style={{ width: "clamp(44px,11vw,72px)" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
-          <div className="flex-1 flex flex-col justify-center">
+          {/* Duration slider — flex-1 takes remaining width */}
+          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0 }}>
             <DurationSlider step={durationStep} onChange={setDurationStep} />
           </div>
-          <button className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(36px,8vw,56px)" }} data-testid="btn-settings">
-            <img src={img("Settings_Sprocket.png")} alt="Settings" className="w-full h-auto" draggable={false} />
+          {/* Loop button */}
+          <button onClick={() => setLoopActive(a => !a)}
+            className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
+            style={{ width: "clamp(32px,7vw,50px)" }} data-testid="btn-loop">
+            <img src={loopActive ? img("LoopIcon(OnCLK).png") : img("LoopIcon.png")}
+              alt="Loop" className="w-full h-auto" draggable={false} />
+          </button>
+          {/* Settings sprocket */}
+          <button onClick={() => setSprocketActive(a => !a)}
+            className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
+            style={{ width: "clamp(40px,9vw,62px)" }} data-testid="btn-settings">
+            <img src={sprocketActive ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
+              alt="Settings" className="w-full h-auto" draggable={false} />
           </button>
         </div>
       </div>
