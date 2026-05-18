@@ -61,6 +61,7 @@ const DURATION_STEPS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "♋"
 function DurationSlider({ step, onChange }: { step: number; onChange: (s: number) => void }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const [slotActive, setSlotActive] = useState(false); /* true while finger/pointer is down */
 
   const N        = DURATION_STEPS.length; /* 11 */
   const loopStep = N - 1;
@@ -81,11 +82,12 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
   const onPD = useCallback((e: React.PointerEvent) => {
     dragging.current = true;
+    setSlotActive(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     computeStep(e.clientX);
   }, [computeStep]);
   const onPM = useCallback((e: React.PointerEvent) => { if (dragging.current) computeStep(e.clientX); }, [computeStep]);
-  const onPU = useCallback(() => { dragging.current = false; }, []);
+  const onPU = useCallback(() => { dragging.current = false; setSlotActive(false); }, []);
 
   return (
     <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
@@ -123,13 +125,14 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         );
       })}
 
-      {/* Slot */}
-      <img src={img("SliderSlot_Base.png")} alt=""
+      {/* Slot — swaps to OnCLK variant while pointer is held down */}
+      <img src={img(slotActive ? "SliderSlot_Base(OnCLK).png" : "SliderSlot_Base.png")} alt=""
         className="absolute w-full pointer-events-none"
         style={{ top: "55%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
         draggable={false} />
 
-      {/* Knob — centred at step/(N-1)*100%, same formula as labels, perfect alignment */}
+      {/* Knob — centred at step/(N-1)*100%, same formula as labels, perfect alignment.
+          Drop shadow added in code since the PNG is exported without one. */}
       <div className="absolute pointer-events-none"
         style={{
           top: "55%",
@@ -137,6 +140,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           transform: "translateX(-50%) translateY(-50%)",
           width: "clamp(16px,3.5cqw,22px)",
           height: "clamp(20px,3.6vh,26px)",
+          filter: "drop-shadow(2px 3px 5px rgba(0,0,0,0.70))",
         }}>
         <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
       </div>
