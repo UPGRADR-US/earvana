@@ -90,7 +90,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
      * No gaps, no separate flex rows — everything absolutely positioned inside.
      */
     <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-      style={{ height: "clamp(48px,8.5vh,64px)", touchAction: "none" }}
+      style={{ height: "clamp(42px,7vh,50px)", touchAction: "none" }}
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
 
@@ -103,7 +103,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
             return (
               <button key={i} onClick={() => onChange(i)}
                 className="flex-shrink-0 transition-all duration-150 pointer-events-auto"
-                style={{ width: "clamp(12px,2.8cqw,18px)", opacity: active ? 1 : 0.45 }}
+                style={{ width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45 }}
                 data-testid={`duration-step-${i}`}>
                 <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
               </button>
@@ -116,23 +116,23 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
                 color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
                 textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
                 fontWeight: active ? 600 : 300,
-                fontSize: "clamp(8px,1.3cqw,12px)",
+                fontSize: "clamp(11px,2.4cqw,16px)",
               }}
               data-testid={`duration-step-${i}`}>{label}</button>
           );
         })}
       </div>
 
-      {/* Slot — centred vertically */}
+      {/* Slot — shifted slightly above centre so numbers sit tight on top */}
       <img src={img("SliderSlot_Base.png")} alt=""
         className="absolute w-full pointer-events-none"
-        style={{ top: "50%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
+        style={{ top: "55%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
         draggable={false} />
 
-      {/* Knob — centred on slot; clamped so it never overhangs either edge */}
+      {/* Knob — same vertical anchor as slot */}
       <div className="absolute pointer-events-none"
         style={{
-          top: "50%", transform: "translateY(-50%)",
+          top: "55%", transform: "translateY(-50%)",
           left: `clamp(0px, calc(${knobPct}% - ${KNOB_HW}), calc(100% - ${KNOB_W}))`,
           width: KNOB_W,
           height: "clamp(20px,3.6vh,26px)",
@@ -140,10 +140,10 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
       </div>
 
-      {/* Duration text — pinned to bottom */}
+      {/* Duration text — pinned to bottom edge */}
       <img src={img("durationtext.png")} alt="duration (hours)"
         className="absolute bottom-0 left-0 right-0 w-full pointer-events-none"
-        style={{ height: "clamp(9px,1.6vh,14px)", objectFit: "contain", objectPosition: "center" }}
+        style={{ height: "clamp(9px,1.5vh,13px)", objectFit: "contain", objectPosition: "center" }}
         draggable={false} />
     </div>
   );
@@ -484,16 +484,16 @@ function Home() {
         <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
-          style={{ padding: "0 clamp(10px,2.5cqw,22px)", gap: "clamp(8px,2cqw,18px)" }}>
+          style={{ padding: "0 clamp(16px,4cqw,28px)", gap: "clamp(6px,1.5cqw,14px)" }}>
           {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(44px,11cqw,72px)", marginLeft: "clamp(6px,2cqw,14px)" }} data-testid="btn-play-pause">
+            style={{ width: "clamp(44px,11cqw,72px)" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
-          {/* Duration slider — flex-1 takes remaining width */}
-          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0 }}>
+          {/* Duration slider — margins further narrow the slot */}
+          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, margin: "0 clamp(4px,1cqw,8px)" }}>
             <DurationSlider step={durationStep} onChange={setDurationStep} />
           </div>
           {/* Settings sprocket */}
