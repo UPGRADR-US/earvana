@@ -16,9 +16,11 @@ export type AudioEngineState = {
   masterVolume: number;
   play: (trackId: string) => Promise<void>;
   pause: (trackId: string) => void;
+  resume: () => Promise<void>;
   setVolume: (trackId: string, volume: number) => void;
   setMasterVolume: (volume: number) => void;
   stopAll: () => void;
+  lastPlayedId: string | null;
 };
 
 // Represents a track's audio state
@@ -175,8 +177,10 @@ class TrackEngine {
 
   setVolume(vol: number) {
     this.volume = vol;
+    // Only touch the gain node while actively playing — otherwise play() will
+    // apply the correct value (and fade-in ramp) when it starts.
+    if (!this.isPlaying) return;
     const t = this.context.currentTime;
-    // Cancel any in-progress fade-in ramp and jump to the new value
     this.trackGain.gain.cancelScheduledValues(t);
     if (this.context.state === 'running') {
       this.trackGain.gain.setTargetAtTime(vol, t, 0.1);
@@ -198,6 +202,7 @@ export function useAudioEngine(): AudioEngineState {
   const contextRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const enginesRef = useRef<Record<string, TrackEngine>>({});
+  const lastPlayedIdRef = useRef<string | null>(null);
 
   const initContext = useCallback(() => {
     if (!contextRef.current) {
@@ -237,6 +242,7 @@ export function useAudioEngine(): AudioEngineState {
 
     const engine = enginesRef.current[trackId];
 
+    lastPlayedIdRef.current = trackId;
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
     try {
       await engine.load();
@@ -247,6 +253,11 @@ export function useAudioEngine(): AudioEngineState {
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
     }
   }, [initContext, tracksState]);
+
+  // Resume the last-played track with a fresh fade-in
+  const resume = useCallback(async () => {
+    if (lastPlayedIdRef.current) await play(lastPlayedIdRef.current);
+  }, [play]);
 
   const pause = useCallback((trackId: string) => {
     const engine = enginesRef.current[trackId];
@@ -289,8 +300,10 @@ export function useAudioEngine(): AudioEngineState {
   return {
     tracks: tracksState,
     masterVolume,
+    lastPlayedId: lastPlayedIdRef.current,
     play,
     pause,
+    resume,
     setVolume,
     setMasterVolume,
     stopAll

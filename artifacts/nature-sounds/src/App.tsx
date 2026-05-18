@@ -385,7 +385,8 @@ function Home() {
   // Auto-open the track list for whichever category is centred — no tap required.
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
 
-  const isPlaying = Object.values(engine.tracks).some((t) => t.isPlaying);
+  const isPlaying    = Object.values(engine.tracks).some((t) => t.isPlaying);
+  const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
 
   const handleSelect = (id: string) => setSelectedId(id);
   // When a new tile snaps to centre, immediately show its track list.
@@ -440,7 +441,7 @@ function Home() {
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
           style={{ padding: "0 clamp(12px,3vw,28px)", gap: "clamp(10px,2.5vw,24px)" }}>
-          <button onClick={() => { if (isPlaying) engine.stopAll(); }}
+          <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
             style={{ width: "clamp(48px,12vw,80px)" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
