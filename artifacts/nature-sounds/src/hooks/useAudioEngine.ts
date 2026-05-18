@@ -4,6 +4,19 @@ import { TRACKS, SoundTrack } from "../sounds";
 const DEFAULT_CROSSFADE  = 15;  // seconds — used when a track has no crossfadeDuration
 const FADE_IN_DURATION   = 5;   // seconds — global fade-in on every play()
 
+// Pre-computed equal-power curves (128 samples).
+// Fade-in:  sin(t·π/2)  — starts slow, ends fast
+// Fade-out: cos(t·π/2)  — starts fast, ends slow
+// At every point sin²+cos²=1, so combined RMS energy stays constant throughout.
+const CURVE_N = 128;
+const EQUAL_POWER_IN  = new Float32Array(CURVE_N);
+const EQUAL_POWER_OUT = new Float32Array(CURVE_N);
+for (let i = 0; i < CURVE_N; i++) {
+  const t = i / (CURVE_N - 1);
+  EQUAL_POWER_IN[i]  = Math.sin(t * Math.PI / 2);
+  EQUAL_POWER_OUT[i] = Math.cos(t * Math.PI / 2);
+}
+
 export type TrackState = {
   isPlaying: boolean;
   isLoading: boolean;
@@ -89,10 +102,12 @@ class TrackEngine {
 
     const startTime = this.context.currentTime;
 
-    // 10-second fade-in: ramp trackGain from 0 → target volume
+    // Equal-power fade-in: ramp trackGain from 0 → target volume on a sin curve
     this.trackGain.gain.cancelScheduledValues(startTime);
     this.trackGain.gain.setValueAtTime(0, startTime);
-    this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + FADE_IN_DURATION);
+    // Scale the curve to the target volume then apply over FADE_IN_DURATION
+    const fadeInScaled = EQUAL_POWER_IN.map(v => v * this.volume);
+    this.trackGain.gain.setValueCurveAtTime(fadeInScaled, startTime, FADE_IN_DURATION);
 
     // Start playback at loopStart offset, play for regionDuration
     source.start(startTime, this.loopStart, this.regionDuration());
@@ -128,17 +143,17 @@ class TrackEngine {
     const inGain = this.context.createGain();
     const crossStart = Math.max(targetTime, this.context.currentTime);
     inGain.gain.setValueAtTime(0, crossStart);
-    inGain.gain.linearRampToValueAtTime(1, crossStart + xfade);
+    inGain.gain.setValueCurveAtTime(EQUAL_POWER_IN, crossStart, xfade);
     inSource.connect(inGain);
     inGain.connect(this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
 
-    // Fade out the outgoing source
+    // Fade out the outgoing source using equal-power cosine curve
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
     if (outGain) {
       outGain.gain.setValueAtTime(outGain.gain.value, crossStart);
-      outGain.gain.linearRampToValueAtTime(0, crossStart + xfade);
+      outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, crossStart, xfade);
     }
 
     // Store incoming in the new slot and advance the pointer
