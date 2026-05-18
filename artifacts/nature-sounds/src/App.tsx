@@ -314,34 +314,6 @@ function CylinderCarousel({
                 <img src={img(cat.thumbnail)} alt={cat.name}
                   className="w-full h-full object-cover" draggable={false} />
 
-                {/* Dark gradient covers the image's built-in blue text bar */}
-                <div style={{
-                  position:"absolute", bottom:0, left:0, right:0, height:"38%",
-                  background:"linear-gradient(transparent, rgba(0,0,0,0.82))",
-                  pointerEvents:"none",
-                }} />
-
-                {/* Category label — Kallisto font, no box, fades in 0.25s after green stroke */}
-                <div style={{
-                  position:"absolute", bottom:0, left:0, right:0,
-                  padding:"4px 4px 7px",
-                  textAlign:"center",
-                  fontFamily:"'Kallisto', 'Nunito', sans-serif",
-                  fontSize:"clamp(11px, 3cqw, 14px)",
-                  fontWeight:500,
-                  color:"#fff",
-                  letterSpacing:"0.07em",
-                  textTransform:"lowercase",
-                  textShadow:"0 1px 5px rgba(0,0,0,0.9)",
-                  opacity: isCentered ? 1 : 0,
-                  transition: isCentered
-                    ? "opacity 0.35s ease 0.25s"  // 0.25s delay after green stroke
-                    : "opacity 0.15s ease",
-                  pointerEvents:"none",
-                }}>
-                  {cat.name}
-                </div>
-
                 {hasPlaying && (
                   <div className="absolute top-[6px] right-[6px] rounded-full"
                     style={{ width:8, height:8, background:"#00ff55", boxShadow:"0 0 6px #00ff55" }} />
