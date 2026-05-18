@@ -430,14 +430,11 @@ function Home() {
           className="w-full h-auto block" draggable={false} />
       </div>
 
-      {/* Middle area — overflow:visible so the cylinder's depth axis can breathe */}
-      <div className="relative flex-1 z-10 flex flex-col" style={{ overflow: "visible" }}>
-
-        {/* Volume meter — anchored bottom-right */}
+      {/* Carousel area — overflow:visible keeps 3D depth rendering intact.
+          flex-shrink-0 so it never expands to steal track-list space. */}
+      <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
         <VolumeMeter volume={engine.masterVolume} onChange={engine.setMasterVolume} />
-
-        {/* Cylinder carousel — pulled up into the banner's wave bottom */}
-        <div className="flex-shrink-0 pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-32px" }}>
+        <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-32px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
@@ -446,14 +443,15 @@ function Home() {
             engine={engine}
           />
         </div>
+      </div>
 
-        {/* Track list — fills all remaining space down to 10px above the control bar */}
-        <div className="flex-1 min-h-0 overflow-hidden" style={{ paddingBottom: "10px" }}>
-          {selectedId && (() => {
-            const cat = CATEGORIES.find((c) => c.id === selectedId);
-            return cat ? <TrackList category={cat} engine={engine} /> : null;
-          })()}
-        </div>
+      {/* Track list area — separate flex-1 with overflow:hidden so it never
+          pushes the control bar. Scrolls internally however long the list is. */}
+      <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingBottom: "10px" }}>
+        {selectedId && (() => {
+          const cat = CATEGORIES.find((c) => c.id === selectedId);
+          return cat ? <TrackList category={cat} engine={engine} /> : null;
+        })()}
       </div>
 
       {/* Bottom control bar */}
