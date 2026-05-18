@@ -363,7 +363,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
       style={{
         maxHeight: "clamp(90px, 20vh, 180px)",
       }}>
-      {category.tracks.map((track: SoundTrack) => {
+      {category.tracks.map((track: SoundTrack, i: number) => {
         const state     = engine.tracks[track.id];
         const isPlaying = state?.isPlaying ?? false;
         const isLoading = state?.isLoading ?? false;
@@ -372,8 +372,13 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
         return (
           <button key={track.id}
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
-            className="w-full flex items-center gap-3 px-4 py-[10px] transition-colors duration-200 text-left"
-            style={{ background: "transparent" }}
+            className="w-full flex items-center gap-3 px-4 py-[10px] text-left"
+            style={{
+              background: "transparent",
+              transformOrigin: "top center",
+              animation: `blindDown 0.28s ease both`,
+              animationDelay: `${i * 0.07}s`,
+            }}
             data-testid={`track-btn-${track.id}`}>
             <div className="flex-shrink-0 flex items-center justify-center transition-all duration-200"
               style={{
@@ -385,7 +390,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
                 : <Play style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
             <span style={{
-              fontSize: "clamp(15px,3.8vw,19px)", fontWeight: isPlaying ? 500 : 300,
+              fontSize: "clamp(17px,4.5vw,22px)", fontWeight: isPlaying ? 500 : 300,
               color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
               textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
               letterSpacing: "0.03em",
