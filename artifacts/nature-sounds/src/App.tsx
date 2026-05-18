@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Play, Pause, Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
@@ -60,35 +60,17 @@ const DURATION_STEPS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "♋"
 
 function DurationSlider({ step, onChange }: { step: number; onChange: (s: number) => void }) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const knobRef  = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-
-  /*
-   * Measure the container and knob widths in real pixels via ResizeObserver.
-   * All position math is done in JS so there is zero CSS clamp/calc nesting —
-   * this avoids Safari's known issues with deeply nested CSS math functions.
-   */
-  const [cw, setCw]     = useState(0);  /* container width px */
-  const [knobW, setKnobW] = useState(18); /* knob width px      */
-
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      setCw(el.offsetWidth);
-      if (knobRef.current) setKnobW(knobRef.current.offsetWidth);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const N        = DURATION_STEPS.length; /* 11 */
   const loopStep = N - 1;
 
-  /* Centre-x in px for the knob when at step i. */
-  const centerPx = (i: number) => (cw > 0)
-    ? (i / (N - 1)) * (cw - knobW) + knobW / 2
-    : (i / (N - 1)) * 100; /* % fallback before first measure */
+  /*
+   * Both the knob and every label use `left: X%` + `transform: translateX(-50%)`.
+   * Because both reference the SAME containing block (trackRef), their centres are
+   * guaranteed to be at identical screen pixels — no JS measurement needed.
+   */
+  const pct = (i: number) => `${(i / (N - 1)) * 100}%`;
 
   const computeStep = useCallback((clientX: number) => {
     if (!trackRef.current) return;
@@ -105,19 +87,13 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   const onPM = useCallback((e: React.PointerEvent) => { if (dragging.current) computeStep(e.clientX); }, [computeStep]);
   const onPU = useCallback(() => { dragging.current = false; }, []);
 
-  /* Knob left edge = centre − half-width */
-  const knobLeft = cw > 0 ? centerPx(step) - knobW / 2 : undefined;
-
-  const leftStyle = (i: number): string =>
-    cw > 0 ? `${centerPx(i)}px` : `${(i / (N - 1)) * 100}%`;
-
   return (
     <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
       style={{ height: "clamp(42px,7vh,50px)", touchAction: "none" }}
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
 
-      {/* Labels — each centred at exactly the same pixel as the knob centre */}
+      {/* Labels — centred at i/(N-1)*100% of trackRef width */}
       {DURATION_STEPS.map((label, i) => {
         const active = step === i;
         if (i === loopStep) {
@@ -125,7 +101,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
             <button key={i} onClick={() => onChange(i)}
               className="absolute transition-all duration-150 pointer-events-auto"
               style={{
-                top: 0, left: leftStyle(i), transform: "translateX(-50%)",
+                top: 0, left: pct(i), transform: "translateX(-50%)",
                 width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45, padding: 0,
               }}
               data-testid={`duration-step-${i}`}>
@@ -137,7 +113,7 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           <button key={i} onClick={() => onChange(i)}
             className="absolute leading-none transition-all duration-150 pointer-events-auto"
             style={{
-              top: 0, left: leftStyle(i), transform: "translateX(-50%)", padding: 0,
+              top: 0, left: pct(i), transform: "translateX(-50%)", padding: 0,
               color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
               textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
               fontWeight: active ? 600 : 300,
@@ -153,11 +129,12 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
         style={{ top: "55%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
         draggable={false} />
 
-      {/* Knob — left set in px so it matches label centres exactly */}
-      <div ref={knobRef} className="absolute pointer-events-none"
+      {/* Knob — centred at step/(N-1)*100%, same formula as labels, perfect alignment */}
+      <div className="absolute pointer-events-none"
         style={{
-          top: "55%", transform: "translateY(-50%)",
-          left: knobLeft !== undefined ? `${knobLeft}px` : `calc(${(step/(N-1))*100}% - 9px)`,
+          top: "55%",
+          left: pct(step),
+          transform: "translateX(-50%) translateY(-50%)",
           width: "clamp(16px,3.5cqw,22px)",
           height: "clamp(20px,3.6vh,26px)",
         }}>
@@ -411,7 +388,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
             className="w-full flex items-center gap-3 py-[18px] text-left"
             style={{
-              paddingLeft: "clamp(8px,2cqw,12px)", paddingRight: "16px",
+              paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "16px",
               background: "transparent",
               transformOrigin: "top center",
               animation: `blindDown 0.28s ease both`,
