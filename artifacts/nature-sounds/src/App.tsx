@@ -107,7 +107,7 @@ function DurationSlider({
 
   return (
     <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-      style={{ height: "clamp(42px,7vh,50px)", touchAction: "none" }}
+      style={{ height: "clamp(54px,9vh,66px)", touchAction: "none" }}
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
 
@@ -157,7 +157,7 @@ function DurationSlider({
               className="absolute transition-all duration-150 pointer-events-auto"
               style={{
                 top: 0, left: pct(i), transform: "translateX(-50%)",
-                width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45, padding: 0,
+                width: "clamp(18px,4.5cqw,26px)", opacity: active ? 1 : 0.45, padding: 0,
               }}
               data-testid={`duration-step-${i}`}>
               <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
@@ -172,7 +172,7 @@ function DurationSlider({
               color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
               textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
               fontWeight: active ? 600 : 300,
-              fontSize: "clamp(11px,2.4cqw,16px)",
+              fontSize: "clamp(15px,3.4cqw,21px)",
             }}
             data-testid={`duration-step-${i}`}>{label}</button>
         );
