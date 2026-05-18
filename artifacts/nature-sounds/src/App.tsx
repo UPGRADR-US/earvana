@@ -385,8 +385,9 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
         return (
           <button key={track.id}
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
-            className="w-full flex items-center gap-3 px-4 py-[18px] text-left"
+            className="w-full flex items-center gap-3 py-[18px] text-left"
             style={{
+              paddingLeft: "clamp(24px,6cqw,36px)", paddingRight: "16px",
               background: "transparent",
               transformOrigin: "top center",
               animation: `blindDown 0.28s ease both`,
@@ -458,7 +459,7 @@ function Home() {
       {/* Carousel area — overflow:visible keeps 3D depth rendering intact.
           flex-shrink-0 so it never expands to steal track-list space. */}
       <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-        <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-32px" }}>
+        <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "6px" }}>
           <CylinderCarousel
             centerIdx={centerIdx}
             selectedId={selectedId}
