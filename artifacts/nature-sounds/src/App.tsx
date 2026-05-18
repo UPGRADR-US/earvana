@@ -109,19 +109,25 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           );
         })}
       </div>
-      {/* Slot — short; knob overflows it vertically for skeuomorphic handle look */}
+      {/* Slot + knob — outer div is the TOUCH TARGET (tall enough for fingers) */}
+      {/* Slot image and knob are centred inside it so they stay visually slim */}
       <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-        style={{ height: "clamp(10px,1.4vh,14px)", overflow: "visible" }}
+        style={{ height: "clamp(44px,7vh,56px)", touchAction: "none" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}>
-        <img src={img("SliderSlot_Base.png")} alt="" className="absolute inset-0 w-full h-full"
-          style={{ objectFit: "fill" }} draggable={false} />
+        {/* Slot image — visually short, centred inside the tall hit zone */}
+        <img src={img("SliderSlot_Base.png")} alt=""
+          className="absolute w-full pointer-events-none"
+          style={{
+            top: "50%", transform: "translateY(-50%)",
+            height: "clamp(10px,1.4vh,14px)", objectFit: "fill",
+          }} draggable={false} />
         {/* Knob — centred on slot, taller than slot */}
         <div className="absolute pointer-events-none"
           style={{
             top: "50%", transform: "translateY(-50%)",
             left: `calc(${knobPct}% - clamp(9px,2cqw,13px))`,
             width: "clamp(18px,4cqw,26px)",
-            height: "clamp(28px,5vh,40px)",
+            height: "clamp(32px,5.5vh,44px)",
           }}>
           <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
         </div>
@@ -420,7 +426,8 @@ function Home() {
   const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(CATEGORIES[idx].id); };
 
   return (
-    <div className="relative flex flex-col w-full overflow-hidden select-none" style={{ height: "100dvh" }}>
+    <div className="relative flex flex-col w-full overflow-hidden select-none"
+      style={{ height: "100dvh", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background */}
       <img src={img("TR-bgV2.png")} alt=""
