@@ -79,28 +79,51 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
 
   const knobPct = (step / (DURATION_STEPS.length - 1)) * 100;
 
+  const loopStep = DURATION_STEPS.length - 1;
+
   return (
-    <div className="flex flex-col gap-[4px] w-full" data-testid="duration-slider">
-      <div className="flex items-end justify-between w-full px-[1px]">
-        {DURATION_STEPS.map((label, i) => (
-          <button key={i} onClick={() => onChange(i)} className="leading-none transition-all duration-150"
-            style={{
-              color: step === i ? "#00ff55" : "rgba(200,220,255,0.45)",
-              textShadow: step === i ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
-              fontWeight: step === i ? 600 : 300,
-              fontSize: label === "♋" ? "clamp(11px,1.8cqw,16px)" : "clamp(8px,1.3cqw,12px)",
-            }}
-            data-testid={`duration-step-${i}`}>{label}</button>
-        ))}
+    <div className="flex flex-col gap-[10px] w-full" data-testid="duration-slider">
+      {/* Numbers 1–10 then loop icon — all in one row */}
+      <div className="flex items-center justify-between w-full px-[1px]">
+        {DURATION_STEPS.map((label, i) => {
+          const active = step === i;
+          if (i === loopStep) {
+            return (
+              <button key={i} onClick={() => onChange(i)}
+                className="flex-shrink-0 transition-all duration-150"
+                style={{ width: "clamp(14px,3.2cqw,20px)", opacity: active ? 1 : 0.45 }}
+                data-testid={`duration-step-${i}`}>
+                <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
+              </button>
+            );
+          }
+          return (
+            <button key={i} onClick={() => onChange(i)} className="leading-none transition-all duration-150"
+              style={{
+                color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
+                textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
+                fontWeight: active ? 600 : 300,
+                fontSize: "clamp(8px,1.3cqw,12px)",
+              }}
+              data-testid={`duration-step-${i}`}>{label}</button>
+          );
+        })}
       </div>
+      {/* Slot — short; knob overflows it vertically for skeuomorphic handle look */}
       <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-        style={{ height: "clamp(18px,2.8vh,26px)" }}
+        style={{ height: "clamp(10px,1.4vh,14px)", overflow: "visible" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}>
         <img src={img("SliderSlot_Base.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
-        <div className="absolute top-0 h-full pointer-events-none"
-          style={{ left: `calc(${knobPct}% - clamp(8px,1.5cqw,12px))`, width: "clamp(16px,3cqw,24px)" }}>
-          <img src={img("SliderKnob.png")} alt="" className="h-full w-auto" draggable={false} />
+        {/* Knob — centred on slot, taller than slot */}
+        <div className="absolute pointer-events-none"
+          style={{
+            top: "50%", transform: "translateY(-50%)",
+            left: `calc(${knobPct}% - clamp(9px,2cqw,13px))`,
+            width: "clamp(18px,4cqw,26px)",
+            height: "clamp(28px,5vh,40px)",
+          }}>
+          <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
         </div>
       </div>
       {/* Burned-in "duration (hours)" label */}
@@ -387,7 +410,6 @@ function Home() {
   const [durationStep, setDurationStep] = useState<number>(10);
   const [centerIdx,   setCenterIdx]   = useState<number>(2);
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
-  const [loopActive,  setLoopActive]  = useState<boolean>(false);
   const [sprocketActive, setSprocketActive] = useState<boolean>(false);
 
   const isPlaying    = Object.values(engine.tracks).some((t) => t.isPlaying);
@@ -457,17 +479,10 @@ function Home() {
           <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0 }}>
             <DurationSlider step={durationStep} onChange={setDurationStep} />
           </div>
-          {/* Loop button */}
-          <button onClick={() => setLoopActive(a => !a)}
-            className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(32px,7cqw,50px)" }} data-testid="btn-loop">
-            <img src={loopActive ? img("LoopIcon(OnCLK).png") : img("LoopIcon.png")}
-              alt="Loop" className="w-full h-auto" draggable={false} />
-          </button>
           {/* Settings sprocket */}
           <button onClick={() => setSprocketActive(a => !a)}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(40px,9cqw,62px)" }} data-testid="btn-settings">
+            style={{ width: "clamp(50px,12cqw,72px)" }} data-testid="btn-settings">
             <img src={sprocketActive ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
               alt="Settings" className="w-full h-auto" draggable={false} />
           </button>
