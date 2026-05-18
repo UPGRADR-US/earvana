@@ -359,10 +359,7 @@ function CylinderCarousel({
 
 function TrackList({ category, engine }: { category: SoundCategory; engine: ReturnType<typeof useAudioEngine> }) {
   return (
-    <div className="w-full overflow-y-auto"
-      style={{
-        maxHeight: "clamp(90px, 20vh, 180px)",
-      }}>
+    <div className="w-full h-full overflow-y-auto">
       {category.tracks.map((track: SoundTrack, i: number) => {
         const state     = engine.tracks[track.id];
         const isPlaying = state?.isPlaying ?? false;
@@ -450,18 +447,13 @@ function Home() {
           />
         </div>
 
-        {/* Track list — opens below carousel when a category is selected */}
-        {selectedId && (() => {
-          const cat = CATEGORIES.find((c) => c.id === selectedId);
-          return cat
-            ? <div className="flex-shrink-0">
-                <TrackList category={cat} engine={engine} />
-              </div>
-            : null;
-        })()}
-
-        {/* Remaining atmospheric space */}
-        <div className="flex-1" />
+        {/* Track list — fills all remaining space down to 10px above the control bar */}
+        <div className="flex-1 min-h-0 overflow-hidden" style={{ paddingBottom: "10px" }}>
+          {selectedId && (() => {
+            const cat = CATEGORIES.find((c) => c.id === selectedId);
+            return cat ? <TrackList category={cat} engine={engine} /> : null;
+          })()}
+        </div>
       </div>
 
       {/* Bottom control bar */}
