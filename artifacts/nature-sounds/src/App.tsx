@@ -360,7 +360,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
                 : isPlaying ? <Pause style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "#00ff55" }} />
                 : <Play style={{ width: "clamp(12px,2vw,16px)", height: "clamp(12px,2vw,16px)", color: "rgba(255,255,255,0.5)", marginLeft: "2px" }} />}
             </div>
-            <span style={{
+            <span className="leading-none" style={{
               fontSize: "clamp(15px,4.0vw,20px)", fontWeight: isPlaying ? 500 : 300,
               color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
               textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
