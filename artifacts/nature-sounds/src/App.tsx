@@ -600,7 +600,7 @@ function Home() {
         <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
         <div className="relative z-10 flex items-center h-full"
-          style={{ padding: "0 clamp(16px,4cqw,28px)", gap: "clamp(6px,1.5cqw,14px)" }}>
+          style={{ paddingLeft: "clamp(22px,5.5cqw,34px)", paddingRight: "clamp(12px,3cqw,20px)", gap: "clamp(6px,1.5cqw,14px)" }}>
           {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
@@ -609,7 +609,7 @@ function Home() {
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
           {/* Duration slider — margins further narrow the slot */}
-          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, margin: "0 clamp(4px,1cqw,8px)" }}>
+          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, margin: "0 clamp(8px,2cqw,14px)" }}>
             <DurationSlider
               step={durationStep}
               onChange={handleDurationChange}
