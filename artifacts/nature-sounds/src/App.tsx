@@ -124,15 +124,24 @@ function DurationSlider({
             whiteSpace: "nowrap",
           }}>
           <span style={{
-            color: isPlaying ? "#00ff55" : "rgba(0,255,85,0.55)",
+            color: isPlaying && timeRemaining <= 300
+              ? "#ffcc00"
+              : isPlaying
+                ? "#00ff55"
+                : "rgba(0,255,85,0.55)",
             fontSize: "clamp(22px,6cqw,32px)",
             fontWeight: 700,
             letterSpacing: "0.05em",
             fontVariantNumeric: "tabular-nums",
-            textShadow: isPlaying
-              ? "0 0 12px #00ff55, 0 0 28px #00ff33"
-              : "0 0 8px rgba(0,255,85,0.3)",
-            transition: "color 0.3s, text-shadow 0.3s",
+            textShadow: isPlaying && timeRemaining <= 300
+              ? "0 0 12px #ffcc00, 0 0 28px #ff9900"
+              : isPlaying
+                ? "0 0 12px #00ff55, 0 0 28px #00ff33"
+                : "0 0 8px rgba(0,255,85,0.3)",
+            animation: isPlaying && timeRemaining <= 300
+              ? "timerFlash 1.8s ease-in-out infinite"
+              : "none",
+            transition: "color 0.5s, text-shadow 0.5s",
           }}>
             {formatTime(timeRemaining)}
           </span>
@@ -514,6 +523,28 @@ function Home() {
     }, 1000);
     return () => clearInterval(id);
   }, [isPlaying, durationStep, LOOP_STEP]);
+
+  /* At exactly 5 minutes remaining: start the exponential fade-out.
+     At 0:00: auto-stop and reset. */
+  useEffect(() => {
+    if (!isPlaying || durationStep >= LOOP_STEP) return;
+    if (timeRemaining === 300) {
+      engine.startFadeOut(300);
+    }
+    if (timeRemaining === 0) {
+      if (playingTrackId) engine.pause(playingTrackId);
+      engine.cancelFade();
+      setTimeRemaining(stepToSeconds(durationStep));
+    }
+  // engine methods are stable useCallback refs — safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining]);
+
+  /* Cancel fade whenever playback stops (manual or auto) */
+  useEffect(() => {
+    if (!isPlaying) engine.cancelFade();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
 
   const handleSelect = (id: string) => setSelectedId(id);
   // When a new tile snaps to centre, immediately show its track list.

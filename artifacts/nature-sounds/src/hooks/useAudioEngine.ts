@@ -4,6 +4,19 @@ import { TRACKS, SoundTrack } from "../sounds";
 const DEFAULT_CROSSFADE  = 15;  // seconds — used when a track has no crossfadeDuration
 const FADE_IN_DURATION   = 5;   // seconds — global fade-in on every play()
 
+// Pre-computed fade-out curve: power-2 shape so dB drops slowly at first
+// then accelerates — starts barely perceptible, ends in a steep plunge.
+// Index 0 = start of fade (gain=1.0), last index = end (gain≈0).
+const FADE_OUT_N = 512;
+const FADE_OUT_CURVE = (() => {
+  const c = new Float32Array(FADE_OUT_N);
+  for (let i = 0; i < FADE_OUT_N; i++) {
+    const t = 1 - i / (FADE_OUT_N - 1); // 1 → 0
+    c[i] = Math.max(t * t, 0.0001);      // t² shape; clamp away from true zero
+  }
+  return c;
+})();
+
 // Pre-computed equal-power curves (128 samples).
 // Fade-in:  sin(t·π/2)  — starts slow, ends fast
 // Fade-out: cos(t·π/2)  — starts fast, ends slow
@@ -34,6 +47,8 @@ export type AudioEngineState = {
   setMasterVolume: (volume: number) => void;
   stopAll: () => void;
   lastPlayedId: string | null;
+  startFadeOut: (durationSeconds: number) => void;
+  cancelFade: () => void;
 };
 
 // Represents a track's audio state
@@ -216,6 +231,7 @@ export function useAudioEngine(): AudioEngineState {
 
   const contextRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
+  const fadeGainRef  = useRef<GainNode | null>(null);  /* timed fade-out — between master and destination */
   const enginesRef = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -252,7 +268,12 @@ export function useAudioEngine(): AudioEngineState {
       contextRef.current = new Ctx();
       masterGainRef.current = contextRef.current.createGain();
       masterGainRef.current.gain.value = masterVolume;
-      masterGainRef.current.connect(contextRef.current.destination);
+      /* fadeGain sits between master and destination so the timed fade is
+         completely independent of the user-facing volume control */
+      fadeGainRef.current = contextRef.current.createGain();
+      fadeGainRef.current.gain.value = 1.0;
+      masterGainRef.current.connect(fadeGainRef.current);
+      fadeGainRef.current.connect(contextRef.current.destination);
     }
     if (contextRef.current.state === "suspended") {
       contextRef.current.resume();
@@ -339,6 +360,28 @@ export function useAudioEngine(): AudioEngineState {
     releaseWakeLock();
   }, [releaseWakeLock]);
 
+  /* Kick off the timed power-curve fade on the dedicated fadeGain node.
+     durationSeconds is the wall-clock time until the gain reaches ~0. */
+  const startFadeOut = useCallback((durationSeconds: number) => {
+    const fg  = fadeGainRef.current;
+    const ctx = contextRef.current;
+    if (!fg || !ctx) return;
+    const now = ctx.currentTime;
+    fg.gain.cancelScheduledValues(now);
+    fg.gain.setValueAtTime(1.0, now);
+    fg.gain.setValueCurveAtTime(FADE_OUT_CURVE, now, durationSeconds);
+  }, []);
+
+  /* Cancel any in-progress fade and immediately restore full gain. */
+  const cancelFade = useCallback(() => {
+    const fg  = fadeGainRef.current;
+    const ctx = contextRef.current;
+    if (!fg || !ctx) return;
+    const t = ctx.currentTime;
+    fg.gain.cancelScheduledValues(t);
+    fg.gain.setValueAtTime(1.0, t);
+  }, []);
+
   return {
     tracks: tracksState,
     masterVolume,
@@ -348,6 +391,8 @@ export function useAudioEngine(): AudioEngineState {
     resume,
     setVolume,
     setMasterVolume,
-    stopAll
+    stopAll,
+    startFadeOut,
+    cancelFade,
   };
 }
