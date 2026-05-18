@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Play, Pause, Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
@@ -58,7 +58,24 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
 
 const DURATION_STEPS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "♋"];
 
-function DurationSlider({ step, onChange }: { step: number; onChange: (s: number) => void }) {
+/* step 0 = "1" hr … step 9 = "10" hrs; step 10 = loop (no countdown) */
+function stepToSeconds(step: number): number { return (step + 1) * 3600; }
+
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function DurationSlider({
+  step, onChange, timeRemaining, isPlaying,
+}: {
+  step: number;
+  onChange: (s: number) => void;
+  timeRemaining: number;   /* seconds; ignored when step===loopStep */
+  isPlaying: boolean;
+}) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const [slotActive, setSlotActive] = useState(false); /* true while finger/pointer is down */
@@ -94,6 +111,32 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
       style={{ height: "clamp(42px,7vh,50px)", touchAction: "none" }}
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
+
+      {/* Timer readout — floats above the bar, horizontally aligned with the knob.
+          Hidden in loop mode. Uses same pct(step) formula as knob for perfect alignment. */}
+      {step < loopStep && (
+        <div className="absolute pointer-events-none"
+          style={{
+            bottom: "calc(100% + 6px)",
+            left: pct(step),
+            transform: "translateX(-50%)",
+            whiteSpace: "nowrap",
+          }}>
+          <span style={{
+            color: isPlaying ? "#00ff55" : "rgba(0,255,85,0.55)",
+            fontSize: "clamp(13px,3.2cqw,18px)",
+            fontWeight: 700,
+            letterSpacing: "0.05em",
+            fontVariantNumeric: "tabular-nums",
+            textShadow: isPlaying
+              ? "0 0 10px #00ff55, 0 0 22px #00ff33"
+              : "0 0 6px rgba(0,255,85,0.3)",
+            transition: "color 0.3s, text-shadow 0.3s",
+          }}>
+            {formatTime(timeRemaining)}
+          </span>
+        </div>
+      )}
 
       {/* Labels — centred at i/(N-1)*100% of trackRef width */}
       {DURATION_STEPS.map((label, i) => {
@@ -447,8 +490,29 @@ function Home() {
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
   const [sprocketActive, setSprocketActive] = useState<boolean>(false);
 
+  /* ── Timer ───────────────────────────────────────────────────────────────── */
+  const LOOP_STEP = DURATION_STEPS.length - 1;
+  const [timeRemaining, setTimeRemaining] = useState<number>(
+    durationStep < LOOP_STEP ? stepToSeconds(durationStep) : 0,
+  );
+
+  /* Reset to full duration whenever the user moves the slider (only when stopped) */
+  const handleDurationChange = useCallback((s: number) => {
+    setDurationStep(s);
+    if (s < LOOP_STEP) setTimeRemaining(stepToSeconds(s));
+  }, [LOOP_STEP]);
+
   const isPlaying    = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
+
+  /* Count down once per second while playing (not in loop mode) */
+  useEffect(() => {
+    if (!isPlaying || durationStep >= LOOP_STEP) return;
+    const id = setInterval(() => {
+      setTimeRemaining(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isPlaying, durationStep, LOOP_STEP]);
 
   const handleSelect = (id: string) => setSelectedId(id);
   // When a new tile snaps to centre, immediately show its track list.
@@ -514,7 +578,12 @@ function Home() {
           </button>
           {/* Duration slider — margins further narrow the slot */}
           <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, margin: "0 clamp(4px,1cqw,8px)" }}>
-            <DurationSlider step={durationStep} onChange={setDurationStep} />
+            <DurationSlider
+              step={durationStep}
+              onChange={handleDurationChange}
+              timeRemaining={timeRemaining}
+              isPlaying={isPlaying}
+            />
           </div>
           {/* Settings sprocket */}
           <button onClick={() => setSprocketActive(a => !a)}
