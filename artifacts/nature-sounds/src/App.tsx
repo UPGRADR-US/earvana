@@ -35,7 +35,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
   const onPU = useCallback(() => { dragging.current = false; }, []);
 
   return (
-    <div className="absolute right-0 bottom-0 flex items-end gap-[5px]"
+    <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
       style={{ paddingRight: "clamp(6px, 1.5vw, 14px)", paddingBottom: bottomPad }}>
       <div className="flex flex-col items-center justify-center gap-[3px]"
         style={{ fontSize: "clamp(9px, 1.6vw, 14px)", fontWeight: 700, color: "rgba(255,255,255,0.75)", height: "clamp(180px, 32vh, 260px)" }}>
