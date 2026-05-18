@@ -94,34 +94,40 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
 
-      {/* Numbers 1–10 + loop icon — pinned to top */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between pointer-events-none"
-        style={{ padding: "0 1px" }}>
-        {DURATION_STEPS.map((label, i) => {
-          const active = step === i;
-          if (i === loopStep) {
-            return (
-              <button key={i} onClick={() => onChange(i)}
-                className="flex-shrink-0 transition-all duration-150 pointer-events-auto"
-                style={{ width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45 }}
-                data-testid={`duration-step-${i}`}>
-                <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
-              </button>
-            );
-          }
+      {/*
+       * Numbers 1–10 + loop icon.
+       * Each label is absolutely positioned at the SAME left% as the knob for that step.
+       * This ensures knob snaps perfectly under every label, not just the first and last.
+       */}
+      {DURATION_STEPS.map((label, i) => {
+        const active  = step === i;
+        const leftPct = (i / (DURATION_STEPS.length - 1)) * 100;
+        if (i === loopStep) {
           return (
             <button key={i} onClick={() => onChange(i)}
-              className="leading-none transition-all duration-150 pointer-events-auto"
+              className="absolute transition-all duration-150 pointer-events-auto"
               style={{
-                color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
-                textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
-                fontWeight: active ? 600 : 300,
-                fontSize: "clamp(11px,2.4cqw,16px)",
+                top: 0, left: `${leftPct}%`, transform: "translateX(-50%)",
+                width: "clamp(13px,3cqw,18px)", opacity: active ? 1 : 0.45,
               }}
-              data-testid={`duration-step-${i}`}>{label}</button>
+              data-testid={`duration-step-${i}`}>
+              <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
+            </button>
           );
-        })}
-      </div>
+        }
+        return (
+          <button key={i} onClick={() => onChange(i)}
+            className="absolute leading-none transition-all duration-150 pointer-events-auto"
+            style={{
+              top: 0, left: `${leftPct}%`, transform: "translateX(-50%)",
+              color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
+              textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
+              fontWeight: active ? 600 : 300,
+              fontSize: "clamp(11px,2.4cqw,16px)",
+            }}
+            data-testid={`duration-step-${i}`}>{label}</button>
+        );
+      })}
 
       {/* Slot — shifted slightly above centre so numbers sit tight on top */}
       <img src={img("SliderSlot_Base.png")} alt=""
@@ -387,7 +393,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
             className="w-full flex items-center gap-3 py-[18px] text-left"
             style={{
-              paddingLeft: "clamp(24px,6cqw,36px)", paddingRight: "16px",
+              paddingLeft: "clamp(8px,2cqw,12px)", paddingRight: "16px",
               background: "transparent",
               transformOrigin: "top center",
               animation: `blindDown 0.28s ease both`,
