@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
-const DEFAULT_CROSSFADE = 15; // seconds — used when a track has no crossfadeDuration
+const DEFAULT_CROSSFADE  = 15;  // seconds — used when a track has no crossfadeDuration
+const FADE_IN_DURATION   = 10;  // seconds — global fade-in on every play()
 
 export type TrackState = {
   isPlaying: boolean;
@@ -41,6 +42,7 @@ class TrackEngine {
 
   timeoutId: number | null = null;
   isPlaying: boolean = false;
+  volume: number = 0.5;  // target volume; ramps here on play()
 
   constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
     this.id = track.id;
@@ -54,7 +56,7 @@ class TrackEngine {
 
     this.trackGain = this.context.createGain();
     this.trackGain.connect(this.masterGain);
-    this.trackGain.gain.value = 0.5;
+    this.trackGain.gain.value = 0;  // starts silent; play() fades in
   }
 
   // Returns the effective loop region length once the buffer is loaded
@@ -84,6 +86,12 @@ class TrackEngine {
     gain.connect(this.trackGain);
 
     const startTime = this.context.currentTime;
+
+    // 10-second fade-in: ramp trackGain from 0 → target volume
+    this.trackGain.gain.cancelScheduledValues(startTime);
+    this.trackGain.gain.setValueAtTime(0, startTime);
+    this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + FADE_IN_DURATION);
+
     // Start playback at loopStart offset, play for regionDuration
     source.start(startTime, this.loopStart, this.regionDuration());
 
@@ -166,8 +174,12 @@ class TrackEngine {
   }
 
   setVolume(vol: number) {
+    this.volume = vol;
+    const t = this.context.currentTime;
+    // Cancel any in-progress fade-in ramp and jump to the new value
+    this.trackGain.gain.cancelScheduledValues(t);
     if (this.context.state === 'running') {
-      this.trackGain.gain.setTargetAtTime(vol, this.context.currentTime, 0.1);
+      this.trackGain.gain.setTargetAtTime(vol, t, 0.1);
     } else {
       this.trackGain.gain.value = vol;
     }
