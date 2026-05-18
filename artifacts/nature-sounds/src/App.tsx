@@ -80,25 +80,38 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
   const knobPct = (step / (DURATION_STEPS.length - 1)) * 100;
 
   const loopStep = DURATION_STEPS.length - 1;
+  const KNOB_W  = "clamp(16px,3.5cqw,22px)";
+  const KNOB_HW = "clamp(8px,1.75cqw,11px)"; /* half knob width for centering */
 
   return (
-    <div className="flex flex-col gap-[2px] w-full" data-testid="duration-slider">
-      {/* Numbers 1–10 then loop icon — all in one row */}
-      <div className="flex items-center justify-between w-full px-[1px]">
+    /*
+     * ONE div = full touch target.
+     * Numbers sit at the top, slot+knob at 50%, duration text at the bottom.
+     * No gaps, no separate flex rows — everything absolutely positioned inside.
+     */
+    <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
+      style={{ height: "clamp(48px,8.5vh,64px)", touchAction: "none" }}
+      onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
+      data-testid="duration-slider">
+
+      {/* Numbers 1–10 + loop icon — pinned to top */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between pointer-events-none"
+        style={{ padding: "0 1px" }}>
         {DURATION_STEPS.map((label, i) => {
           const active = step === i;
           if (i === loopStep) {
             return (
               <button key={i} onClick={() => onChange(i)}
-                className="flex-shrink-0 transition-all duration-150"
-                style={{ width: "clamp(14px,3.2cqw,20px)", opacity: active ? 1 : 0.45 }}
+                className="flex-shrink-0 transition-all duration-150 pointer-events-auto"
+                style={{ width: "clamp(12px,2.8cqw,18px)", opacity: active ? 1 : 0.45 }}
                 data-testid={`duration-step-${i}`}>
                 <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
               </button>
             );
           }
           return (
-            <button key={i} onClick={() => onChange(i)} className="leading-none transition-all duration-150"
+            <button key={i} onClick={() => onChange(i)}
+              className="leading-none transition-all duration-150 pointer-events-auto"
               style={{
                 color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
                 textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
@@ -109,32 +122,28 @@ function DurationSlider({ step, onChange }: { step: number; onChange: (s: number
           );
         })}
       </div>
-      {/* Slot + knob — outer div is the TOUCH TARGET (tall enough for fingers) */}
-      {/* Slot image and knob are centred inside it so they stay visually slim */}
-      <div ref={trackRef} className="relative w-full touch-none cursor-pointer"
-        style={{ height: "clamp(44px,7vh,56px)", touchAction: "none" }}
-        onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}>
-        {/* Slot image — visually short, centred inside the tall hit zone */}
-        <img src={img("SliderSlot_Base.png")} alt=""
-          className="absolute w-full pointer-events-none"
-          style={{
-            top: "50%", transform: "translateY(-50%)",
-            height: "clamp(10px,1.4vh,14px)", objectFit: "fill",
-          }} draggable={false} />
-        {/* Knob — centred on slot, taller than slot */}
-        <div className="absolute pointer-events-none"
-          style={{
-            top: "50%", transform: "translateY(-50%)",
-            left: `calc(${knobPct}% - clamp(9px,2cqw,13px))`,
-            width: "clamp(18px,4cqw,26px)",
-            height: "clamp(32px,5.5vh,44px)",
-          }}>
-          <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
-        </div>
+
+      {/* Slot — centred vertically */}
+      <img src={img("SliderSlot_Base.png")} alt=""
+        className="absolute w-full pointer-events-none"
+        style={{ top: "50%", transform: "translateY(-50%)", height: "clamp(9px,1.3vh,13px)", objectFit: "fill" }}
+        draggable={false} />
+
+      {/* Knob — centred on slot; clamped so it never overhangs either edge */}
+      <div className="absolute pointer-events-none"
+        style={{
+          top: "50%", transform: "translateY(-50%)",
+          left: `clamp(0px, calc(${knobPct}% - ${KNOB_HW}), calc(100% - ${KNOB_W}))`,
+          width: KNOB_W,
+          height: "clamp(20px,3.6vh,26px)",
+        }}>
+        <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
       </div>
-      {/* Burned-in "duration (hours)" label */}
-      <img src={img("durationtext.png")} alt="duration (hours)" className="w-full h-auto block"
-        style={{ maxHeight: "clamp(10px,1.8vh,18px)", objectFit: "contain", objectPosition: "center" }}
+
+      {/* Duration text — pinned to bottom */}
+      <img src={img("durationtext.png")} alt="duration (hours)"
+        className="absolute bottom-0 left-0 right-0 w-full pointer-events-none"
+        style={{ height: "clamp(9px,1.6vh,14px)", objectFit: "contain", objectPosition: "center" }}
         draggable={false} />
     </div>
   );
@@ -479,7 +488,7 @@ function Home() {
           {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(44px,11cqw,72px)" }} data-testid="btn-play-pause">
+            style={{ width: "clamp(44px,11cqw,72px)", marginLeft: "clamp(6px,2cqw,14px)" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
@@ -490,7 +499,7 @@ function Home() {
           {/* Settings sprocket */}
           <button onClick={() => setSprocketActive(a => !a)}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(50px,12cqw,72px)" }} data-testid="btn-settings">
+            style={{ width: "clamp(58px,14cqw,84px)" }} data-testid="btn-settings">
             <img src={sprocketActive ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
               alt="Settings" className="w-full h-auto" draggable={false} />
           </button>
