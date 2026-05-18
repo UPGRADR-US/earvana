@@ -1,5 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600&display=swap');
+
+/*
+ * Kallisto font — drop your .woff2/.woff files into public/fonts/ and
+ * this @font-face will pick them up automatically.
+ */
+@font-face {
+  font-family: 'Kallisto';
+  src: url('/fonts/Kallisto-Medium.woff2') format('woff2'),
+       url('/fonts/Kallisto-Medium.woff')  format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
