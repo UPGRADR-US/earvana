@@ -105,8 +105,8 @@ export const CATEGORIES: SoundCategory[] = [
     tracks: [
       { id: "noise_white_rolling", name: "White-Wave",         file: "sounds/(t)Noise-Rolling(WHT).mp3", icon: "Radio" },
       { id: "noise_pink_rolling",  name: "Pink-Wave",          file: "sounds/(t)Noise-Rolling(PNK).mp3", icon: "Radio" },
-      { id: "noise_white_static",  name: "White-Noise Static", file: "sounds/noise_white_static.mp3",    icon: "Radio" },
-      { id: "noise_pink_static",   name: "Pink-Noise Static",  file: "sounds/noise_pink_static.mp3",     icon: "Radio" },
+      { id: "noise_white_static",  name: "White-Static", file: "sounds/Noise-static(WHT).mp3", icon: "Radio" },
+      { id: "noise_pink_static",   name: "Pink-Static",  file: "sounds/Noise-static(PNK).mp3", icon: "Radio" },
     ],
   },
 ];
