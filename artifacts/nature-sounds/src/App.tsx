@@ -555,7 +555,7 @@ function Home() {
       style={{ height: "100svh", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background */}
-      <img src={img("TR-bgV2.png")} alt=""
+      <img src={img("bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
       {/* Top Banner — RGBA PNG; transparent wave bottom blends into the background naturally */}
@@ -587,7 +587,7 @@ function Home() {
 
       {/* Track list area — separate flex-1 with overflow:hidden so it never
           pushes the control bar. Scrolls internally however long the list is. */}
-      <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingBottom: "10px" }}>
+      <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,3vh,28px)", paddingBottom: "10px" }}>
         {selectedId && (() => {
           const cat = CATEGORIES.find((c) => c.id === selectedId);
           return cat ? <TrackList category={cat} engine={engine} /> : null;
