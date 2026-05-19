@@ -877,12 +877,12 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(205px,32vh,262px)"
+            bottomPad="clamp(180px,27vh,228px)"
           />
 
           {/* Carousel */}
           <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "6px" }}>
+            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "0" }}>
               <CylinderCarousel
                 centerIdx={centerIdx}
                 selectedId={selectedId}
@@ -894,7 +894,7 @@ function Home() {
           </div>
 
           {/* Track list */}
-          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,3vh,28px)", paddingBottom: "10px" }}>
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(4px,0.8vh,8px)", paddingBottom: "4px" }}>
             {selectedId && (() => {
               const cat = CATEGORIES.find((c) => c.id === selectedId);
               return cat ? <TrackList category={cat} engine={engine} /> : null;
@@ -903,7 +903,7 @@ function Home() {
 
           {/* Bottom control bar — two-row layout */}
           <div className="relative z-10 flex-shrink-0"
-            style={{ height: `calc(clamp(200px,30vh,250px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            style={{ height: `calc(clamp(175px,25vh,220px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
               style={{ objectFit: "fill" }} draggable={false} />
 
@@ -911,7 +911,7 @@ function Home() {
 
               {/* Duration slider — absolutely placed, low in the bar just above icon row */}
               <div className="absolute left-0 right-0"
-                style={{ bottom: "clamp(82px,11.5vh,105px)", paddingLeft: "52px", paddingRight: "44px" }}>
+                style={{ bottom: "clamp(68px,9.5vh,88px)", paddingLeft: "52px", paddingRight: "44px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
