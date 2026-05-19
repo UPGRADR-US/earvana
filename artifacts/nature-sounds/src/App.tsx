@@ -629,103 +629,123 @@ function SettingsPanel({ onClose, eqMode, onEqChange }: {
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
 
         <div className="absolute inset-0 overflow-y-auto"
-          style={{ paddingTop: "16%", paddingLeft: "5%", paddingRight: "5%", paddingBottom: "6%" }}>
+          style={{ paddingTop: "23%", paddingLeft: "5%", paddingRight: "5%", paddingBottom: "6%" }}>
 
           {/* AUDIO */}
           <SettingsRow label="audio" isOpen={openSection === "audio"} onToggle={() => toggleSection("audio")}>
-            <div style={{ marginBottom: "10px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>EQ / SOUND:</div>
-            {EQ_MODES.map(m => (
-              <button key={m.id} onClick={() => m.id !== "custom" && onEqChange(m.id as EqModeId)}
-                className="block w-full text-left"
-                style={{ padding: "5px 0", background: "none", border: "none", cursor: m.id === "custom" ? "default" : "pointer" }}>
-                <span style={{ color: eqMode === m.id ? "#00ff55" : m.id === "custom" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
-                  {m.label}
-                </span>
-                {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "11px", marginLeft: "6px" }}>({m.sub})</span>}
-              </button>
-            ))}
+            {/* EQ/SOUND — 1 tab indent */}
+            <div style={{ paddingLeft: "14px" }}>
+              <div style={{ marginBottom: "8px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>
+                EQ / SOUND:
+              </div>
+              {/* Presets — 2 tab indent */}
+              <div style={{ paddingLeft: "14px" }}>
+                {EQ_MODES.map(m => (
+                  <button key={m.id} onClick={() => m.id !== "custom" && onEqChange(m.id as EqModeId)}
+                    className="block w-full text-left"
+                    style={{ padding: "4px 0", background: "none", border: "none", cursor: m.id === "custom" ? "default" : "pointer" }}>
+                    <span style={{ color: eqMode === m.id ? "#00ff55" : m.id === "custom" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
+                      {">"}&nbsp;{m.label}
+                    </span>
+                    {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "11px", marginLeft: "6px" }}>({m.sub})</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
           </SettingsRow>
 
           {/* MY SUBSCRIPTION */}
           <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
-            {([
-              { label: "restore on a new device",
-                action: () => alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.") },
-              { label: "cancel my subscription",
-                action: () => window.open("https://support.apple.com/en-us/118428", "_blank") },
-            ] as { label: string; action: () => void }[]).map((item, i, arr) => (
-              <button key={i} onClick={item.action} className="block w-full text-left"
-                style={{ padding: "10px 0", background: "none", border: "none", cursor: "pointer",
-                  borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
-                  color: "rgba(255,255,255,0.78)", fontSize: "13px" }}>
-                <span style={{ color: "#00c8ff", marginRight: "8px" }}>{">"}</span>{item.label}
-              </button>
-            ))}
+            {/* Items — 1 tab indent */}
+            <div style={{ paddingLeft: "14px" }}>
+              {([
+                { label: "restore on a new device",
+                  action: () => alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.") },
+                { label: "cancel my subscription",
+                  action: () => window.open("https://support.apple.com/en-us/118428", "_blank") },
+              ] as { label: string; action: () => void }[]).map((item, i, arr) => (
+                <button key={i} onClick={item.action} className="block w-full text-left"
+                  style={{ padding: "9px 0", background: "none", border: "none", cursor: "pointer",
+                    borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
+                    color: "rgba(255,255,255,0.78)", fontSize: "13px" }}>
+                  <span style={{ color: "#00c8ff", marginRight: "8px" }}>{">"}</span>{item.label}
+                </button>
+              ))}
+            </div>
           </SettingsRow>
 
           {/* LEAVE A REVIEW */}
           <SettingsRow label="leave a review" isOpen={openSection === "review"} onToggle={() => toggleSection("review")}>
-            {reviewSent
-              ? <div style={{ color: "#00ff55", fontSize: "14px", padding: "4px" }}>Thank you for your feedback! ✓</div>
-              : <>
-                  <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} rows={4}
-                    placeholder="Share your experience with Tinnitus Relief by Earvana…"
-                    style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)",
-                      borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "13px",
-                      padding: "8px", resize: "none", boxSizing: "border-box" }} />
-                  <button onClick={handleReviewSubmit}
-                    style={{ marginTop: "8px", padding: "7px 20px", background: "rgba(0,180,90,0.18)",
-                      border: "1px solid rgba(0,255,100,0.35)", borderRadius: "6px",
-                      color: "#00ee88", fontSize: "13px", cursor: "pointer", letterSpacing: "0.04em" }}>
-                    Submit
-                  </button>
-                </>
-            }
+            {/* Content — 1 tab indent */}
+            <div style={{ paddingLeft: "14px" }}>
+              {reviewSent
+                ? <div style={{ color: "#00ff55", fontSize: "14px", padding: "4px 0" }}>Thank you for your feedback! ✓</div>
+                : <>
+                    <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} rows={4}
+                      placeholder="Share your experience with Tinnitus Relief by Earvana…"
+                      style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)",
+                        borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "13px",
+                        padding: "8px", resize: "none", boxSizing: "border-box" }} />
+                    <button onClick={handleReviewSubmit}
+                      style={{ marginTop: "8px", padding: "7px 20px", background: "rgba(0,180,90,0.18)",
+                        border: "1px solid rgba(0,255,100,0.35)", borderRadius: "6px",
+                        color: "#00ee88", fontSize: "13px", cursor: "pointer", letterSpacing: "0.04em" }}>
+                      Submit
+                    </button>
+                  </>
+              }
+            </div>
           </SettingsRow>
 
           {/* FAQ */}
           <SettingsRow label="faq" isOpen={openSection === "faq"} onToggle={() => toggleSection("faq")}>
-            {FAQ_ITEMS.map((item, i) => (
-              <div key={i}>
-                <button onClick={() => toggleSub(`faq-${i}`)} className="w-full text-left flex items-start"
-                  style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
-                    borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                  <span style={{ color: "#00c8ff", fontSize: "11px", lineHeight: "18px", flexShrink: 0 }}>
-                    {openSub === `faq-${i}` ? "∨" : ">"}
-                  </span>
-                  <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", lineHeight: 1.45, textAlign: "left" }}>
-                    {item.q}
-                  </span>
-                </button>
-                {openSub === `faq-${i}` && (
-                  <div style={{ padding: "8px 4px 10px 20px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55 }}>
-                    {item.a}
-                  </div>
-                )}
-              </div>
-            ))}
+            {/* Questions — 1 tab indent; answers — 2 tab indent */}
+            <div style={{ paddingLeft: "14px" }}>
+              {FAQ_ITEMS.map((item, i) => (
+                <div key={i}>
+                  <button onClick={() => toggleSub(`faq-${i}`)} className="w-full text-left flex items-start"
+                    style={{ gap: "8px", padding: "8px 0", background: "none", border: "none", cursor: "pointer",
+                      borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    <span style={{ color: "#00c8ff", fontSize: "11px", lineHeight: "18px", flexShrink: 0 }}>
+                      {openSub === `faq-${i}` ? "∨" : ">"}
+                    </span>
+                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", lineHeight: 1.45, textAlign: "left" }}>
+                      {item.q}
+                    </span>
+                  </button>
+                  {openSub === `faq-${i}` && (
+                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55 }}>
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </SettingsRow>
 
           {/* LEGAL */}
           <SettingsRow label="legal" isOpen={openSection === "legal"} onToggle={() => toggleSection("legal")}>
-            {([
-              { key: "privacy", label: "PRIVACY POLICY",   text: PRIVACY_POLICY   },
-              { key: "terms",   label: "TERMS OF SERVICE", text: TERMS_OF_SERVICE },
-            ] as { key: string; label: string; text: string }[]).map(doc => (
-              <div key={doc.key}>
-                <button onClick={() => toggleSub(`legal-${doc.key}`)} className="w-full text-left flex items-center"
-                  style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
-                    borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                  <span style={{ color: "#00c8ff", fontSize: "11px" }}>{openSub === `legal-${doc.key}` ? "∨" : ">"}</span>
-                  <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", letterSpacing: "0.06em" }}>{doc.label}</span>
-                </button>
-                {openSub === `legal-${doc.key}` && (
-                  <div style={{ padding: "10px 4px 10px 20px", color: "rgba(255,255,255,0.45)", fontSize: "11px", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
-                    {doc.text}
-                  </div>
-                )}
-              </div>
-            ))}
+            {/* Doc rows — 1 tab indent; expanded text — 2 tab indent */}
+            <div style={{ paddingLeft: "14px" }}>
+              {([
+                { key: "privacy", label: "PRIVACY POLICY",   text: PRIVACY_POLICY   },
+                { key: "terms",   label: "TERMS OF SERVICE", text: TERMS_OF_SERVICE },
+              ] as { key: string; label: string; text: string }[]).map(doc => (
+                <div key={doc.key}>
+                  <button onClick={() => toggleSub(`legal-${doc.key}`)} className="w-full text-left flex items-center"
+                    style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
+                      borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    <span style={{ color: "#00c8ff", fontSize: "11px" }}>{openSub === `legal-${doc.key}` ? "∨" : ">"}</span>
+                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", letterSpacing: "0.06em" }}>{doc.label}</span>
+                  </button>
+                  {openSub === `legal-${doc.key}` && (
+                    <div style={{ padding: "8px 4px 10px 14px", color: "rgba(255,255,255,0.45)", fontSize: "11px", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                      {doc.text}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </SettingsRow>
 
         </div>
