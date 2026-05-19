@@ -379,9 +379,12 @@ function CylinderCarousel({
           const isSelected  = cat.id === selectedId;
           const hasPlaying  = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
           const faceOpacity = tileOpacity(visAngle);
+          // Only apply shadow to the centred tile — side tiles are rotated in 3D
+          // and a 2D box-shadow bleeds around the projected shape, creating
+          // visible artefacts at the corners.
           const frontShadow = isCentered
             ? "0 14px 32px rgba(0,0,0,0.85), 0 3px 10px rgba(0,0,0,0.6)"
-            : "0 6px 16px rgba(0,0,0,0.7)";
+            : "none";
 
           return (
             // Tile container: preserve-3d so slab faces sit in 3D space.
