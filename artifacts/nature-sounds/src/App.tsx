@@ -877,7 +877,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(66px,12vh,92px)"
+            bottomPad="clamp(110px,18vh,150px)"
           />
 
           {/* Carousel */}
@@ -908,9 +908,9 @@ function Home() {
               style={{ objectFit: "fill" }} draggable={false} />
 
             <div className="relative z-10 flex flex-col h-full">
-              {/* Row 1: Duration slider + label — pushed down past the banner top edge */}
-              <div className="flex-1 flex flex-col justify-center"
-                style={{ paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(32px,8cqw,44px)", paddingTop: "clamp(18px,2.5vh,26px)" }}>
+              {/* Row 1: Duration slider + label — bottom-aligned so slider sits just above the label */}
+              <div className="flex-1 flex flex-col justify-end"
+                style={{ paddingLeft: "52px", paddingRight: "44px", paddingBottom: "2px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
