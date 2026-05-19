@@ -229,20 +229,19 @@ export function useAudioEngine(): AudioEngineState {
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
 
-  const contextRef = useRef<AudioContext | null>(null);
+  const contextRef    = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
-  const fadeGainRef  = useRef<GainNode | null>(null);  /* timed fade-out — between master and destination */
-  const enginesRef = useRef<Record<string, TrackEngine>>({});
+  const fadeGainRef   = useRef<GainNode | null>(null);
+  const enginesRef    = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const wakeLockRef   = useRef<WakeLockSentinel | null>(null);
+  const keepAliveRef  = useRef<HTMLAudioElement | null>(null);
 
-  // Acquire a screen wake lock so audio keeps playing when the screen sleeps.
-  // Re-acquires automatically if the page becomes visible again while playing.
+  // ── Wake Lock (Android Chrome) ───────────────────────────────────────────
   const acquireWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) return;
-    try {
-      wakeLockRef.current = await navigator.wakeLock.request('screen');
-    } catch { /* permission denied or not supported — silent fail */ }
+    try { wakeLockRef.current = await navigator.wakeLock.request('screen'); }
+    catch { /* not supported or denied — silent */ }
   }, []);
 
   const releaseWakeLock = useCallback(() => {
@@ -250,17 +249,67 @@ export function useAudioEngine(): AudioEngineState {
     wakeLockRef.current = null;
   }, []);
 
-  // Re-acquire if the page visibility changes (wake lock auto-drops on hide)
+  // ── iOS background-audio keep-alive + AudioContext auto-resume ───────────
+  // iOS suspends the AudioContext when the screen locks unless there is an
+  // HTMLAudioElement playing.  We route a zero-gain BufferSource through a
+  // MediaStreamDestination → <audio> element so iOS treats the whole session
+  // as active media.  We also listen for context suspension and immediately
+  // resume it when the page becomes visible again.
+  const startKeepAlive = useCallback((ctx: AudioContext) => {
+    if (keepAliveRef.current) return; // already running
+    try {
+      // 1-second silent buffer, looped forever
+      const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop   = true;
+      const dest = ctx.createMediaStreamDestination();
+      src.connect(dest);
+      src.start();
+
+      const el = new Audio();
+      el.srcObject = dest.stream;
+      el.volume    = 0;           // completely inaudible
+      el.play().catch(() => {});  // called inside a user-gesture — should succeed
+      keepAliveRef.current = el;
+    } catch { /* createMediaStreamDestination unavailable — graceful degradation */ }
+  }, []);
+
+  const stopKeepAlive = useCallback(() => {
+    if (!keepAliveRef.current) return;
+    keepAliveRef.current.pause();
+    keepAliveRef.current.srcObject = null;
+    keepAliveRef.current = null;
+  }, []);
+
+  // Re-acquire wake lock and resume suspended context when tab returns to foreground
   useEffect(() => {
     const onVisibilityChange = () => {
+      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
       if (document.visibilityState === 'visible') {
-        const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
         if (anyPlaying) acquireWakeLock();
+        // Resume AudioContext if iOS suspended it while the screen was locked
+        const ctx = contextRef.current;
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      } else {
+        // Screen locked — iOS may suspend; set up auto-resume on statechange
+        const ctx = contextRef.current;
+        if (ctx && anyPlaying) {
+          const onStateChange = () => {
+            if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+          };
+          ctx.addEventListener('statechange', onStateChange, { once: true });
+        }
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [acquireWakeLock]);
+
+  // Stable refs so MediaSession action handlers always call the latest version
+  const playRef   = useRef<((id: string) => Promise<void>) | null>(null);
+  const pauseRef  = useRef<((id: string) => void) | null>(null);
+  const resumeRef = useRef<(() => Promise<void>) | null>(null);
 
   const initContext = useCallback(() => {
     if (!contextRef.current) {
@@ -268,17 +317,17 @@ export function useAudioEngine(): AudioEngineState {
       contextRef.current = new Ctx();
       masterGainRef.current = contextRef.current.createGain();
       masterGainRef.current.gain.value = masterVolume;
-      /* fadeGain sits between master and destination so the timed fade is
-         completely independent of the user-facing volume control */
       fadeGainRef.current = contextRef.current.createGain();
       fadeGainRef.current.gain.value = 1.0;
       masterGainRef.current.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
     }
-    if (contextRef.current.state === "suspended") {
-      contextRef.current.resume();
+    if (contextRef.current.state === 'suspended') {
+      contextRef.current.resume().catch(() => {});
     }
-  }, [masterVolume]);
+    // Start iOS keep-alive on first user interaction
+    startKeepAlive(contextRef.current);
+  }, [masterVolume, startKeepAlive]);
 
   const play = useCallback(async (trackId: string) => {
     initContext();
@@ -312,6 +361,15 @@ export function useAudioEngine(): AudioEngineState {
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
+      // Tell iOS lock screen what's playing
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.name,
+          artist: 'Tinnitus Relief by Earvana',
+          album: 'Nature Sounds',
+        });
+        navigator.mediaSession.playbackState = 'playing';
+      }
     } catch (e) {
       console.error("Failed to play track", e);
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
@@ -328,6 +386,7 @@ export function useAudioEngine(): AudioEngineState {
     if (engine) engine.pause();
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
     releaseWakeLock();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, [releaseWakeLock]);
 
   const setVolume = useCallback((trackId: string, volume: number) => {
@@ -358,6 +417,7 @@ export function useAudioEngine(): AudioEngineState {
       return ns;
     });
     releaseWakeLock();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, [releaseWakeLock]);
 
   /* Kick off the timed power-curve fade on the dedicated fadeGain node.
@@ -380,6 +440,29 @@ export function useAudioEngine(): AudioEngineState {
     const t = ctx.currentTime;
     fg.gain.cancelScheduledValues(t);
     fg.gain.setValueAtTime(1.0, t);
+  }, []);
+
+  // Keep stable refs so MediaSession callbacks always use the latest functions
+  // without being stale closures.
+  useEffect(() => { playRef.current   = play;   }, [play]);
+  useEffect(() => { pauseRef.current  = pause;  }, [pause]);
+  useEffect(() => { resumeRef.current = resume; }, [resume]);
+
+  // Wire MediaSession lock-screen action handlers once on mount.
+  // Handlers read from refs so they never become stale.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => {
+      resumeRef.current?.();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      const id = lastPlayedIdRef.current;
+      if (id) pauseRef.current?.(id);
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      const id = lastPlayedIdRef.current;
+      if (id) pauseRef.current?.(id);
+    });
   }, []);
 
   return {
