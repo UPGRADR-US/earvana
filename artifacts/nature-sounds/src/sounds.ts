@@ -111,8 +111,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Fire",
     thumbnail: "sounds/TR_tn_fire.png",
     tracks: [
-      { id: "fire_crackle", name: "Crackle", file: "sounds/fire_crackle.mp3", icon: "Flame" },
-      { id: "fire_bonfire", name: "Bonfire", file: "sounds/fire_bonfire.mp3", icon: "Flame" },
+      { id: "fire_crackle", name: "Crackle", file: "sounds/ev-Fire(fireplce).mp3", icon: "Flame" },
+      { id: "fire_bonfire", name: "Bonfire", file: "sounds/ev-Fire(bonfire).mp3",  icon: "Flame" },
     ],
   },
   {
