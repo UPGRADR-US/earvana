@@ -38,7 +38,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
     <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
       style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", paddingBottom: bottomPad }}>
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ width: "clamp(24px, 3.2cqw, 40px)", height: "clamp(180px, 32vh, 260px)" }}
+        style={{ width: "clamp(24px, 3.2cqw, 40px)", height: "min(clamp(120px,18svh,175px), calc(100svh - 460px))" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt="" className="absolute inset-0 w-full h-full"
           style={{ objectFit: "fill" }} draggable={false} />
@@ -47,7 +47,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
           draggable={false} />
       </div>
       <div className="flex flex-col items-center justify-center gap-[3px]"
-        style={{ fontSize: "clamp(7px, 1.3cqw, 11px)", fontWeight: 300, color: "rgba(255,255,255,0.6)", height: "clamp(180px, 32vh, 260px)" }}>
+        style={{ fontSize: "clamp(7px, 1.3cqw, 11px)", fontWeight: 300, color: "rgba(255,255,255,0.6)", height: "min(clamp(120px,18svh,175px), calc(100svh - 460px))" }}>
         {"VOLUME".split("").map((ch, i) => <span key={i}>{ch}</span>)}
       </div>
     </div>
