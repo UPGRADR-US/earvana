@@ -410,7 +410,7 @@ function CylinderCarousel({
                   opacity: faceOpacity,
                   border: isCentered || isSelected
                     ? "2px solid rgba(0,255,100,0.8)"
-                    : "2px solid rgba(255,255,255,0.07)",
+                    : "2px solid rgba(255,255,255,0.35)",
                   boxShadow: isCentered || isSelected
                     ? `${frontShadow}, inset 0 0 0 1px rgba(0,255,80,0.25)`
                     : frontShadow,
