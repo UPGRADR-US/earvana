@@ -401,19 +401,20 @@ function CylinderCarousel({
                 else animateTo(i);
               }}>
 
-              {/* Slab edges */}
-              <div style={{ position:"absolute", top:0, right:0, width:SLAB_DEPTH, height:"100%",
+              {/* Slab edges — inset by 12px on each corner axis so the squared
+                  ends never poke out beyond the front face's rounded-xl corners */}
+              <div style={{ position:"absolute", top:"12px", right:0, width:SLAB_DEPTH, height:"calc(100% - 24px)",
                 transformOrigin:"right center", transform:"rotateY(90deg)",
-                background:EDGE_RIGHT, opacity:faceOpacity, borderRadius:"12px" }} />
-              <div style={{ position:"absolute", top:0, left:0, width:SLAB_DEPTH, height:"100%",
+                background:EDGE_RIGHT, opacity:faceOpacity }} />
+              <div style={{ position:"absolute", top:"12px", left:0, width:SLAB_DEPTH, height:"calc(100% - 24px)",
                 transformOrigin:"left center", transform:"rotateY(-90deg)",
-                background:EDGE_LEFT, opacity:faceOpacity, borderRadius:"12px" }} />
-              <div style={{ position:"absolute", top:0, left:0, width:"100%", height:SLAB_DEPTH,
+                background:EDGE_LEFT, opacity:faceOpacity }} />
+              <div style={{ position:"absolute", top:0, left:"12px", width:"calc(100% - 24px)", height:SLAB_DEPTH,
                 transformOrigin:"center top", transform:"rotateX(90deg)",
-                background:EDGE_TOP, opacity:faceOpacity, borderRadius:"12px" }} />
-              <div style={{ position:"absolute", bottom:0, left:0, width:"100%", height:SLAB_DEPTH,
+                background:EDGE_TOP, opacity:faceOpacity }} />
+              <div style={{ position:"absolute", bottom:0, left:"12px", width:"calc(100% - 24px)", height:SLAB_DEPTH,
                 transformOrigin:"center bottom", transform:"rotateX(-90deg)",
-                background:EDGE_BOTTOM, opacity:faceOpacity, borderRadius:"12px" }} />
+                background:EDGE_BOTTOM, opacity:faceOpacity }} />
 
               {/* Front face — pushed forward by SLAB_DEPTH */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
