@@ -440,7 +440,7 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
         return (
           <button key={track.id}
             onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
-            className="w-full flex items-center gap-3 py-[18px] text-left"
+            className="w-full flex items-center gap-3 py-[9px] text-left"
             style={{
               paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "16px",
               background: "transparent",
@@ -877,7 +877,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(110px,18vh,150px)"
+            bottomPad="clamp(160px,24vh,200px)"
           />
 
           {/* Carousel */}
@@ -907,10 +907,11 @@ function Home() {
             <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
               style={{ objectFit: "fill" }} draggable={false} />
 
-            <div className="relative z-10 flex flex-col h-full">
-              {/* Row 1: Duration slider + label — bottom-aligned so slider sits just above the label */}
-              <div className="flex-1 flex flex-col justify-end"
-                style={{ paddingLeft: "52px", paddingRight: "44px", paddingBottom: "2px" }}>
+            <div className="relative z-10 w-full h-full">
+
+              {/* Duration slider — absolutely placed, low in the bar just above icon row */}
+              <div className="absolute left-0 right-0"
+                style={{ bottom: "clamp(50px,7vh,66px)", paddingLeft: "52px", paddingRight: "44px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
@@ -922,25 +923,27 @@ function Home() {
                 </div>
               </div>
 
-              {/* Row 2: Speaker | Play (centered) | Sprocket */}
-              <div className="flex items-center flex-shrink-0"
-                style={{ paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(30px,7.5cqw,42px)", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
-                {/* Speaker / output selector — smaller, sits at track-list left margin */}
+              {/* Icon row — absolutely pinned to bottom */}
+              <div className="absolute bottom-0 left-0 right-0 flex items-center"
+                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
+                {/* Speaker */}
                 <button onClick={handleSpeakerClick}
                   className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
                   style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                   <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
                 </button>
-                {/* Play / Pause — centered in remaining space */}
-                <div className="flex-1 flex justify-center">
+                {/* Play — truly centered across full bar width */}
+                <div className="absolute inset-x-0 flex justify-center pointer-events-none"
+                  style={{ bottom: "clamp(14px,2.5vh,22px)" }}>
                   <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-                    className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
+                    className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
                     style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
                     <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
                       alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
                   </button>
                 </div>
-                {/* Settings sprocket — 2× size, right edge matches left margin */}
+                {/* Sprocket — pinned right */}
+                <div className="flex-1" />
                 <button onClick={handleSprocketClick}
                   className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
                   style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
