@@ -481,6 +481,259 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
 
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 
+// ─── Settings Panel ───────────────────────────────────────────────────────────
+
+const EQ_MODES = [
+  { id: "normal",   label: "Normal",   sub: ""                      },
+  { id: "hf_boost", label: "HF Boost", sub: "crisper"               },
+  { id: "hf_cut",   label: "HF Cut",   sub: "duller"                },
+  { id: "lf_boost", label: "LF Boost", sub: "warmer"                },
+  { id: "lf_cut",   label: "LF Cut",   sub: "thinner"               },
+  { id: "custom",   label: "Custom",   sub: "5-band · coming soon"  },
+] as const;
+type EqModeId = typeof EQ_MODES[number]["id"];
+
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  { q: "How can this help mask my tinnitus?",
+    a: "Nature sounds provide a steady broadband signal that partially or fully masks the phantom ringing in your ears, gradually shifting your auditory focus away from it. With regular use many listeners report the perceived loudness of their tinnitus decreases over time." },
+  { q: "Which audio tracks will work best for my tinnitus frequency?",
+    a: "High-frequency tinnitus (ringing, hissing) responds well to Ocean, Rain, or White/Pink-Wave. Low-frequency tinnitus (hum, roar) benefits from Streams, Forests, or Wind. Start with Ocean Night-Calm or White-Wave — they cover the widest range of tinnitus frequencies." },
+  { q: "How do I set the timer?",
+    a: "Tap the duration bar at the bottom of the screen to select 1–10 hours, or tap the ∞ icon at the far right for continuous playback. A countdown timer appears above the bar while a track is playing." },
+  { q: "What are the recommended speakers for Earvana audio?",
+    a: "Any quality speaker or headphone works well. For bedside use, a small Bluetooth speaker rated down to 80 Hz or lower is ideal. Over-ear headphones deliver the most immersive experience." },
+  { q: "Can I use this with my Bluetooth ear pods?",
+    a: "Yes — connect your AirPods or Bluetooth earbuds before pressing play. Audio routes automatically through your device's active output. AirPods in Transparency mode can further enhance the masking effect." },
+  { q: "Can I play this through my TV system?",
+    a: "Yes. On iPhone/iPad use AirPlay in Control Center to stream to an Apple TV or compatible soundbar. On Android use Chromecast or Bluetooth to your TV's audio system." },
+  { q: "How can I cancel my subscription?",
+    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find Tinnitus Relief by Earvana and tap Cancel. Access continues through the end of your current billing period." },
+  { q: "Will there be new tracks added in the future?",
+    a: "Yes — new sound categories and tracks are in production and delivered automatically to all subscribers at no additional charge." },
+];
+
+const PRIVACY_POLICY = `Effective: May 2025
+
+Earvana LLC ("we") is committed to protecting your privacy.
+
+DATA WE COLLECT
+Tinnitus Relief by Earvana does not collect, transmit, or store any personal information. No account or login is required. All preferences are stored locally on your device only and are never sent to our servers.
+
+SUBSCRIPTIONS
+Subscription billing is managed entirely by Apple App Store or Google Play. We do not access your payment information. Please refer to Apple's or Google's privacy policies for details.
+
+ANALYTICS
+We do not use third-party analytics or tracking SDKs.
+
+CHILDREN'S PRIVACY
+This app does not knowingly collect data from children under 13.
+
+CONTACT
+privacy@earvana.com`;
+
+const TERMS_OF_SERVICE = `Effective: May 2025
+
+By using Tinnitus Relief by Earvana ("the App") you agree to these Terms.
+
+LICENSE
+Earvana LLC grants you a personal, non-transferable, non-exclusive license to use the App for personal, non-commercial purposes only.
+
+RESTRICTIONS
+You may not: (a) record or redistribute any audio content; (b) reverse-engineer or decompile the App; (c) use the App for commercial purposes without written consent from Earvana LLC.
+
+MEDICAL DISCLAIMER
+This App is a sound-masking and relaxation aid only. It is not a medical device and makes no claims to diagnose, treat, cure, or prevent any medical condition including tinnitus. Always consult a licensed audiologist or physician for tinnitus-related medical advice.
+
+SUBSCRIPTIONS
+Subscriptions auto-renew unless cancelled at least 24 hours before the renewal date.
+
+DISCLAIMER OF WARRANTIES
+The App is provided "as is" without warranty of any kind. Earvana LLC is not liable for any direct, indirect, or incidental damages arising from use of the App.
+
+GOVERNING LAW
+These Terms are governed by the laws of the State of California, USA.
+
+© 2025 Earvana LLC. All rights reserved.`;
+
+function SettingsRow({ label, isOpen, onToggle, children }: {
+  label: string; isOpen: boolean; onToggle: () => void; children?: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: "5px" }}>
+      <button onClick={onToggle}
+        className="w-full text-left flex items-center"
+        style={{
+          padding: "11px 14px", gap: "10px",
+          background: "rgba(0,15,40,0.60)",
+          borderRadius: isOpen ? "8px 8px 0 0" : "8px",
+          border: "none", cursor: "pointer",
+        }}>
+        <span style={{ color: "#00c8ff", fontFamily: "monospace", fontSize: "14px", width: "12px", flexShrink: 0, lineHeight: 1 }}>
+          {isOpen ? "∨" : ">"}
+        </span>
+        <span style={{ color: "#00c8ff", fontSize: "15px", letterSpacing: "0.06em" }}>
+          {label}
+        </span>
+      </button>
+      {isOpen && children && (
+        <div style={{ background: "rgba(0,10,30,0.42)", borderRadius: "0 0 8px 8px", padding: "12px 14px 16px" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SettingsPanel({ onClose, eqMode, onEqChange }: {
+  onClose: () => void;
+  eqMode: EqModeId;
+  onEqChange: (m: EqModeId) => void;
+}) {
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [openSub,     setOpenSub]     = useState<string | null>(null);
+  const [reviewText,  setReviewText]  = useState("");
+  const [reviewSent,  setReviewSent]  = useState(false);
+  const [xFlash,      setXFlash]      = useState(false);
+
+  const handleClose = () => { setXFlash(true); setTimeout(() => { setXFlash(false); onClose(); }, 200); };
+
+  const toggleSection = (s: string) => {
+    setOpenSub(null);
+    setOpenSection(o => o === s ? null : s);
+  };
+  const toggleSub = (key: string) => setOpenSub(o => o === key ? null : key);
+
+  const handleReviewSubmit = () => {
+    if (!reviewText.trim()) return;
+    setReviewSent(true); setReviewText("");
+    setTimeout(() => setReviewSent(false), 3500);
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center"
+      style={{ animation: "settingsPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+      {/* X close button — top-left of screen */}
+      <button onClick={handleClose}
+        style={{
+          position: "absolute", top: "4.5%", left: "5%", zIndex: 10,
+          background: "none", border: "none", cursor: "pointer", padding: "10px", lineHeight: 1,
+          color: xFlash ? "#00ffcc" : "rgba(255,255,255,0.82)", fontSize: "24px",
+          textShadow: xFlash ? "0 0 16px #00ffcc, 0 0 36px #00ffaa, 0 0 60px #00ff88" : "0 2px 8px rgba(0,0,0,0.9)",
+          transition: "color 0.12s, text-shadow 0.12s",
+        }}>✕</button>
+
+      {/* Panel */}
+      <div className="relative" style={{ width: "88%", maxWidth: "390px", height: "88svh", maxHeight: "760px" }}>
+        <img src={img("settings-pane.png")} alt=""
+          className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
+
+        <div className="absolute inset-0 overflow-y-auto"
+          style={{ paddingTop: "16%", paddingLeft: "5%", paddingRight: "5%", paddingBottom: "6%" }}>
+
+          {/* AUDIO */}
+          <SettingsRow label="audio" isOpen={openSection === "audio"} onToggle={() => toggleSection("audio")}>
+            <div style={{ marginBottom: "10px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>EQ / SOUND:</div>
+            {EQ_MODES.map(m => (
+              <button key={m.id} onClick={() => m.id !== "custom" && onEqChange(m.id as EqModeId)}
+                className="block w-full text-left"
+                style={{ padding: "5px 0", background: "none", border: "none", cursor: m.id === "custom" ? "default" : "pointer" }}>
+                <span style={{ color: eqMode === m.id ? "#00ff55" : m.id === "custom" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
+                  {m.label}
+                </span>
+                {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "11px", marginLeft: "6px" }}>({m.sub})</span>}
+              </button>
+            ))}
+          </SettingsRow>
+
+          {/* MY SUBSCRIPTION */}
+          <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
+            {([
+              { label: "restore on a new device",
+                action: () => alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.") },
+              { label: "cancel my subscription",
+                action: () => window.open("https://support.apple.com/en-us/118428", "_blank") },
+            ] as { label: string; action: () => void }[]).map((item, i, arr) => (
+              <button key={i} onClick={item.action} className="block w-full text-left"
+                style={{ padding: "10px 0", background: "none", border: "none", cursor: "pointer",
+                  borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
+                  color: "rgba(255,255,255,0.78)", fontSize: "13px" }}>
+                <span style={{ color: "#00c8ff", marginRight: "8px" }}>{">"}</span>{item.label}
+              </button>
+            ))}
+          </SettingsRow>
+
+          {/* LEAVE A REVIEW */}
+          <SettingsRow label="leave a review" isOpen={openSection === "review"} onToggle={() => toggleSection("review")}>
+            {reviewSent
+              ? <div style={{ color: "#00ff55", fontSize: "14px", padding: "4px" }}>Thank you for your feedback! ✓</div>
+              : <>
+                  <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} rows={4}
+                    placeholder="Share your experience with Tinnitus Relief by Earvana…"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)",
+                      borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "13px",
+                      padding: "8px", resize: "none", boxSizing: "border-box" }} />
+                  <button onClick={handleReviewSubmit}
+                    style={{ marginTop: "8px", padding: "7px 20px", background: "rgba(0,180,90,0.18)",
+                      border: "1px solid rgba(0,255,100,0.35)", borderRadius: "6px",
+                      color: "#00ee88", fontSize: "13px", cursor: "pointer", letterSpacing: "0.04em" }}>
+                    Submit
+                  </button>
+                </>
+            }
+          </SettingsRow>
+
+          {/* FAQ */}
+          <SettingsRow label="faq" isOpen={openSection === "faq"} onToggle={() => toggleSection("faq")}>
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i}>
+                <button onClick={() => toggleSub(`faq-${i}`)} className="w-full text-left flex items-start"
+                  style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
+                    borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ color: "#00c8ff", fontSize: "11px", lineHeight: "18px", flexShrink: 0 }}>
+                    {openSub === `faq-${i}` ? "∨" : ">"}
+                  </span>
+                  <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", lineHeight: 1.45, textAlign: "left" }}>
+                    {item.q}
+                  </span>
+                </button>
+                {openSub === `faq-${i}` && (
+                  <div style={{ padding: "8px 4px 10px 20px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55 }}>
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </SettingsRow>
+
+          {/* LEGAL */}
+          <SettingsRow label="legal" isOpen={openSection === "legal"} onToggle={() => toggleSection("legal")}>
+            {([
+              { key: "privacy", label: "PRIVACY POLICY",   text: PRIVACY_POLICY   },
+              { key: "terms",   label: "TERMS OF SERVICE", text: TERMS_OF_SERVICE },
+            ] as { key: string; label: string; text: string }[]).map(doc => (
+              <div key={doc.key}>
+                <button onClick={() => toggleSub(`legal-${doc.key}`)} className="w-full text-left flex items-center"
+                  style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
+                    borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ color: "#00c8ff", fontSize: "11px" }}>{openSub === `legal-${doc.key}` ? "∨" : ">"}</span>
+                  <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", letterSpacing: "0.06em" }}>{doc.label}</span>
+                </button>
+                {openSub === `legal-${doc.key}` && (
+                  <div style={{ padding: "10px 4px 10px 20px", color: "rgba(255,255,255,0.45)", fontSize: "11px", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                    {doc.text}
+                  </div>
+                )}
+              </div>
+            ))}
+          </SettingsRow>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Home() {
   const engine = useAudioEngine();
   const [durationStep, setDurationStep] = useState<number>(10);
@@ -495,7 +748,11 @@ function Home() {
     const id    = saved ?? "oceans";
     return CATEGORIES.some((c) => c.id === id) ? id : CATEGORIES[0].id;
   });
-  const [sprocketActive, setSprocketActive] = useState<boolean>(false);
+  const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
+  const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
+  const [eqMode,        setEqMode]        = useState<EqModeId>(
+    () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
+  );
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
   const LOOP_STEP = DURATION_STEPS.length - 1;
@@ -547,7 +804,6 @@ function Home() {
     setSelectedId(id);
     localStorage.setItem("tr_last_category", id);
   };
-  // When a new tile snaps to centre, immediately show its track list.
   const handleCenterChange = (idx: number) => {
     const id = CATEGORIES[idx].id;
     setCenterIdx(idx);
@@ -555,83 +811,103 @@ function Home() {
     localStorage.setItem("tr_last_category", id);
   };
 
+  const handleSprocketClick = useCallback(() => {
+    setSprocketFlash(true);
+    setTimeout(() => { setSprocketFlash(false); setSettingsOpen(true); }, 180);
+  }, []);
+
+  const handleEqChange = useCallback((mode: EqModeId) => {
+    setEqMode(mode);
+    localStorage.setItem("tr_eq_mode", mode);
+  }, []);
+
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
       style={{ height: "100svh", touchAction: "none", overscrollBehavior: "none" }}>
 
-      {/* Full-screen background */}
+      {/* Full-screen background — always visible */}
       <img src={img("bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
-      {/* Top Banner — RGBA PNG; transparent wave bottom blends into the background naturally */}
-      <div className="relative z-10 flex-shrink-0 w-full">
-        <img src={img("banner.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
-          className="w-full h-auto block" draggable={false} />
-      </div>
+      {/* Settings overlay — hides all other UI when open */}
+      {settingsOpen && (
+        <SettingsPanel
+          onClose={() => setSettingsOpen(false)}
+          eqMode={eqMode}
+          onEqChange={handleEqChange}
+        />
+      )}
 
-      {/* Volume meter — anchored to outer container, sits just above the control bar */}
-      <VolumeMeter
-        volume={engine.masterVolume}
-        onChange={engine.setMasterVolume}
-        bottomPad="clamp(66px,12vh,92px)"
-      />
-
-      {/* Carousel area — overflow:visible keeps 3D depth rendering intact.
-          flex-shrink-0 so it never expands to steal track-list space. */}
-      <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-        <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "6px" }}>
-          <CylinderCarousel
-            centerIdx={centerIdx}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            onCenterChange={handleCenterChange}
-            engine={engine}
-          />
-        </div>
-      </div>
-
-      {/* Track list area — separate flex-1 with overflow:hidden so it never
-          pushes the control bar. Scrolls internally however long the list is. */}
-      <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,3vh,28px)", paddingBottom: "10px" }}>
-        {selectedId && (() => {
-          const cat = CATEGORIES.find((c) => c.id === selectedId);
-          return cat ? <TrackList category={cat} engine={engine} /> : null;
-        })()}
-      </div>
-
-      {/* Bottom control bar */}
-      <div className="relative z-10 flex-shrink-0"
-        style={{ height: "calc(clamp(62px,11vh,88px) + env(safe-area-inset-bottom, 0px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
-          style={{ objectFit: "fill" }} draggable={false} />
-        <div className="relative z-10 flex items-center h-full"
-          style={{ paddingLeft: "clamp(22px,5.5cqw,34px)", paddingRight: "clamp(12px,3cqw,20px)", gap: "clamp(6px,1.5cqw,14px)" }}>
-          {/* Play / Pause */}
-          <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-            className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(44px,11cqw,72px)", position: "relative", left: "4px", top: "3px" }} data-testid="btn-play-pause">
-            <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
-              alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
-          </button>
-          {/* Duration slider — asymmetric margins: normal left, tight right so the
-              loop-icon (at left:100%) doesn't get clipped by the container edge */}
-          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, marginLeft: "clamp(8px,2cqw,14px)", marginRight: "clamp(2px,0.5cqw,4px)" }}>
-            <DurationSlider
-              step={durationStep}
-              onChange={handleDurationChange}
-              timeRemaining={timeRemaining}
-              isPlaying={isPlaying}
-            />
+      {!settingsOpen && (
+        <>
+          {/* Top Banner */}
+          <div className="relative z-10 flex-shrink-0 w-full">
+            <img src={img("banner.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
+              className="w-full h-auto block" draggable={false} />
           </div>
-          {/* Settings sprocket */}
-          <button onClick={() => setSprocketActive(a => !a)}
-            className="flex-shrink-0 transition-opacity duration-150 active:opacity-60 hover:opacity-80"
-            style={{ width: "clamp(58px,14cqw,84px)" }} data-testid="btn-settings">
-            <img src={sprocketActive ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
-              alt="Settings" className="w-full h-auto" draggable={false} />
-          </button>
-        </div>
-      </div>
+
+          {/* Volume meter */}
+          <VolumeMeter
+            volume={engine.masterVolume}
+            onChange={engine.setMasterVolume}
+            bottomPad="clamp(66px,12vh,92px)"
+          />
+
+          {/* Carousel */}
+          <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
+            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "6px" }}>
+              <CylinderCarousel
+                centerIdx={centerIdx}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+                onCenterChange={handleCenterChange}
+                engine={engine}
+              />
+            </div>
+          </div>
+
+          {/* Track list */}
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,3vh,28px)", paddingBottom: "10px" }}>
+            {selectedId && (() => {
+              const cat = CATEGORIES.find((c) => c.id === selectedId);
+              return cat ? <TrackList category={cat} engine={engine} /> : null;
+            })()}
+          </div>
+
+          {/* Bottom control bar */}
+          <div className="relative z-10 flex-shrink-0"
+            style={{ height: "calc(clamp(62px,11vh,88px) + env(safe-area-inset-bottom, 0px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
+              style={{ objectFit: "fill" }} draggable={false} />
+            <div className="relative z-10 flex items-center h-full"
+              style={{ paddingLeft: "clamp(22px,5.5cqw,34px)", paddingRight: "clamp(12px,3cqw,20px)", gap: "clamp(6px,1.5cqw,14px)" }}>
+              {/* Play / Pause */}
+              <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
+                className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
+                style={{ width: "clamp(44px,11cqw,72px)", position: "relative", left: "4px", top: "3px" }} data-testid="btn-play-pause">
+                <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
+                  alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
+              </button>
+              {/* Duration slider */}
+              <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, marginLeft: "clamp(8px,2cqw,14px)", marginRight: "clamp(2px,0.5cqw,4px)" }}>
+                <DurationSlider
+                  step={durationStep}
+                  onChange={handleDurationChange}
+                  timeRemaining={timeRemaining}
+                  isPlaying={isPlaying}
+                />
+              </div>
+              {/* Settings sprocket — momentary flash then opens panel */}
+              <button onClick={handleSprocketClick}
+                className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
+                style={{ width: "clamp(58px,14cqw,84px)" }} data-testid="btn-settings">
+                <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
+                  alt="Settings" className="w-full h-auto" draggable={false} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
