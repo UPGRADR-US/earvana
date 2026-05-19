@@ -212,11 +212,6 @@ function DurationSlider({
         <img src={img("SliderKnob.png")} alt="" className="w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
       </div>
 
-      {/* Duration text */}
-      <img src={img("durationtext.png")} alt="duration (hours)"
-        className="absolute bottom-0 left-0 right-0 w-full pointer-events-none"
-        style={{ height: "clamp(9px,1.5vh,13px)", objectFit: "contain", objectPosition: "center" }}
-        draggable={false} />
     </div>
   );
 }
@@ -841,6 +836,18 @@ function Home() {
     localStorage.setItem("tr_eq_mode", mode);
   }, []);
 
+  const handleSpeakerClick = useCallback(() => {
+    /* On iOS Safari, webkitShowPlaybackTargetPicker() opens the native
+       AirPlay / route-picker sheet (internal speaker, Bluetooth, AirPlay). */
+    const audios = document.getElementsByTagName("audio");
+    if (audios.length > 0) {
+      const el = audios[0] as HTMLAudioElement & { webkitShowPlaybackTargetPicker?: () => void };
+      if (typeof el.webkitShowPlaybackTargetPicker === "function") {
+        el.webkitShowPlaybackTargetPicker();
+      }
+    }
+  }, []);
+
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
       style={{ height: "100svh", touchAction: "none", overscrollBehavior: "none" }}>
@@ -894,36 +901,51 @@ function Home() {
             })()}
           </div>
 
-          {/* Bottom control bar */}
+          {/* Bottom control bar — two-row layout */}
           <div className="relative z-10 flex-shrink-0"
-            style={{ height: "calc(clamp(62px,11vh,88px) + env(safe-area-inset-bottom, 0px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-            <img src={img("CPanl_bar_btm.png")} alt="" className="absolute inset-0 w-full h-full"
+            style={{ height: `calc(clamp(108px,18vh,148px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
               style={{ objectFit: "fill" }} draggable={false} />
-            <div className="relative z-10 flex items-center h-full"
-              style={{ paddingLeft: "clamp(22px,5.5cqw,34px)", paddingRight: "clamp(12px,3cqw,20px)", gap: "clamp(6px,1.5cqw,14px)" }}>
-              {/* Play / Pause */}
-              <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-                className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-                style={{ width: "clamp(44px,11cqw,72px)", position: "relative", left: "4px", top: "3px" }} data-testid="btn-play-pause">
-                <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
-                  alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
-              </button>
-              {/* Duration slider */}
-              <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, marginLeft: "clamp(8px,2cqw,14px)", marginRight: "clamp(2px,0.5cqw,4px)" }}>
+
+            <div className="relative z-10 flex flex-col h-full">
+              {/* Row 1: Duration slider + label */}
+              <div className="flex-1 flex flex-col justify-center"
+                style={{ paddingLeft: "clamp(14px,3.5cqw,22px)", paddingRight: "clamp(8px,2cqw,14px)", paddingTop: "6px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
                   timeRemaining={timeRemaining}
                   isPlaying={isPlaying}
                 />
+                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "2px" }}>
+                  duration (hours)
+                </div>
               </div>
-              {/* Settings sprocket — momentary flash then opens panel */}
-              <button onClick={handleSprocketClick}
-                className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
-                style={{ width: "clamp(58px,14cqw,84px)" }} data-testid="btn-settings">
-                <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
-                  alt="Settings" className="w-full h-auto" draggable={false} />
-              </button>
+
+              {/* Row 2: Speaker | Play | Sprocket */}
+              <div className="flex items-center justify-between flex-shrink-0"
+                style={{ paddingLeft: "clamp(20px,5cqw,36px)", paddingRight: "clamp(20px,5cqw,36px)", paddingBottom: "clamp(8px,1.5vh,14px)", paddingTop: "2px" }}>
+                {/* Speaker / output selector */}
+                <button onClick={handleSpeakerClick}
+                  className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
+                  style={{ width: "clamp(34px,8.5cqw,50px)" }} data-testid="btn-speaker">
+                  <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
+                </button>
+                {/* Play / Pause */}
+                <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
+                  className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
+                  style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
+                  <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
+                    alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
+                </button>
+                {/* Settings sprocket */}
+                <button onClick={handleSprocketClick}
+                  className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
+                  style={{ width: "clamp(34px,8.5cqw,50px)" }} data-testid="btn-settings">
+                  <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
+                    alt="Settings" className="w-full h-auto" draggable={false} />
+                </button>
+              </div>
             </div>
           </div>
         </>
