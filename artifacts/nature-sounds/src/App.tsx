@@ -484,8 +484,17 @@ function TrackList({ category, engine }: { category: SoundCategory; engine: Retu
 function Home() {
   const engine = useAudioEngine();
   const [durationStep, setDurationStep] = useState<number>(10);
-  const [centerIdx,   setCenterIdx]   = useState<number>(2);
-  const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[2].id);
+  const [centerIdx,   setCenterIdx]   = useState<number>(() => {
+    const saved = localStorage.getItem("tr_last_category");
+    const id    = saved ?? "oceans";
+    const idx   = CATEGORIES.findIndex((c) => c.id === id);
+    return idx >= 0 ? idx : 0;
+  });
+  const [selectedId,  setSelectedId]  = useState<string | null>(() => {
+    const saved = localStorage.getItem("tr_last_category");
+    const id    = saved ?? "oceans";
+    return CATEGORIES.some((c) => c.id === id) ? id : CATEGORIES[0].id;
+  });
   const [sprocketActive, setSprocketActive] = useState<boolean>(false);
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
@@ -534,9 +543,17 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
 
-  const handleSelect = (id: string) => setSelectedId(id);
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    localStorage.setItem("tr_last_category", id);
+  };
   // When a new tile snaps to centre, immediately show its track list.
-  const handleCenterChange = (idx: number) => { setCenterIdx(idx); setSelectedId(CATEGORIES[idx].id); };
+  const handleCenterChange = (idx: number) => {
+    const id = CATEGORIES[idx].id;
+    setCenterIdx(idx);
+    setSelectedId(id);
+    localStorage.setItem("tr_last_category", id);
+  };
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
