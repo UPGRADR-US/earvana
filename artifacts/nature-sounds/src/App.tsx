@@ -604,7 +604,7 @@ function Home() {
           {/* Play / Pause */}
           <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
             className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-            style={{ width: "clamp(44px,11cqw,72px)" }} data-testid="btn-play-pause">
+            style={{ width: "clamp(44px,11cqw,72px)", position: "relative", left: "4px", top: "3px" }} data-testid="btn-play-pause">
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
