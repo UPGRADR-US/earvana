@@ -404,16 +404,16 @@ function CylinderCarousel({
               {/* Slab edges */}
               <div style={{ position:"absolute", top:0, right:0, width:SLAB_DEPTH, height:"100%",
                 transformOrigin:"right center", transform:"rotateY(90deg)",
-                background:EDGE_RIGHT, opacity:faceOpacity, borderRadius:"0 12px 12px 0" }} />
+                background:EDGE_RIGHT, opacity:faceOpacity, borderRadius:"12px" }} />
               <div style={{ position:"absolute", top:0, left:0, width:SLAB_DEPTH, height:"100%",
                 transformOrigin:"left center", transform:"rotateY(-90deg)",
-                background:EDGE_LEFT, opacity:faceOpacity, borderRadius:"12px 0 0 12px" }} />
+                background:EDGE_LEFT, opacity:faceOpacity, borderRadius:"12px" }} />
               <div style={{ position:"absolute", top:0, left:0, width:"100%", height:SLAB_DEPTH,
                 transformOrigin:"center top", transform:"rotateX(90deg)",
-                background:EDGE_TOP, opacity:faceOpacity, borderRadius:"12px 12px 0 0" }} />
+                background:EDGE_TOP, opacity:faceOpacity, borderRadius:"12px" }} />
               <div style={{ position:"absolute", bottom:0, left:0, width:"100%", height:SLAB_DEPTH,
                 transformOrigin:"center bottom", transform:"rotateX(-90deg)",
-                background:EDGE_BOTTOM, opacity:faceOpacity, borderRadius:"0 0 12px 12px" }} />
+                background:EDGE_BOTTOM, opacity:faceOpacity, borderRadius:"12px" }} />
 
               {/* Front face — pushed forward by SLAB_DEPTH */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
