@@ -564,7 +564,7 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
         className="w-full text-left flex items-center"
         style={{
           padding: "11px 14px", gap: "10px",
-          background: "rgba(0,15,40,0.60)",
+          background: "rgba(0,15,40,0.28)",
           borderRadius: isOpen ? "8px 8px 0 0" : "8px",
           border: "none", cursor: "pointer",
         }}>
@@ -576,7 +576,7 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
         </span>
       </button>
       {isOpen && children && (
-        <div style={{ background: "rgba(0,10,30,0.42)", borderRadius: "0 0 8px 8px", padding: "12px 14px 16px" }}>
+        <div style={{ background: "rgba(0,10,30,0.20)", borderRadius: "0 0 8px 8px", padding: "12px 14px 16px" }}>
           {children}
         </div>
       )}
