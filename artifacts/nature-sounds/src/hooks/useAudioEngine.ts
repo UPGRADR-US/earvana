@@ -228,25 +228,42 @@ export function useAudioEngine(): AudioEngineState {
   }, []);
 
   // ── iOS keep-alive: silent HTMLAudioElement keeps audio session active ───
-  // iOS suspends the Web Audio API when the screen locks unless an
-  // HTMLAudioElement is playing. We route a zero-gain looping buffer through
-  // a MediaStreamDestination → <audio> to hold the session open.
-  const startKeepAlive = useCallback((ctx: AudioContext) => {
+  // iOS Safari suspends the Web Audio API when the screen locks unless an
+  // HTMLAudioElement is actively playing a real audio src (not a stream —
+  // srcObject/MediaStreamDestination is NOT supported on iOS Safari).
+  // We build a minimal silent WAV in memory, turn it into a blob URL, and
+  // loop it at near-zero volume. iOS treats this as a live audio session and
+  // keeps the Web Audio context running in the background.
+  const startKeepAlive = useCallback(() => {
     if (keepAliveRef.current) return;
     try {
-      const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.loop   = true;
-      const dest = ctx.createMediaStreamDestination();
-      src.connect(dest);
-      src.start();
-      const el = new Audio();
-      el.srcObject = dest.stream;
-      el.volume    = 0;
+      // Build a minimal silent WAV: 8000 Hz, mono, 8-bit PCM, 0.5 s
+      const sampleRate = 8000;
+      const numSamples = sampleRate / 2;          // 0.5 seconds
+      const dataSize   = numSamples;               // 1 byte per sample (8-bit)
+      const header     = new Uint8Array(44);
+      const dv         = new DataView(header.buffer);
+      const wr32 = (o: number, v: number) => dv.setUint32(o, v, true);
+      const wr16 = (o: number, v: number) => dv.setUint16(o, v, true);
+      const str  = (o: number, s: string) => s.split('').forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+      str(0,  'RIFF'); wr32(4, 36 + dataSize);
+      str(8,  'WAVE'); str(12, 'fmt '); wr32(16, 16);
+      wr16(20, 1);           // PCM
+      wr16(22, 1);           // mono
+      wr32(24, sampleRate);  // sample rate
+      wr32(28, sampleRate);  // byte rate (= sampleRate × 1 channel × 1 byte)
+      wr16(32, 1);           // block align
+      wr16(34, 8);           // bits per sample
+      str(36, 'data'); wr32(40, dataSize);
+      const data = new Uint8Array(numSamples).fill(128); // 128 = silence in 8-bit unsigned PCM
+      const url  = URL.createObjectURL(new Blob([header, data], { type: 'audio/wav' }));
+
+      const el  = new Audio(url);
+      el.loop   = true;
+      el.volume = 0.001;   // near-silent but non-zero — iOS skips muted elements
       el.play().catch(() => {});
       keepAliveRef.current = el;
-    } catch { /* MediaStreamDestination unavailable — graceful degradation */ }
+    } catch { /* graceful degradation on browsers without Blob/Audio support */ }
   }, []);
 
   // ── AudioContext init ────────────────────────────────────────────────────
@@ -264,7 +281,7 @@ export function useAudioEngine(): AudioEngineState {
     if (contextRef.current.state === 'suspended') {
       contextRef.current.resume().catch(() => {});
     }
-    startKeepAlive(contextRef.current);
+    startKeepAlive();
   }, [masterVolume, startKeepAlive]);
 
   // ── Playback controls ────────────────────────────────────────────────────
