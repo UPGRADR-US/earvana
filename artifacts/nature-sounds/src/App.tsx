@@ -903,7 +903,7 @@ function Home() {
 
           {/* Bottom control bar — two-row layout */}
           <div className="relative z-10 flex-shrink-0"
-            style={{ height: `calc(clamp(108px,18vh,148px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            style={{ height: `calc(clamp(136px,22.5vh,185px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
               style={{ objectFit: "fill" }} draggable={false} />
 
@@ -911,7 +911,7 @@ function Home() {
 
               {/* Duration slider — absolutely placed, low in the bar just above icon row */}
               <div className="absolute left-0 right-0"
-                style={{ bottom: "clamp(50px,7vh,66px)", paddingLeft: "52px", paddingRight: "44px" }}>
+                style={{ bottom: "clamp(28px,4.5vh,46px)", paddingLeft: "52px", paddingRight: "44px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
@@ -925,7 +925,7 @@ function Home() {
 
               {/* Icon row — absolutely pinned to bottom */}
               <div className="absolute bottom-0 left-0 right-0 flex items-center"
-                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
+                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(11px,2vh,18px)", paddingTop: "2px" }}>
                 {/* Speaker */}
                 <button onClick={handleSpeakerClick}
                   className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
