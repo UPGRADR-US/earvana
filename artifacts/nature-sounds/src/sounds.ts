@@ -102,8 +102,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Winds",
     thumbnail: "sounds/TR_tn_winds.png",
     tracks: [
-      { id: "wind_breezy",    name: "Breezy",    file: "sounds/wind_breezy.mp3",    icon: "Wind" },
-      { id: "wind_whistling", name: "Whistling", file: "sounds/wind_whistling.mp3", icon: "Wind" },
+      { id: "wind_gusty",     name: "Gusty",     file: "sounds/(t)Wind(gusty).mp3",     icon: "Wind" },
+      { id: "wind_whistling", name: "Whistling", file: "sounds/(t)Wind(whistling).mp3", icon: "Wind" },
     ],
   },
   {
@@ -124,8 +124,8 @@ export const CATEGORIES: SoundCategory[] = [
       { id: "noise_pink_static",   name: "Pink-Static",   file: "sounds/noise_pink_static.mp3",   icon: "Radio" },
       { id: "noise_green_static",  name: "Green-Static",  file: "sounds/noise_green_static.mp3",  icon: "Radio" },
       { id: "noise_brown_static",  name: "Brown-Static",  file: "sounds/noise_brown_static.mp3",  icon: "Radio" },
-      { id: "noise_white_rolling", name: "White-Rolling", file: "sounds/noise_white_rolling.mp3", icon: "Radio" },
-      { id: "noise_pink_rolling",  name: "Pink-Rolling",  file: "sounds/noise_pink_rolling.mp3",  icon: "Radio" },
+      { id: "noise_white_rolling", name: "White-Rolling", file: "sounds/(t)Noise-Rolling(WHT).mp3", icon: "Radio" },
+      { id: "noise_pink_rolling",  name: "Pink-Rolling",  file: "sounds/(t)Noise-Rolling(PNK).mp3",  icon: "Radio" },
       { id: "noise_green_rolling", name: "Green-Rolling", file: "sounds/noise_green_rolling.mp3", icon: "Radio" },
       { id: "noise_brown_rolling", name: "Brown-Rolling", file: "sounds/noise_brown_rolling.mp3", icon: "Radio" },
     ],
