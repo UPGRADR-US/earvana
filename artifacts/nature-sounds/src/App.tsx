@@ -245,7 +245,7 @@ function shortArc(deg: number): number {
 // Must NOT be applied to the tile container (breaks preserve-3d); faces only.
 function tileOpacity(visAngleDeg: number): number {
   const a = Math.abs(visAngleDeg);
-  return a < 98 ? 1 : a < 155 ? 1 - ((a - 98) / 57) * 0.6 : 0;
+  return a < 98 ? 1 : a < 172 ? 1 - ((a - 98) / 74) * 0.78 : 0;
 }
 
 const EDGE_RIGHT  = "linear-gradient(to right,  #22435e, #162c40)";
@@ -373,7 +373,7 @@ function CylinderCarousel({
           const visAngle  = shortArc(itemAngle - rotation);
           const absVis    = Math.abs(visAngle);
 
-          if (absVis > 155) return null;   // in the back — invisible, skip rendering
+          if (absVis > 172) return null;   // in the back — invisible, skip rendering
 
           const isCentered  = absVis < ANGLE_STEP / 2;
           const isSelected  = cat.id === selectedId;
