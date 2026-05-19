@@ -926,7 +926,7 @@ function Home() {
 
               {/* Icon row — absolutely pinned to bottom */}
               <div className="absolute bottom-0 left-0 right-0 flex items-center"
-                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
+                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(4px,0.6vh,8px)", paddingTop: "2px" }}>
                 {/* Speaker */}
                 <button onClick={handleSpeakerClick}
                   className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
@@ -935,7 +935,7 @@ function Home() {
                 </button>
                 {/* Play — truly centered across full bar width */}
                 <div className="absolute inset-x-0 flex justify-center pointer-events-none"
-                  style={{ bottom: "clamp(14px,2.5vh,22px)", paddingBottom: "0" }}>
+                  style={{ bottom: "clamp(4px,0.6vh,8px)", paddingBottom: "0" }}>
                   <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
                     className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
                     style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
