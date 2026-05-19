@@ -55,9 +55,9 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Forests",
     thumbnail: "sounds/TR_tn_forests.png",
     tracks: [
-      { id: "forest_calm",   name: "Calm",   file: "sounds/forest_calm.mp3",   icon: "TreePine" },
-      { id: "forest_active", name: "Active", file: "sounds/forest_active.mp3", icon: "TreePine" },
-      { id: "forest_amazon", name: "Amazon", file: "sounds/forest_amazon.mp3", icon: "TreePine" },
+      { id: "forest_calm",   name: "Calm",   file: "sounds/Forest(calm).mp3",   icon: "TreePine" },
+      { id: "forest_active", name: "Active", file: "sounds/Forest(active).mp3", icon: "TreePine" },
+      { id: "forest_amazon", name: "Amazon", file: "sounds/Forest(amzn).mp3",   icon: "TreePine" },
     ],
   },
   {
@@ -74,8 +74,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Fields",
     thumbnail: "sounds/TR_tn_fields.png",
     tracks: [
-      { id: "field_calm",   name: "Calm",   file: "sounds/field_calm.mp3",   icon: "Leaf" },
-      { id: "field_active", name: "Active", file: "sounds/field_active.mp3", icon: "Leaf" },
+      { id: "field_calm",   name: "Calm",   file: "sounds/Field(calm).mp3",   icon: "Leaf" },
+      { id: "field_active", name: "Active", file: "sounds/Field(actv).mp3",   icon: "Leaf" },
     ],
   },
   {
@@ -93,8 +93,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Storms",
     thumbnail: "sounds/TR_tn_storms.png",
     tracks: [
-      { id: "storm_gentle", name: "Gentle", file: "sounds/storm_gentle.mp3", icon: "CloudLightning" },
-      { id: "storm_active", name: "Active", file: "sounds/storm_active.mp3", icon: "CloudLightning" },
+      { id: "storm_calm",   name: "Calm",   file: "sounds/Storm(calm).mp3",   icon: "CloudLightning" },
+      { id: "storm_active", name: "Active", file: "sounds/Storm(active).mp3", icon: "CloudLightning" },
     ],
   },
   {
