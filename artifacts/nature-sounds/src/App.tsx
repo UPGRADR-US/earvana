@@ -877,7 +877,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(160px,24vh,200px)"
+            bottomPad="clamp(205px,32vh,262px)"
           />
 
           {/* Carousel */}
@@ -903,7 +903,7 @@ function Home() {
 
           {/* Bottom control bar — two-row layout */}
           <div className="relative z-10 flex-shrink-0"
-            style={{ height: `calc(clamp(155px,25vh,205px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            style={{ height: `calc(clamp(200px,30vh,250px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
               style={{ objectFit: "fill" }} draggable={false} />
 
@@ -911,22 +911,22 @@ function Home() {
 
               {/* Duration slider — absolutely placed, low in the bar just above icon row */}
               <div className="absolute left-0 right-0"
-                style={{ bottom: "clamp(38px,5.5vh,58px)", paddingLeft: "52px", paddingRight: "44px" }}>
+                style={{ bottom: "clamp(82px,11.5vh,105px)", paddingLeft: "52px", paddingRight: "44px" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
                   timeRemaining={timeRemaining}
                   isPlaying={isPlaying}
                 />
-                {/* pulled up to sit just below the slot track (slot is at 55% of slider height) */}
-                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-16px" }}>
+                {/* -19px pulls text up to just below the slot (slot bottom ≈ sliderHeight×0.55 + slotHeight/2) */}
+                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-19px" }}>
                   duration (hours)
                 </div>
               </div>
 
               {/* Icon row — absolutely pinned to bottom */}
               <div className="absolute bottom-0 left-0 right-0 flex items-center"
-                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(2px,0.5vh,8px)", paddingTop: "2px" }}>
+                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
                 {/* Speaker */}
                 <button onClick={handleSpeakerClick}
                   className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
@@ -935,7 +935,7 @@ function Home() {
                 </button>
                 {/* Play — truly centered across full bar width */}
                 <div className="absolute inset-x-0 flex justify-center pointer-events-none"
-                  style={{ bottom: "clamp(14px,2.5vh,22px)" }}>
+                  style={{ bottom: "clamp(14px,2.5vh,22px)", paddingBottom: "0" }}>
                   <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
                     className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
                     style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
