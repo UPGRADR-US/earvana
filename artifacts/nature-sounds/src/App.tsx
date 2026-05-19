@@ -560,7 +560,7 @@ function Home() {
 
       {/* Top Banner — RGBA PNG; transparent wave bottom blends into the background naturally */}
       <div className="relative z-10 flex-shrink-0 w-full">
-        <img src={img("TopBannerV2.png")} alt="tinnitus relief by earvana"
+        <img src={img("banner.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
           className="w-full h-auto block" draggable={false} />
       </div>
 
