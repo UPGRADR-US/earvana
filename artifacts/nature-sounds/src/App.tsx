@@ -908,40 +908,42 @@ function Home() {
               style={{ objectFit: "fill" }} draggable={false} />
 
             <div className="relative z-10 flex flex-col h-full">
-              {/* Row 1: Duration slider + label */}
+              {/* Row 1: Duration slider + label — pushed down past the banner top edge */}
               <div className="flex-1 flex flex-col justify-center"
-                style={{ paddingLeft: "clamp(14px,3.5cqw,22px)", paddingRight: "clamp(8px,2cqw,14px)", paddingTop: "6px" }}>
+                style={{ paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(32px,8cqw,44px)", paddingTop: "clamp(18px,2.5vh,26px)" }}>
                 <DurationSlider
                   step={durationStep}
                   onChange={handleDurationChange}
                   timeRemaining={timeRemaining}
                   isPlaying={isPlaying}
                 />
-                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "2px" }}>
+                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-1px" }}>
                   duration (hours)
                 </div>
               </div>
 
-              {/* Row 2: Speaker | Play | Sprocket */}
-              <div className="flex items-center justify-between flex-shrink-0"
-                style={{ paddingLeft: "clamp(20px,5cqw,36px)", paddingRight: "clamp(20px,5cqw,36px)", paddingBottom: "clamp(8px,1.5vh,14px)", paddingTop: "2px" }}>
-                {/* Speaker / output selector */}
+              {/* Row 2: Speaker | Play (centered) | Sprocket */}
+              <div className="flex items-center flex-shrink-0"
+                style={{ paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(30px,7.5cqw,42px)", paddingBottom: "clamp(14px,2.5vh,22px)", paddingTop: "2px" }}>
+                {/* Speaker / output selector — smaller, sits at track-list left margin */}
                 <button onClick={handleSpeakerClick}
                   className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
-                  style={{ width: "clamp(34px,8.5cqw,50px)" }} data-testid="btn-speaker">
+                  style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                   <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
                 </button>
-                {/* Play / Pause */}
-                <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-                  className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-                  style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
-                  <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
-                    alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
-                </button>
-                {/* Settings sprocket */}
+                {/* Play / Pause — centered in remaining space */}
+                <div className="flex-1 flex justify-center">
+                  <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
+                    className="flex-shrink-0 transition-opacity duration-150 active:opacity-60"
+                    style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
+                    <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
+                      alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
+                  </button>
+                </div>
+                {/* Settings sprocket — 2× size, right edge matches left margin */}
                 <button onClick={handleSprocketClick}
                   className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
-                  style={{ width: "clamp(34px,8.5cqw,50px)" }} data-testid="btn-settings">
+                  style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
                   <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
                     alt="Settings" className="w-full h-auto" draggable={false} />
                 </button>
