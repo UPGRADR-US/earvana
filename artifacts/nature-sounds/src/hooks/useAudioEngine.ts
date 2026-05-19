@@ -1,26 +1,21 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
-const DEFAULT_CROSSFADE  = 15;  // seconds — used when a track has no crossfadeDuration
-const FADE_IN_DURATION   = 5;   // seconds — global fade-in on every play()
+const DEFAULT_CROSSFADE  = 15;  // seconds
+const FADE_IN_DURATION   = 5;   // seconds
 
-// Pre-computed fade-out curve: power-2 shape so dB drops slowly at first
-// then accelerates — starts barely perceptible, ends in a steep plunge.
-// Index 0 = start of fade (gain=1.0), last index = end (gain≈0).
+// Pre-computed fade-out curve: power-2 shape
 const FADE_OUT_N = 512;
 const FADE_OUT_CURVE = (() => {
   const c = new Float32Array(FADE_OUT_N);
   for (let i = 0; i < FADE_OUT_N; i++) {
-    const t = 1 - i / (FADE_OUT_N - 1); // 1 → 0
-    c[i] = Math.max(t * t, 0.0001);      // t² shape; clamp away from true zero
+    const t = 1 - i / (FADE_OUT_N - 1);
+    c[i] = Math.max(t * t, 0.0001);
   }
   return c;
 })();
 
-// Pre-computed equal-power curves (128 samples).
-// Fade-in:  sin(t·π/2)  — starts slow, ends fast
-// Fade-out: cos(t·π/2)  — starts fast, ends slow
-// At every point sin²+cos²=1, so combined RMS energy stays constant throughout.
+// Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
 const EQUAL_POWER_IN  = new Float32Array(CURVE_N);
 const EQUAL_POWER_OUT = new Float32Array(CURVE_N);
@@ -34,7 +29,7 @@ export type TrackState = {
   isPlaying: boolean;
   isLoading: boolean;
   hasError: boolean;
-  volume: number; // 0 to 1
+  volume: number;
 };
 
 export type AudioEngineState = {
@@ -51,7 +46,6 @@ export type AudioEngineState = {
   cancelFade: () => void;
 };
 
-// Represents a track's audio state
 class TrackEngine {
   id: string;
   url: string;
@@ -60,36 +54,31 @@ class TrackEngine {
   trackGain: GainNode;
   buffer: AudioBuffer | null = null;
 
-  // Per-track loop settings (resolved from SoundTrack metadata)
   crossfadeDuration: number;
-  loopStart: number;       // seconds into file; 0 = start of file
-  loopEnd: number | null;  // seconds into file; null = use full buffer duration
+  loopStart: number;
+  loopEnd: number | null;
 
-  // Two slots ping-pong for seamless crossfade looping
   sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
   gains: [GainNode | null, GainNode | null] = [null, null];
   currentSlot: 0 | 1 = 0;
 
   timeoutId: number | null = null;
   isPlaying: boolean = false;
-  volume: number = 0.5;  // target volume; ramps here on play()
+  volume: number = 0.5;
 
   constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
     this.id = track.id;
     this.url = track.file;
     this.context = context;
     this.masterGain = masterGain;
-
     this.crossfadeDuration = track.crossfadeDuration ?? DEFAULT_CROSSFADE;
     this.loopStart = track.loopStart ?? 0;
     this.loopEnd = track.loopEnd ?? null;
-
     this.trackGain = this.context.createGain();
     this.trackGain.connect(this.masterGain);
-    this.trackGain.gain.value = 0;  // starts silent; play() fades in
+    this.trackGain.gain.value = 0;
   }
 
-  // Returns the effective loop region length once the buffer is loaded
   private regionDuration(): number {
     const end = this.loopEnd ?? this.buffer!.duration;
     return end - this.loopStart;
@@ -116,30 +105,20 @@ class TrackEngine {
     gain.connect(this.trackGain);
 
     const startTime = this.context.currentTime;
-
-    // Equal-power fade-in: ramp trackGain from 0 → target volume on a sin curve
     this.trackGain.gain.cancelScheduledValues(startTime);
     this.trackGain.gain.setValueAtTime(0, startTime);
-    // Scale the curve to the target volume then apply over FADE_IN_DURATION
     const fadeInScaled = EQUAL_POWER_IN.map(v => v * this.volume);
     this.trackGain.gain.setValueCurveAtTime(fadeInScaled, startTime, FADE_IN_DURATION);
 
-    // Start playback at loopStart offset, play for regionDuration
     source.start(startTime, this.loopStart, this.regionDuration());
-
     this.sources[0] = source;
     this.gains[0] = gain;
-
-    // Schedule first crossfade: crossfadeDuration before the region ends
     this.scheduleNextLoop(startTime + this.regionDuration() - this.crossfadeDuration);
   }
 
   scheduleNextLoop(targetTime: number) {
     if (!this.isPlaying || !this.buffer) return;
-
     const timeUntilNext = targetTime - this.context.currentTime;
-
-    // If more than 1s away, poll again closer to the time
     if (timeUntilNext > 1) {
       this.timeoutId = window.setTimeout(
         () => this.scheduleNextLoop(targetTime),
@@ -152,7 +131,6 @@ class TrackEngine {
     const inSlot: 0 | 1 = outSlot === 0 ? 1 : 0;
     const xfade = this.crossfadeDuration;
 
-    // Start the incoming source from loopStart, play for regionDuration
     const inSource = this.context.createBufferSource();
     inSource.buffer = this.buffer;
     const inGain = this.context.createGain();
@@ -163,7 +141,6 @@ class TrackEngine {
     inGain.connect(this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
 
-    // Fade out the outgoing source using equal-power cosine curve
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
     if (outGain) {
@@ -171,12 +148,10 @@ class TrackEngine {
       outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, crossStart, xfade);
     }
 
-    // Store incoming in the new slot and advance the pointer
     this.sources[inSlot] = inSource;
     this.gains[inSlot] = inGain;
     this.currentSlot = inSlot;
 
-    // Clean up outgoing after crossfade completes
     const cleanupDelay = (crossStart - this.context.currentTime + xfade + 0.1) * 1000;
     window.setTimeout(() => {
       try { outSource?.stop(); } catch { /* already stopped */ }
@@ -186,7 +161,6 @@ class TrackEngine {
       if (this.gains[outSlot] === outGain) this.gains[outSlot] = null;
     }, Math.max(cleanupDelay, 0));
 
-    // Schedule the next crossfade
     this.scheduleNextLoop(crossStart + this.regionDuration() - xfade);
   }
 
@@ -207,8 +181,6 @@ class TrackEngine {
 
   setVolume(vol: number) {
     this.volume = vol;
-    // Only touch the gain node while actively playing — otherwise play() will
-    // apply the correct value (and fade-in ramp) when it starts.
     if (!this.isPlaying) return;
     const t = this.context.currentTime;
     this.trackGain.gain.cancelScheduledValues(t);
@@ -221,6 +193,7 @@ class TrackEngine {
 }
 
 export function useAudioEngine(): AudioEngineState {
+  // ── State ────────────────────────────────────────────────────────────────
   const [tracksState, setTracksState] = useState<Record<string, TrackState>>(
     TRACKS.reduce((acc, t) => ({
       ...acc,
@@ -229,19 +202,24 @@ export function useAudioEngine(): AudioEngineState {
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
 
-  const contextRef    = useRef<AudioContext | null>(null);
-  const masterGainRef = useRef<GainNode | null>(null);
-  const fadeGainRef   = useRef<GainNode | null>(null);
-  const enginesRef    = useRef<Record<string, TrackEngine>>({});
+  // ── Refs — ALL declared before any useCallback / useEffect ───────────────
+  const contextRef      = useRef<AudioContext | null>(null);
+  const masterGainRef   = useRef<GainNode | null>(null);
+  const fadeGainRef     = useRef<GainNode | null>(null);
+  const enginesRef      = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
-  const wakeLockRef   = useRef<WakeLockSentinel | null>(null);
-  const keepAliveRef  = useRef<HTMLAudioElement | null>(null);
+  const wakeLockRef     = useRef<WakeLockSentinel | null>(null);
+  const keepAliveRef    = useRef<HTMLAudioElement | null>(null);
+  // Stable refs for MediaSession callbacks (avoid stale closures)
+  const playRef         = useRef<((id: string) => Promise<void>) | null>(null);
+  const pauseRef        = useRef<((id: string) => void) | null>(null);
+  const resumeRef       = useRef<(() => Promise<void>) | null>(null);
 
   // ── Wake Lock (Android Chrome) ───────────────────────────────────────────
   const acquireWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) return;
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); }
-    catch { /* not supported or denied — silent */ }
+    catch { /* not supported or denied */ }
   }, []);
 
   const releaseWakeLock = useCallback(() => {
@@ -249,16 +227,13 @@ export function useAudioEngine(): AudioEngineState {
     wakeLockRef.current = null;
   }, []);
 
-  // ── iOS background-audio keep-alive + AudioContext auto-resume ───────────
-  // iOS suspends the AudioContext when the screen locks unless there is an
-  // HTMLAudioElement playing.  We route a zero-gain BufferSource through a
-  // MediaStreamDestination → <audio> element so iOS treats the whole session
-  // as active media.  We also listen for context suspension and immediately
-  // resume it when the page becomes visible again.
+  // ── iOS keep-alive: silent HTMLAudioElement keeps audio session active ───
+  // iOS suspends the Web Audio API when the screen locks unless an
+  // HTMLAudioElement is playing. We route a zero-gain looping buffer through
+  // a MediaStreamDestination → <audio> to hold the session open.
   const startKeepAlive = useCallback((ctx: AudioContext) => {
-    if (keepAliveRef.current) return; // already running
+    if (keepAliveRef.current) return;
     try {
-      // 1-second silent buffer, looped forever
       const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const src = ctx.createBufferSource();
       src.buffer = buf;
@@ -266,51 +241,15 @@ export function useAudioEngine(): AudioEngineState {
       const dest = ctx.createMediaStreamDestination();
       src.connect(dest);
       src.start();
-
       const el = new Audio();
       el.srcObject = dest.stream;
-      el.volume    = 0;           // completely inaudible
-      el.play().catch(() => {});  // called inside a user-gesture — should succeed
+      el.volume    = 0;
+      el.play().catch(() => {});
       keepAliveRef.current = el;
-    } catch { /* createMediaStreamDestination unavailable — graceful degradation */ }
+    } catch { /* MediaStreamDestination unavailable — graceful degradation */ }
   }, []);
 
-  const stopKeepAlive = useCallback(() => {
-    if (!keepAliveRef.current) return;
-    keepAliveRef.current.pause();
-    keepAliveRef.current.srcObject = null;
-    keepAliveRef.current = null;
-  }, []);
-
-  // Re-acquire wake lock and resume suspended context when tab returns to foreground
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
-      if (document.visibilityState === 'visible') {
-        if (anyPlaying) acquireWakeLock();
-        // Resume AudioContext if iOS suspended it while the screen was locked
-        const ctx = contextRef.current;
-        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-      } else {
-        // Screen locked — iOS may suspend; set up auto-resume on statechange
-        const ctx = contextRef.current;
-        if (ctx && anyPlaying) {
-          const onStateChange = () => {
-            if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-          };
-          ctx.addEventListener('statechange', onStateChange, { once: true });
-        }
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [acquireWakeLock]);
-
-  // Stable refs so MediaSession action handlers always call the latest version
-  const playRef   = useRef<((id: string) => Promise<void>) | null>(null);
-  const pauseRef  = useRef<((id: string) => void) | null>(null);
-  const resumeRef = useRef<(() => Promise<void>) | null>(null);
-
+  // ── AudioContext init ────────────────────────────────────────────────────
   const initContext = useCallback(() => {
     if (!contextRef.current) {
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
@@ -325,19 +264,18 @@ export function useAudioEngine(): AudioEngineState {
     if (contextRef.current.state === 'suspended') {
       contextRef.current.resume().catch(() => {});
     }
-    // Start iOS keep-alive on first user interaction
     startKeepAlive(contextRef.current);
   }, [masterVolume, startKeepAlive]);
 
+  // ── Playback controls ────────────────────────────────────────────────────
   const play = useCallback(async (trackId: string) => {
     initContext();
     const ctx = contextRef.current!;
-    const mg = masterGainRef.current!;
+    const mg  = masterGainRef.current!;
 
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Stop every other playing track first — only one track at a time.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
       if (id !== trackId && eng.isPlaying) eng.pause();
     });
@@ -349,11 +287,10 @@ export function useAudioEngine(): AudioEngineState {
 
     if (!enginesRef.current[trackId]) {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
-      enginesRef.current[trackId].setVolume(tracksState[trackId].volume);
+      enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
     }
 
     const engine = enginesRef.current[trackId];
-
     lastPlayedIdRef.current = trackId;
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
     try {
@@ -361,7 +298,6 @@ export function useAudioEngine(): AudioEngineState {
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
-      // Tell iOS lock screen what's playing
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: track.name,
@@ -376,7 +312,6 @@ export function useAudioEngine(): AudioEngineState {
     }
   }, [initContext, tracksState, acquireWakeLock]);
 
-  // Resume the last-played track with a fresh fade-in
   const resume = useCallback(async () => {
     if (lastPlayedIdRef.current) await play(lastPlayedIdRef.current);
   }, [play]);
@@ -391,16 +326,13 @@ export function useAudioEngine(): AudioEngineState {
 
   const setVolume = useCallback((trackId: string, volume: number) => {
     const engine = enginesRef.current[trackId];
-    if (engine) {
-      engine.setVolume(volume);
-    }
+    if (engine) engine.setVolume(volume);
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], volume } }));
   }, []);
 
   const setMasterVolume = useCallback((volume: number) => {
     setMasterVolumeState(volume);
     if (masterGainRef.current) {
-      // Cancel any automation and immediately apply the new volume level
       const t = contextRef.current?.currentTime ?? 0;
       masterGainRef.current.gain.cancelScheduledValues(t);
       masterGainRef.current.gain.value = volume;
@@ -408,20 +340,16 @@ export function useAudioEngine(): AudioEngineState {
   }, []);
 
   const stopAll = useCallback(() => {
-    Object.keys(enginesRef.current).forEach(id => {
-      enginesRef.current[id].pause();
-    });
+    Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause());
     setTracksState(s => {
       const ns = { ...s };
-      Object.keys(ns).forEach(id => { ns[id].isPlaying = false; });
+      Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
       return ns;
     });
     releaseWakeLock();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, [releaseWakeLock]);
 
-  /* Kick off the timed power-curve fade on the dedicated fadeGain node.
-     durationSeconds is the wall-clock time until the gain reaches ~0. */
   const startFadeOut = useCallback((durationSeconds: number) => {
     const fg  = fadeGainRef.current;
     const ctx = contextRef.current;
@@ -432,7 +360,6 @@ export function useAudioEngine(): AudioEngineState {
     fg.gain.setValueCurveAtTime(FADE_OUT_CURVE, now, durationSeconds);
   }, []);
 
-  /* Cancel any in-progress fade and immediately restore full gain. */
   const cancelFade = useCallback(() => {
     const fg  = fadeGainRef.current;
     const ctx = contextRef.current;
@@ -442,28 +369,46 @@ export function useAudioEngine(): AudioEngineState {
     fg.gain.setValueAtTime(1.0, t);
   }, []);
 
-  // Keep stable refs so MediaSession callbacks always use the latest functions
-  // without being stale closures.
+  // ── Effects ──────────────────────────────────────────────────────────────
+
+  // Keep stable refs current so MediaSession handlers never hold stale closures
   useEffect(() => { playRef.current   = play;   }, [play]);
   useEffect(() => { pauseRef.current  = pause;  }, [pause]);
   useEffect(() => { resumeRef.current = resume; }, [resume]);
 
-  // Wire MediaSession lock-screen action handlers once on mount.
-  // Handlers read from refs so they never become stale.
+  // Wire MediaSession lock-screen controls once on mount
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.setActionHandler('play', () => {
-      resumeRef.current?.();
-    });
+    navigator.mediaSession.setActionHandler('play',  () => { resumeRef.current?.(); });
     navigator.mediaSession.setActionHandler('pause', () => {
       const id = lastPlayedIdRef.current;
       if (id) pauseRef.current?.(id);
     });
-    navigator.mediaSession.setActionHandler('stop', () => {
+    navigator.mediaSession.setActionHandler('stop',  () => {
       const id = lastPlayedIdRef.current;
       if (id) pauseRef.current?.(id);
     });
   }, []);
+
+  // Wake lock re-acquire + AudioContext auto-resume on visibility change
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
+      const ctx = contextRef.current;
+      if (document.visibilityState === 'visible') {
+        if (anyPlaying) acquireWakeLock();
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      } else if (ctx && anyPlaying) {
+        // Screen locked — iOS may suspend; auto-resume when statechange fires
+        const onStateChange = () => {
+          if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        };
+        ctx.addEventListener('statechange', onStateChange, { once: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [acquireWakeLock]);
 
   return {
     tracks: tracksState,
