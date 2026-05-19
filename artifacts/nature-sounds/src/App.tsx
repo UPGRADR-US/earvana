@@ -613,8 +613,9 @@ function Home() {
             <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
               alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
           </button>
-          {/* Duration slider — margins further narrow the slot */}
-          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, margin: "0 clamp(8px,2cqw,14px)" }}>
+          {/* Duration slider — asymmetric margins: normal left, tight right so the
+              loop-icon (at left:100%) doesn't get clipped by the container edge */}
+          <div className="flex-1 flex flex-col justify-center" style={{ minWidth: 0, marginLeft: "clamp(8px,2cqw,14px)", marginRight: "clamp(2px,0.5cqw,4px)" }}>
             <DurationSlider
               step={durationStep}
               onChange={handleDurationChange}
