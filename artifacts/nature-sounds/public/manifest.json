@@ -1,7 +1,7 @@
 {
-  "name": "Tinnitus Relief by Earvana",
-  "short_name": "Tinnitus Relief",
-  "description": "Ambient nature sound mixer for tinnitus relief",
+  "name": "earvana: tinnitus relief",
+  "short_name": "earvana",
+  "description": "Ambient nature sound mixer for tinnitus relief by Earvana.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
