@@ -877,7 +877,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(180px,27vh,228px)"
+            bottomPad="clamp(100px,14vh,130px)"
           />
 
           {/* Carousel */}
@@ -901,57 +901,49 @@ function Home() {
             })()}
           </div>
 
-          {/* Bottom control bar — two-row layout */}
+          {/* Bottom controls — no background banner */}
           <div className="relative z-10 flex-shrink-0"
-            style={{ height: `calc(clamp(175px,25vh,220px) + env(safe-area-inset-bottom, 0px))`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-            <img src={img("banner-btm.png")} alt="" className="absolute inset-0 w-full h-full"
-              style={{ objectFit: "fill" }} draggable={false} />
+            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
 
-            <div className="relative z-10 w-full h-full">
-
-              {/* Duration slider — absolutely placed, low in the bar just above icon row */}
-              <div className="absolute left-0 right-0"
-                style={{ bottom: "clamp(68px,9.5vh,88px)", paddingLeft: "52px", paddingRight: "44px" }}>
-                <DurationSlider
-                  step={durationStep}
-                  onChange={handleDurationChange}
-                  timeRemaining={timeRemaining}
-                  isPlaying={isPlaying}
-                />
-                {/* -19px pulls text up to just below the slot (slot bottom ≈ sliderHeight×0.55 + slotHeight/2) */}
-                <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-19px" }}>
-                  duration (hours)
-                </div>
+            {/* Duration slider */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(6px,1vh,10px)" }}>
+              <DurationSlider
+                step={durationStep}
+                onChange={handleDurationChange}
+                timeRemaining={timeRemaining}
+                isPlaying={isPlaying}
+              />
+              <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-19px" }}>
+                duration (hours)
               </div>
+            </div>
 
-              {/* Icon row — absolutely pinned to bottom */}
-              <div className="absolute bottom-0 left-0 right-0 flex items-center"
-                style={{ paddingLeft: "38px", paddingRight: "30px", paddingBottom: "clamp(4px,0.6vh,8px)", paddingTop: "2px" }}>
-                {/* Speaker */}
-                <button onClick={handleSpeakerClick}
-                  className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
-                  style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
-                  <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
-                </button>
-                {/* Play — truly centered across full bar width */}
-                <div className="absolute inset-x-0 flex justify-center pointer-events-none"
-                  style={{ bottom: "clamp(4px,0.6vh,8px)", paddingBottom: "0" }}>
-                  <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-                    className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-                    style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
-                    <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
-                      alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
-                  </button>
-                </div>
-                {/* Sprocket — pinned right */}
-                <div className="flex-1" />
-                <button onClick={handleSprocketClick}
-                  className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
-                  style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
-                  <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
-                    alt="Settings" className="w-full h-auto" draggable={false} />
+            {/* Icon row */}
+            <div className="relative flex items-center"
+              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(4px,0.8vh,10px)", paddingBottom: "clamp(8px,1.5vh,18px)" }}>
+              {/* Speaker */}
+              <button onClick={handleSpeakerClick}
+                className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
+                style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
+                <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
+              </button>
+              {/* Play — truly centered across full bar width */}
+              <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+                <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
+                  className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
+                  style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
+                  <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
+                    alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
                 </button>
               </div>
+              {/* Sprocket — pinned right */}
+              <div className="flex-1" />
+              <button onClick={handleSprocketClick}
+                className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
+                style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
+                <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
+                  alt="Settings" className="w-full h-auto" draggable={false} />
+              </button>
             </div>
           </div>
         </>
