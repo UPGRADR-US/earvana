@@ -200,6 +200,9 @@ export function useAudioEngine(): AudioEngineState {
   const lastPlayedIdRef = useRef<string | null>(null);
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null);
   const keepAliveRef    = useRef<HTMLAudioElement | null>(null);
+  // Per-track pre-unlocked <audio> elements for iOS background handoff
+  const bgAudioRef      = useRef<Record<string, HTMLAudioElement>>({});
+  const masterVolumeRef = useRef<number>(0.8);
   // Stable refs for MediaSession callbacks (avoid stale closures)
   const playRef         = useRef<((id: string) => Promise<void>) | null>(null);
   const pauseRef        = useRef<((id: string) => void) | null>(null);
@@ -326,6 +329,16 @@ export function useAudioEngine(): AudioEngineState {
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
+      // Pre-unlock a background <audio> element for this track while we're still
+      // inside a user-gesture context — iOS requires this so we can call .play()
+      // from the visibilitychange handler without a new gesture.
+      if (!bgAudioRef.current[trackId]) {
+        const bgEl = new Audio(import.meta.env.BASE_URL + track.file);
+        bgEl.loop    = true;
+        bgEl.preload = 'auto';
+        bgEl.play().then(() => bgEl.pause()).catch(() => {});
+        bgAudioRef.current[trackId] = bgEl;
+      }
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: track.name,
@@ -347,6 +360,8 @@ export function useAudioEngine(): AudioEngineState {
   const pause = useCallback((trackId: string) => {
     const engine = enginesRef.current[trackId];
     if (engine) engine.pause();
+    const bgEl = bgAudioRef.current[trackId];
+    if (bgEl && !bgEl.paused) bgEl.pause();
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
     releaseWakeLock();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
@@ -359,6 +374,7 @@ export function useAudioEngine(): AudioEngineState {
   }, []);
 
   const setMasterVolume = useCallback((volume: number) => {
+    masterVolumeRef.current = volume;
     setMasterVolumeState(volume);
     if (masterGainRef.current) {
       const t = contextRef.current?.currentTime ?? 0;
@@ -369,6 +385,7 @@ export function useAudioEngine(): AudioEngineState {
 
   const stopAll = useCallback(() => {
     Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause());
+    Object.values(bgAudioRef.current).forEach(el => { if (!el.paused) el.pause(); });
     setTracksState(s => {
       const ns = { ...s };
       Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
@@ -418,26 +435,47 @@ export function useAudioEngine(): AudioEngineState {
     });
   }, []);
 
-  // Wake lock re-acquire + AudioContext auto-resume on visibility change.
-  // Mid-background resumption is handled by the keepAlive element's timeupdate
-  // listener (see startKeepAlive) — no statechange juggling needed here.
+  // iOS background audio handoff.
+  //
+  // iOS Safari suspends AudioContext when the page is hidden and will NOT allow
+  // ctx.resume() from a non-visible page — even with an active audio session.
+  // The only audio iOS lets continue in background is a native <audio> element
+  // that was already playing before the page was hidden.
+  //
+  // Strategy:
+  //   hidden  → hand off to pre-unlocked <audio> elements (loop=true, no WebAudio)
+  //   visible → stop <audio> elements, resume AudioContext (WebAudio takes over)
+  //
+  // The <audio> elements are pre-unlocked inside play() while we're still in a
+  // user-gesture context, so iOS allows .play() here without a new gesture.
   useEffect(() => {
     const onVisibilityChange = () => {
-      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
       const ctx = contextRef.current;
-      if (document.visibilityState === 'visible') {
-        if (anyPlaying) acquireWakeLock();
+      const engines = enginesRef.current;
+
+      if (document.visibilityState === 'hidden') {
+        const mv = masterVolumeRef.current;
+        Object.entries(engines).forEach(([id, eng]) => {
+          if (!eng.isPlaying) return;
+          const bgEl = bgAudioRef.current[id];
+          if (!bgEl) return;
+          bgEl.volume = Math.min(1, Math.max(0, eng.volume * mv));
+          bgEl.play().catch(() => {});
+        });
+      } else {
+        // visible / bfcache restore — Web Audio takes back over
+        Object.values(bgAudioRef.current).forEach(el => { if (!el.paused) el.pause(); });
         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-        // Restart keepAlive in case iOS paused it while we were away
         startKeepAlive();
+        const anyPlaying = Object.values(engines).some(e => e.isPlaying);
+        if (anyPlaying) acquireWakeLock();
       }
     };
-    const onPageShow = () => {
-      // bfcache restore — same treatment as visibilitychange → visible
-      const ctx = contextRef.current;
-      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-      startKeepAlive();
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) onVisibilityChange(); // bfcache restore
     };
+
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pageshow', onPageShow);
     return () => {
