@@ -877,7 +877,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="clamp(100px,14vh,130px)"
+            bottomPad="clamp(130px,18vh,170px)"
           />
 
           {/* Carousel */}
