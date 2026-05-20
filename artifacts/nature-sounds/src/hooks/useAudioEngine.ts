@@ -4,16 +4,6 @@ import { TRACKS, SoundTrack } from "../sounds";
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 5;   // seconds
 
-// Pre-computed fade-out curve: power-2 shape
-const FADE_OUT_N = 512;
-const FADE_OUT_CURVE = (() => {
-  const c = new Float32Array(FADE_OUT_N);
-  for (let i = 0; i < FADE_OUT_N; i++) {
-    const t = 1 - i / (FADE_OUT_N - 1);
-    c[i] = Math.max(t * t, 0.0001);
-  }
-  return c;
-})();
 
 // Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
@@ -235,7 +225,11 @@ export function useAudioEngine(): AudioEngineState {
   // loop it at near-zero volume. iOS treats this as a live audio session and
   // keeps the Web Audio context running in the background.
   const startKeepAlive = useCallback(() => {
-    if (keepAliveRef.current) return;
+    // If already created, just make sure it's playing
+    if (keepAliveRef.current) {
+      if (keepAliveRef.current.paused) keepAliveRef.current.play().catch(() => {});
+      return;
+    }
     try {
       // Build a minimal silent WAV: 8000 Hz, mono, 8-bit PCM, 0.5 s
       const sampleRate = 8000;
@@ -261,6 +255,17 @@ export function useAudioEngine(): AudioEngineState {
       const el  = new Audio(url);
       el.loop   = true;
       el.volume = 0.001;   // near-silent but non-zero — iOS skips muted elements
+
+      // If iOS pauses us in background, fight back immediately
+      el.addEventListener('pause', () => { el.play().catch(() => {}); });
+
+      // Each timeupdate tick (fires ~4×/s while playing) nudges a suspended
+      // AudioContext back to running — critical for iOS background playback
+      el.addEventListener('timeupdate', () => {
+        const ctx = contextRef.current;
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      });
+
       el.play().catch(() => {});
       keepAliveRef.current = el;
     } catch { /* graceful degradation on browsers without Blob/Audio support */ }
@@ -380,7 +385,7 @@ export function useAudioEngine(): AudioEngineState {
     const now = ctx.currentTime;
     fg.gain.cancelScheduledValues(now);
     fg.gain.setValueAtTime(1.0, now);
-    fg.gain.setValueCurveAtTime(FADE_OUT_CURVE, now, durationSeconds);
+    fg.gain.linearRampToValueAtTime(0.0001, now + durationSeconds);
   }, []);
 
   const cancelFade = useCallback(() => {
@@ -413,7 +418,9 @@ export function useAudioEngine(): AudioEngineState {
     });
   }, []);
 
-  // Wake lock re-acquire + AudioContext auto-resume on visibility change
+  // Wake lock re-acquire + AudioContext auto-resume on visibility change.
+  // Mid-background resumption is handled by the keepAlive element's timeupdate
+  // listener (see startKeepAlive) — no statechange juggling needed here.
   useEffect(() => {
     const onVisibilityChange = () => {
       const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
@@ -421,17 +428,23 @@ export function useAudioEngine(): AudioEngineState {
       if (document.visibilityState === 'visible') {
         if (anyPlaying) acquireWakeLock();
         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-      } else if (ctx && anyPlaying) {
-        // Screen locked — iOS may suspend; auto-resume when statechange fires
-        const onStateChange = () => {
-          if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-        };
-        ctx.addEventListener('statechange', onStateChange, { once: true });
+        // Restart keepAlive in case iOS paused it while we were away
+        startKeepAlive();
       }
     };
+    const onPageShow = () => {
+      // bfcache restore — same treatment as visibilitychange → visible
+      const ctx = contextRef.current;
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      startKeepAlive();
+    };
     document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [acquireWakeLock]);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [acquireWakeLock, startKeepAlive]);
 
   return {
     tracks: tracksState,
