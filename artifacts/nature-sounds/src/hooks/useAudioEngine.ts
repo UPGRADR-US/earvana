@@ -302,6 +302,12 @@ export function useAudioEngine(): AudioEngineState {
       return ns;
     });
 
+    // If track previously errored, destroy the stale engine so we get a clean fetch
+    if (tracksState[trackId]?.hasError && enginesRef.current[trackId]) {
+      enginesRef.current[trackId].pause();
+      delete enginesRef.current[trackId];
+    }
+
     if (!enginesRef.current[trackId]) {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
       enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
