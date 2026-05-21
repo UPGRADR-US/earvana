@@ -850,7 +850,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100svh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
       <img src={img("bg.png")} alt=""
@@ -894,7 +894,7 @@ function Home() {
           </div>
 
           {/* Track list */}
-          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(4px,0.8vh,8px)", paddingBottom: "4px" }}>
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,2.5vh,22px)", paddingBottom: "4px" }}>
             {selectedId && (() => {
               const cat = CATEGORIES.find((c) => c.id === selectedId);
               return cat ? <TrackList category={cat} engine={engine} /> : null;
