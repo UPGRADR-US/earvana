@@ -51,10 +51,25 @@ class TrackEngine {
   sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
   gains: [GainNode | null, GainNode | null] = [null, null];
   currentSlot: 0 | 1 = 0;
+  // AudioContext time at which each slot's source started playing
+  slotStartTime: [number, number] = [0, 0];
 
   timeoutId: number | null = null;
   isPlaying: boolean = false;
   volume: number = 0.5;
+
+  // Current position within the audio file (seconds), for background sync
+  get currentFileTime(): number {
+    if (!this.buffer || !this.isPlaying) return this.loopStart;
+    const elapsed = this.context.currentTime - this.slotStartTime[this.currentSlot];
+    const pos = this.loopStart + Math.max(0, elapsed) % this.regionDuration();
+    return Math.min(pos, this.buffer.duration - 0.05);
+  }
+
+  // Live output gain of the track gain node (reflects fade-in curves etc.)
+  get currentGain(): number {
+    return this.trackGain.gain.value;
+  }
 
   constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
     this.id = track.id;
@@ -101,6 +116,7 @@ class TrackEngine {
     this.trackGain.gain.setValueCurveAtTime(fadeInScaled, startTime, FADE_IN_DURATION);
 
     source.start(startTime, this.loopStart, this.regionDuration());
+    this.slotStartTime[0] = startTime;
     this.sources[0] = source;
     this.gains[0] = gain;
     this.scheduleNextLoop(startTime + this.regionDuration() - this.crossfadeDuration);
@@ -130,6 +146,7 @@ class TrackEngine {
     inSource.connect(inGain);
     inGain.connect(this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
+    this.slotStartTime[inSlot] = crossStart;
 
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
@@ -274,6 +291,32 @@ export function useAudioEngine(): AudioEngineState {
     } catch { /* graceful degradation on browsers without Blob/Audio support */ }
   }, []);
 
+  // ── Background preloader ─────────────────────────────────────────────────
+  // After the first user gesture, load + decode every track's audio buffer
+  // in the background (one at a time, staggered) so subsequent track taps
+  // are instant — no waiting for network fetch + decodeAudioData.
+  const preloadInBackground = useCallback(() => {
+    const ctx = contextRef.current;
+    const mg  = masterGainRef.current;
+    if (!ctx || !mg) return;
+
+    const unloaded = TRACKS.filter(t => !enginesRef.current[t.id]);
+    let i = 0;
+    const loadNext = () => {
+      if (i >= unloaded.length) return;
+      const track = unloaded[i++];
+      const engine = new TrackEngine(track, ctx, mg);
+      engine.setVolume(0.5);
+      enginesRef.current[track.id] = engine;
+      engine.load().catch(() => {}).finally(() => {
+        // 200 ms gap between decodes to avoid competing with active playback
+        setTimeout(loadNext, 200);
+      });
+    };
+    // Start 800 ms after first gesture so the selected track loads first
+    setTimeout(loadNext, 800);
+  }, []);
+
   // ── AudioContext init ────────────────────────────────────────────────────
   const initContext = useCallback(() => {
     if (!contextRef.current) {
@@ -285,6 +328,8 @@ export function useAudioEngine(): AudioEngineState {
       fadeGainRef.current.gain.value = 1.0;
       masterGainRef.current.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
+      // Kick off background preload on very first init only
+      setTimeout(preloadInBackground, 0);
     }
     if (contextRef.current.state === 'suspended') {
       contextRef.current.resume().catch(() => {});
@@ -318,8 +363,9 @@ export function useAudioEngine(): AudioEngineState {
 
     if (!enginesRef.current[trackId]) {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
-      enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
     }
+    // Always sync volume — engine may have been pre-created by background preloader
+    enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
 
     const engine = enginesRef.current[trackId];
     lastPlayedIdRef.current = trackId;
@@ -454,12 +500,16 @@ export function useAudioEngine(): AudioEngineState {
       const engines = enginesRef.current;
 
       if (document.visibilityState === 'hidden') {
-        const mv = masterVolumeRef.current;
+        const masterGainVal = masterGainRef.current?.gain.value ?? masterVolumeRef.current;
+        const fadeGainVal   = fadeGainRef.current?.gain.value  ?? 1.0;
         Object.entries(engines).forEach(([id, eng]) => {
           if (!eng.isPlaying) return;
           const bgEl = bgAudioRef.current[id];
           if (!bgEl) return;
-          bgEl.volume = Math.min(1, Math.max(0, eng.volume * mv));
+          // Match exact output level: trackGain × masterGain × fadeGain
+          bgEl.volume      = Math.min(1, Math.max(0.001, eng.currentGain * masterGainVal * fadeGainVal));
+          // Resume from the same position in the file so there's no restart glitch
+          bgEl.currentTime = eng.currentFileTime;
           bgEl.play().catch(() => {});
         });
       } else {
