@@ -1,8 +1,6 @@
-const CACHE = "tinnitus-relief-v1";
+const CACHE = "tinnitus-relief-v2";
 
 const PRECACHE = [
-  "/",
-  "/index.html",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
@@ -61,7 +59,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else: cache-first
+  // Navigation requests (HTML) and index: always network-first so new deploys
+  // are picked up immediately. Falls back to cache only if offline.
+  if (request.mode === "navigate" || url.pathname === "/" || url.pathname.endsWith(".html")) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Everything else (hashed JS/CSS bundles, images): cache-first
   event.respondWith(
     caches.match(request).then(
       (cached) => cached ?? fetch(request).then((res) => {
