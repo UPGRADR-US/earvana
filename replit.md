@@ -1,4 +1,4 @@
-# Nature Sounds
+# earvana: tinnitus relief
 
 A calm ambient sound mixer where users can layer multiple nature audio tracks simultaneously, each looping seamlessly with crossfade so there are never any gaps or jarring cuts.
 

@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Nature Sounds"
+title = "earvana: tinnitus relief"
 version = "1.0.0"
 id = "artifacts/nature-sounds"
 router = "path"
