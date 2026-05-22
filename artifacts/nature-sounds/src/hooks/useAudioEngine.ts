@@ -148,8 +148,17 @@ class TrackEngine {
     inSource.buffer = this.buffer;
     const inGain = this.context.createGain();
     const crossStart = Math.max(targetTime, this.context.currentTime);
+    // Offset the curves by 10 ms so setValueAtTime and setValueCurveAtTime are
+    // never at the exact same timestamp.  iOS Safari's tie-breaking between these
+    // two event types is undefined — on the first crossfade the curve is often
+    // skipped entirely, leaving inGain frozen at 0 (silent new loop) and outGain
+    // frozen at 1 (no fade-out, abrupt cut when the source expires).  After the
+    // first crossfade the nodes have event history and iOS handles it correctly,
+    // which is why the glitch only ever happens once per track session.
+    // The 10 ms hold (inGain=0, outGain=1) is completely inaudible.
+    const curveStart = crossStart + 0.01;
     inGain.gain.setValueAtTime(0, crossStart);
-    inGain.gain.setValueCurveAtTime(EQUAL_POWER_IN, crossStart, xfade);
+    inGain.gain.setValueCurveAtTime(EQUAL_POWER_IN, curveStart, xfade);
     inSource.connect(inGain);
     inGain.connect(this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
@@ -163,7 +172,7 @@ class TrackEngine {
       // rather than the curve's final value — causing a loud jump or silent fade.
       outGain.gain.cancelScheduledValues(crossStart);
       outGain.gain.setValueAtTime(1, crossStart);
-      outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, crossStart, xfade);
+      outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, curveStart, xfade);
     }
 
     this.sources[inSlot] = inSource;
