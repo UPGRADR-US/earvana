@@ -367,7 +367,7 @@ export function useAudioEngine(): AudioEngineState {
       if (id !== trackId) eng.pause();
     });
     Object.entries(bgAudioRef.current).forEach(([id, el]) => {
-      if (id !== trackId && !el.paused) el.pause();
+      if (id !== trackId) el.pause(); // always pause — .paused is true while play() promise is pending on iOS
     });
     setTracksState(s => {
       const ns = { ...s };
@@ -384,7 +384,20 @@ export function useAudioEngine(): AudioEngineState {
     if (!enginesRef.current[trackId]) {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
     }
-    // Always sync volume — engine may have been pre-created by background preloader
+
+    // Guard: if the engine is already playing (e.g. a MediaSession 'play' action
+    // fired while the track is live, or a fast re-tap before React state settles),
+    // initContext() above has already resumed the AudioContext — nothing more needed.
+    // DO NOT call setVolume() here: it calls cancelScheduledValues on trackGain,
+    // which kills any in-progress fade-in curve, causes an audible pop, and then
+    // engine.play() returns early leaving orphaned source nodes with no way to stop.
+    if (enginesRef.current[trackId].isPlaying) {
+      lastPlayedIdRef.current = trackId;
+      return;
+    }
+
+    // Only sync volume when the engine is stopped — safe to set without interfering
+    // with scheduled gain automations.
     enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
 
     const engine = enginesRef.current[trackId];
@@ -439,7 +452,7 @@ export function useAudioEngine(): AudioEngineState {
     const engine = enginesRef.current[trackId];
     if (engine) engine.pause();
     const bgEl = bgAudioRef.current[trackId];
-    if (bgEl && !bgEl.paused) bgEl.pause();
+    if (bgEl) bgEl.pause(); // always pause — .paused may be true while iOS play() promise is still pending
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
     releaseWakeLock();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
@@ -463,7 +476,7 @@ export function useAudioEngine(): AudioEngineState {
 
   const stopAll = useCallback(() => {
     Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause());
-    Object.values(bgAudioRef.current).forEach(el => { if (!el.paused) el.pause(); });
+    Object.values(bgAudioRef.current).forEach(el => el.pause()); // always — .paused unreliable on iOS
     setTracksState(s => {
       const ns = { ...s };
       Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
@@ -546,7 +559,7 @@ export function useAudioEngine(): AudioEngineState {
         });
       } else {
         // visible / bfcache restore — Web Audio takes back over
-        Object.values(bgAudioRef.current).forEach(el => { if (!el.paused) el.pause(); });
+        Object.values(bgAudioRef.current).forEach(el => el.pause()); // always — .paused unreliable while play() promise is pending
         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
         startKeepAlive();
         const anyPlaying = Object.values(engines).some(e => e.isPlaying);
