@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { Play, Pause, Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
@@ -257,17 +257,19 @@ function CylinderCarousel({
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
 }) {
-  // rotation is React state — only written on snap/tap, NOT during drag.
-  // During drag we write directly to cylinderRef.current.style.transform so
-  // there are zero React re-renders mid-drag (the main source of jank).
-  const [rotation,    setRotation]    = useState(centerIdx * ANGLE_STEP);
-  const rotRef                        = useRef(centerIdx * ANGLE_STEP);
-  const cylinderRef                   = useRef<HTMLDivElement>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const isDragging                    = useRef(false);
-  const didDrag                       = useRef(false);
-  const dragStartX                    = useRef<number | null>(null);
-  const dragStartRot                  = useRef(0);
+  // rotation is React state — used ONLY for tile visibility/opacity calcs.
+  // style.transform and style.transition on the cylinder are managed 100%
+  // via direct DOM writes so React never touches them and can never cancel
+  // a running CSS transition by writing the same value we just set.
+  const [rotation,  setRotation]  = useState(centerIdx * ANGLE_STEP);
+  const rotRef                    = useRef(centerIdx * ANGLE_STEP);
+  const cylinderRef               = useRef<HTMLDivElement>(null);
+  const isDragging                = useRef(false);
+  const didDrag                   = useRef(false);
+  const dragStartX                = useRef<number | null>(null);
+  const dragStartRot              = useRef(0);
+
+  const SNAP_EASE = "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)";
 
   // Write the cylinder transform without going through React state.
   const setCylinderRot = (deg: number) => {
@@ -275,6 +277,10 @@ function CylinderCarousel({
       cylinderRef.current.style.transform = `rotateY(${-deg}deg)`;
     }
   };
+
+  // Set the initial transform on mount (React style prop omits transform
+  // entirely so the reconciler never overwrites our direct DOM writes).
+  useLayoutEffect(() => { setCylinderRot(rotRef.current); }, []);
 
   const snapCommitted = (dragDelta: number) => {
     const startSlot = Math.round(dragStartRot.current / ANGLE_STEP);
@@ -286,15 +292,13 @@ function CylinderCarousel({
     const target    = committed * ANGLE_STEP;
     const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
-    // Do NOT call setCylinderRot(target) here.  If we write style.transform
-    // directly and then React re-renders with the same value, the browser sees
-    // no change and immediately cancels the CSS transition — the animation
-    // "teleports" to the final position, skipping the whole middle section.
-    // Instead, let React write the new transform via state.  The browser will
-    // see style.transform change from the drag's last position → snap target
-    // with the transition enabled, and play the full animation correctly.
-    setRotation(target);
-    setIsAnimating(true);
+    // Re-enable transition then animate — direct DOM only, React never writes
+    // style.transform so it can't cancel this transition mid-flight.
+    if (cylinderRef.current) {
+      cylinderRef.current.style.transition = SNAP_EASE;
+      setCylinderRot(target);
+    }
+    setRotation(target);   // updates tile visibility/opacity only
     onCenterChange(newCenter);
   };
 
@@ -305,15 +309,17 @@ function CylinderCarousel({
     if (steps > N / 2) steps -= N;
     const target    = snap + steps * ANGLE_STEP;
     rotRef.current  = target;
-    setRotation(target);
-    setIsAnimating(true);
+    if (cylinderRef.current) {
+      cylinderRef.current.style.transition = SNAP_EASE;
+      setCylinderRot(target);
+    }
+    setRotation(target);   // updates tile visibility/opacity only
     onCenterChange(i);
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
     // Kill any in-flight CSS transition immediately.
     if (cylinderRef.current) cylinderRef.current.style.transition = "none";
-    setIsAnimating(false);
     isDragging.current   = true;
     didDrag.current      = false;
     dragStartX.current   = e.clientX;
@@ -360,11 +366,11 @@ function CylinderCarousel({
       <div ref={cylinderRef} className="absolute inset-0"
         style={{
           transformStyle: "preserve-3d",
-          transform: `rotateY(${-rotation}deg)`,
-          transition: isAnimating
-            ? "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)"
-            : "none",
           willChange: "transform",
+          // transform and transition are intentionally absent from React style —
+          // they are managed 100% by direct DOM writes (setCylinderRot / SNAP_EASE)
+          // so the reconciler can never cancel a running CSS transition by writing
+          // the same transform value we just committed.
         }}>
 
         {CATEGORIES.map((cat, i) => {
