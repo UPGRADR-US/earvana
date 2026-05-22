@@ -191,6 +191,13 @@ class TrackEngine {
       this.sources[i] = null;
       this.gains[i] = null;
     }
+    // Cancel any scheduled automations on trackGain and clamp to silent.
+    // Without this, a fade-in curve continues running after pause(), meaning
+    // trackGain stays at a non-zero value and any newly connected source node
+    // (from a race or re-play) bleeds through.
+    const t = this.context.currentTime;
+    this.trackGain.gain.cancelScheduledValues(t);
+    this.trackGain.gain.setValueAtTime(0, t);
   }
 
   setVolume(vol: number) {
@@ -401,10 +408,12 @@ export function useAudioEngine(): AudioEngineState {
       // Pre-unlock a background <audio> element for this track while we're still
       // inside a user-gesture context — iOS requires this so we can call .play()
       // from the visibilitychange handler without a new gesture.
+      // volume=0 during unlock so the user never hears this bleed over Web Audio.
       if (!bgAudioRef.current[trackId]) {
         const bgEl = new Audio(import.meta.env.BASE_URL + track.file);
         bgEl.loop    = true;
         bgEl.preload = 'auto';
+        bgEl.volume  = 0;
         bgEl.play().then(() => bgEl.pause()).catch(() => {});
         bgAudioRef.current[trackId] = bgEl;
       }
