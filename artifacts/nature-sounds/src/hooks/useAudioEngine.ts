@@ -372,6 +372,16 @@ export function useAudioEngine(): AudioEngineState {
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
     try {
       await engine.load();
+      // If the user tapped a different track while this one was loading,
+      // lastPlayedIdRef will have moved on — don't start a ghost second track.
+      if (lastPlayedIdRef.current !== trackId) {
+        setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false } }));
+        return;
+      }
+      // Pause any engine that finished loading concurrently (edge case)
+      Object.entries(enginesRef.current).forEach(([id, eng]) => {
+        if (id !== trackId && eng.isPlaying) eng.pause();
+      });
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
