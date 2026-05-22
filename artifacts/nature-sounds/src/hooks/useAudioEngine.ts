@@ -346,8 +346,14 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
+    // Pause ALL other engines unconditionally — not just those with isPlaying=true.
+    // A track that is mid-load has isPlaying=false but will call engine.play() soon;
+    // silencing it here prevents ghost playback from async races.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
-      if (id !== trackId && eng.isPlaying) eng.pause();
+      if (id !== trackId) eng.pause();
+    });
+    Object.entries(bgAudioRef.current).forEach(([id, el]) => {
+      if (id !== trackId && !el.paused) el.pause();
     });
     setTracksState(s => {
       const ns = { ...s };
