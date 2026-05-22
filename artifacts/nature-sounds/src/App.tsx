@@ -257,46 +257,49 @@ function CylinderCarousel({
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
 }) {
-  // Absolute cumulative rotation (degrees). Container = rotateY(-rotation).
-  // Item i is at front when rotation ≈ i * ANGLE_STEP (mod 360).
-  // Drag left → rotation increases → right-side items come forward.
+  // rotation is React state — only written on snap/tap, NOT during drag.
+  // During drag we write directly to cylinderRef.current.style.transform so
+  // there are zero React re-renders mid-drag (the main source of jank).
   const [rotation,    setRotation]    = useState(centerIdx * ANGLE_STEP);
   const rotRef                        = useRef(centerIdx * ANGLE_STEP);
+  const cylinderRef                   = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const isDragging                    = useRef(false);
-  // didDrag stays true after a drag so the click that browser fires right after
-  // pointerup doesn't accidentally trigger animateTo / onSelect.
   const didDrag                       = useRef(false);
   const dragStartX                    = useRef<number | null>(null);
   const dragStartRot                  = useRef(0);
 
-  // Snap with directional commitment.
-  // Uses Math.round for natural large-drag behaviour (no slot-skipping),
-  // but guarantees ≥1 step in the drag direction for any intentional swipe (> 1°).
-  // Tiny jitter (≤1°) just snaps to nearest without moving.
+  // Write the cylinder transform without going through React state.
+  const setCylinderRot = (deg: number) => {
+    if (cylinderRef.current) {
+      cylinderRef.current.style.transform = `rotateY(${-deg}deg)`;
+    }
+  };
+
   const snapCommitted = (dragDelta: number) => {
     const startSlot = Math.round(dragStartRot.current / ANGLE_STEP);
     const nearest   = Math.round(rotRef.current / ANGLE_STEP);
-    // Threshold ~0.75° ≈ 3px — safely below 1% of a 390px screen so a deliberate
-    // flick always commits, but a pure tap (≤2px of jitter) stays put.
     const committed =
-      dragDelta >  0.75 ? Math.max(nearest, startSlot + 1) :  // left  → at least +1
-      dragDelta < -0.75 ? Math.min(nearest, startSlot - 1) :  // right → at least −1
-                          nearest;                             // tap / jitter → nearest
+      dragDelta >  0.75 ? Math.max(nearest, startSlot + 1) :
+      dragDelta < -0.75 ? Math.min(nearest, startSlot - 1) :
+                          nearest;
     const target    = committed * ANGLE_STEP;
     const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
+    // Enable CSS transition then commit to React state for the snap animation.
+    if (cylinderRef.current) cylinderRef.current.style.transition =
+      "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)";
+    setCylinderRot(target);
     setRotation(target);
     setIsAnimating(true);
     onCenterChange(newCenter);
   };
 
-  // Animated tap-to-centre: find shortest-arc path and spin there.
   const animateTo = (i: number) => {
     const snap      = Math.round(rotRef.current / ANGLE_STEP) * ANGLE_STEP;
     const cur       = ((Math.round(snap / ANGLE_STEP) % N) + N) % N;
     let   steps     = ((i - cur) % N + N) % N;
-    if (steps > N / 2) steps -= N;          // take the short arc
+    if (steps > N / 2) steps -= N;
     const target    = snap + steps * ANGLE_STEP;
     rotRef.current  = target;
     setRotation(target);
@@ -305,9 +308,11 @@ function CylinderCarousel({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    setIsAnimating(false);           // interrupt any in-flight animation
+    // Kill any in-flight CSS transition immediately.
+    if (cylinderRef.current) cylinderRef.current.style.transition = "none";
+    setIsAnimating(false);
     isDragging.current   = true;
-    didDrag.current      = false;    // reset per-gesture
+    didDrag.current      = false;
     dragStartX.current   = e.clientX;
     dragStartRot.current = rotRef.current;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -316,11 +321,11 @@ function CylinderCarousel({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current || dragStartX.current === null) return;
     const px = e.clientX - dragStartX.current;
-    // Mark as a real drag once finger travels more than 4px
     if (Math.abs(px) > 4) didDrag.current = true;
     const r        = dragStartRot.current - px * DRAG_SENS;
     rotRef.current = r;
-    setRotation(r);
+    // Direct DOM write — no React re-render, buttery smooth at 60/120fps.
+    setCylinderRot(r);
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -329,61 +334,52 @@ function CylinderCarousel({
     const pxDelta = dragStartX.current !== null ? dragStartX.current - e.clientX : 0;
     dragStartX.current = null;
     snapCommitted(pxDelta * DRAG_SENS);
-    // didDrag stays true — the browser fires click right after pointerup and we
-    // need to suppress it. It is cleared inside the tile onClick handler below.
   };
 
-  // cqw = width of the nearest container ancestor (the carousel div below).
-  // This gives us sizes relative to the actual 430px column, not the full viewport.
-  const thumbSize = "clamp(78px, 21cqw, 104px)";  // 20% smaller than previous
+  const thumbSize = "clamp(78px, 21cqw, 104px)";
 
   return (
     <div className="relative w-full touch-none"
       style={{
-        height: "clamp(134px, 34cqw, 192px)",  // 20% smaller than previous
+        height: "clamp(134px, 34cqw, 192px)",
         perspective: "820px",
         perspectiveOrigin: "50% 50%",
-        containerType: "inline-size",   // makes cqw resolve against THIS element's width
+        containerType: "inline-size",
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}>
 
-      {/* Single cylinder container — its rotateY drives everything.
-          isAnimating enables the CSS transition for snap/tap; during drag it's off. */}
-      <div className="absolute inset-0"
+      {/* Single cylinder container — rotateY drives all tile positions.
+          will-change promotes this layer to the GPU compositor so drag
+          transforms are applied off the main thread. */}
+      <div ref={cylinderRef} className="absolute inset-0"
         style={{
           transformStyle: "preserve-3d",
           transform: `rotateY(${-rotation}deg)`,
           transition: isAnimating
             ? "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)"
             : "none",
+          willChange: "transform",
         }}>
 
         {CATEGORIES.map((cat, i) => {
-          // Fixed absolute angle on the cylinder. Container rotation does all the work.
           const itemAngle = i * ANGLE_STEP;
-          // Visual angle currently shown to the viewer (−180..+180).
           const visAngle  = shortArc(itemAngle - rotation);
           const absVis    = Math.abs(visAngle);
 
-          if (absVis > 172) return null;   // in the back — invisible, skip rendering
+          if (absVis > 172) return null;
 
           const isCentered  = absVis < ANGLE_STEP / 2;
           const isSelected  = cat.id === selectedId;
           const hasPlaying  = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
           const faceOpacity = tileOpacity(visAngle);
-          // Only apply shadow to the centred tile — side tiles are rotated in 3D
-          // and a 2D box-shadow bleeds around the projected shape, creating
-          // visible artefacts at the corners.
           const frontShadow = isCentered
             ? "0 14px 32px rgba(0,0,0,0.85), 0 3px 10px rgba(0,0,0,0.6)"
             : "none";
 
           return (
-            // Tile container: preserve-3d so slab faces sit in 3D space.
-            // NO opacity/filter here — either breaks preserve-3d on children.
             <div key={cat.id}
               style={{
                 position: "absolute", left: "50%", top: "50%",
@@ -393,16 +389,18 @@ function CylinderCarousel({
                 cursor: isCentered ? "default" : "pointer",
               }}
               onClick={() => {
-                // Suppress click that browser fires immediately after a drag gesture
                 if (didDrag.current) { didDrag.current = false; return; }
                 if (isCentered) onSelect(cat.id);
                 else animateTo(i);
               }}>
 
-              {/* Front face */}
+              {/* Front face — backfaceVisibility:hidden prevents iOS from
+                  re-painting hidden faces and cuts GPU overdraw in half. */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
                 style={{
                   opacity: faceOpacity,
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                   border: isCentered || isSelected
                     ? "2px solid rgba(0,255,100,0.8)"
                     : "2px solid rgba(255,255,255,0.20)",
