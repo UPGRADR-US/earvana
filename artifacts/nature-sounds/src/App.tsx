@@ -286,10 +286,13 @@ function CylinderCarousel({
     const target    = committed * ANGLE_STEP;
     const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
-    // Enable CSS transition then commit to React state for the snap animation.
-    if (cylinderRef.current) cylinderRef.current.style.transition =
-      "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)";
-    setCylinderRot(target);
+    // Do NOT call setCylinderRot(target) here.  If we write style.transform
+    // directly and then React re-renders with the same value, the browser sees
+    // no change and immediately cancels the CSS transition — the animation
+    // "teleports" to the final position, skipping the whole middle section.
+    // Instead, let React write the new transform via state.  The browser will
+    // see style.transform change from the drag's last position → snap target
+    // with the transition enabled, and play the full animation correctly.
     setRotation(target);
     setIsAnimating(true);
     onCenterChange(newCenter);
