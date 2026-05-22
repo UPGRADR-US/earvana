@@ -28,6 +28,11 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    // Injected at build/dev-server-start time so the UI can show which
+    // build is running — lets you confirm the latest deploy is live.
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),

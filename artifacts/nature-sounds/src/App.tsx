@@ -925,6 +925,11 @@ function Home() {
               </div>
             </div>
 
+            {/* Build timestamp — confirms which deploy is running */}
+            <div style={{ textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.18)", letterSpacing: "0.05em", marginBottom: "2px" }}>
+              {new Date(__BUILD_TIME__).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </div>
+
             {/* Icon row */}
             <div className="relative flex items-center"
               style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(4px,0.8vh,10px)", paddingBottom: "clamp(8px,1.5vh,18px)" }}>
