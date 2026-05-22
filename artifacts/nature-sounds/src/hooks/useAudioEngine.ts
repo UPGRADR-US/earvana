@@ -66,9 +66,12 @@ class TrackEngine {
     return Math.min(pos, this.buffer.duration - 0.05);
   }
 
-  // Live output gain of the track gain node (reflects fade-in curves etc.)
+  // Intended steady-state output gain for this track.
+  // We use this.volume (the stored target) rather than trackGain.gain.value because
+  // Safari/iOS returns the last *explicit* setValueAtTime value during a scheduled
+  // curve, not the live interpolated value — making .value unreliable mid-fade.
   get currentGain(): number {
-    return this.trackGain.gain.value;
+    return this.volume;
   }
 
   constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
@@ -151,7 +154,11 @@ class TrackEngine {
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
     if (outGain) {
-      outGain.gain.setValueAtTime(outGain.gain.value, crossStart);
+      // Always start fade-out from 1.  We cannot use outGain.gain.value because
+      // Safari/iOS returns the last *explicit* setValueAtTime (0) after a curve
+      // rather than the curve's final value — causing a loud jump or silent fade.
+      outGain.gain.cancelScheduledValues(crossStart);
+      outGain.gain.setValueAtTime(1, crossStart);
       outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, crossStart, xfade);
     }
 

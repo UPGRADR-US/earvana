@@ -1,0 +1,1 @@
+- [iOS Safari AudioParam .value bug](ios-webaudio-gain-value.md) — reading .gain.value after setValueCurveAtTime returns 0 on iOS; use stored volume or hardcode 1
