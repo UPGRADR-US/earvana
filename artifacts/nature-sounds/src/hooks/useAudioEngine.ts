@@ -114,13 +114,13 @@ class TrackEngine {
 
     const startTime = this.context.currentTime;
     this.trackGain.gain.cancelScheduledValues(startTime);
+    // Use a linear ramp instead of setValueCurveAtTime for the initial fade-in.
+    // setValueCurveAtTime has timing-ambiguity bugs on iOS Safari when scheduled at
+    // the same currentTime as a preceding setValueAtTime — the results are erratic.
+    // linearRampToValueAtTime is rock-solid on all platforms and sounds identical
+    // for a simple fade from silence (equal-power matters most at crossfades, not here).
     this.trackGain.gain.setValueAtTime(0, startTime);
-    // Offset curve by 10 ms so setValueAtTime and setValueCurveAtTime are never at
-    // the exact same timestamp — iOS Safari's tie-breaking is undefined and can cause
-    // the curve to be skipped entirely, producing an audible pop instead of a fade-in.
-    const curveStart = startTime + 0.01;
-    const fadeInScaled = EQUAL_POWER_IN.map(v => v * this.volume);
-    this.trackGain.gain.setValueCurveAtTime(fadeInScaled, curveStart, FADE_IN_DURATION);
+    this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + FADE_IN_DURATION);
 
     source.start(startTime, this.loopStart, this.regionDuration());
     this.slotStartTime[0] = startTime;
@@ -202,25 +202,6 @@ class TrackEngine {
     const t = this.context.currentTime;
     this.trackGain.gain.cancelScheduledValues(t);
     this.trackGain.gain.setValueAtTime(0, t);
-  }
-
-  // Called after AudioContext.resume() to guard against iOS resetting GainNode
-  // automations during suspension.  Sets everything to a known-good state and
-  // does a short 200 ms fade-in so there's no loud burst if iOS did reset gains.
-  restoreGain() {
-    if (!this.isPlaying) return;
-    const now = this.context.currentTime;
-    // Slot gains: only the current slot should be audible
-    this.gains.forEach((g, i) => {
-      if (!g) return;
-      g.gain.cancelScheduledValues(now);
-      g.gain.setValueAtTime(i === this.currentSlot ? 1 : 0, now);
-    });
-    // trackGain: clamp to 0 first, then ramp to target volume over 200 ms.
-    // This ensures Web Audio adds nothing while any bgEl pipeline is still draining.
-    this.trackGain.gain.cancelScheduledValues(now);
-    this.trackGain.gain.setValueAtTime(0, now);
-    this.trackGain.gain.linearRampToValueAtTime(this.volume, now + 0.2);
   }
 
   setVolume(vol: number) {
@@ -585,15 +566,31 @@ export function useAudioEngine(): AudioEngineState {
         // 1. Silence bgEl immediately (unconditional — .paused is unreliable while
         //    an iOS play() promise is still pending).
         Object.values(bgAudioRef.current).forEach(el => el.pause());
-        // 2. Resume AudioContext, then restore all gain nodes to known-good values.
-        //    iOS can reset GainNode automations during suspension, causing a loud
-        //    burst when the context resumes.  restoreGain() clamps to 0 and fades
-        //    back to the target volume over 200 ms — well after any bgEl pipeline
-        //    drains — so the two sources never overlap at full gain.
-        if (ctx && ctx.state === 'suspended') {
-          ctx.resume().then(() => {
-            Object.values(engines).forEach(eng => eng.restoreGain());
-          }).catch(() => {});
+        if (ctx) {
+          if (ctx.state === 'suspended') {
+            // 2. Briefly zero the master gain before resuming, then restore it in
+            //    100 ms.  This absorbs any loud burst that would occur if:
+            //    (a) bgEl audio pipeline hasn't fully drained yet, or
+            //    (b) iOS reset GainNode automations during suspension.
+            //    We touch ONLY the master gain so individual track fade-in /
+            //    crossfade curves are left completely intact — touching per-track
+            //    gains here was what caused mid-fade "jumps" in earlier builds.
+            const mg  = masterGainRef.current;
+            const vol = masterVolumeRef.current;
+            if (mg) {
+              const t = ctx.currentTime;
+              mg.gain.cancelScheduledValues(t);
+              mg.gain.setValueAtTime(0, t);
+              ctx.resume().then(() => {
+                const now = ctx.currentTime;
+                mg.gain.cancelScheduledValues(now);
+                mg.gain.setValueAtTime(0, now);
+                mg.gain.linearRampToValueAtTime(vol, now + 0.1);
+              }).catch(() => {});
+            } else {
+              ctx.resume().catch(() => {});
+            }
+          }
         }
         startKeepAlive();
         const anyPlaying = Object.values(engines).some(e => e.isPlaying);
