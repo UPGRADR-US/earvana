@@ -100,6 +100,23 @@ class TrackEngine {
     this.buffer = await this.context.decodeAudioData(arrayBuffer);
   }
 
+  // Crossfade duration capped at regionDuration/3 so the crossfade always
+  // occupies the last third of the file.  This prevents two failure modes:
+  //   (a) crossfadeDuration ≥ regionDuration → crossStart ≤ 0, crossfade fires
+  //       immediately at t=0, both sources share the same gain-fade curves from
+  //       the very beginning, audio volume builds across the whole file then snaps.
+  //   (b) crossfadeDuration × 2 > regionDuration → the inGain curve from loop N
+  //       is still running when loop N+1 calls cancelScheduledValues on that same
+  //       GainNode.  cancelScheduledValues cannot cancel a curve whose start time
+  //       predates cancelTime, so the old EQUAL_POWER_IN fights the new
+  //       EQUAL_POWER_OUT events — undefined behaviour on every browser.
+  // With xfade ≤ regionDuration/3, each inGain curve completes a full
+  // regionDuration/3 before the next crossfade even begins, and the crossfade
+  // start is always ≥ 2/3 * regionDuration into the file (safely in the future).
+  private effectiveXfade(): number {
+    return Math.min(this.crossfadeDuration, this.regionDuration() / 3);
+  }
+
   play() {
     if (this.isPlaying || !this.buffer) return;
     this.isPlaying = true;
@@ -112,21 +129,20 @@ class TrackEngine {
     source.connect(gain);
     gain.connect(this.trackGain);
 
+    const xfade    = this.effectiveXfade();
     const startTime = this.context.currentTime;
     this.trackGain.gain.cancelScheduledValues(startTime);
-    // Use a linear ramp instead of setValueCurveAtTime for the initial fade-in.
-    // setValueCurveAtTime has timing-ambiguity bugs on iOS Safari when scheduled at
-    // the same currentTime as a preceding setValueAtTime — the results are erratic.
-    // linearRampToValueAtTime is rock-solid on all platforms and sounds identical
-    // for a simple fade from silence (equal-power matters most at crossfades, not here).
+    // Fade-in capped to regionDuration/3 so it always finishes before the
+    // crossfade begins (crossfade starts at 2/3 of the file at the earliest).
+    const fadeIn = Math.min(FADE_IN_DURATION, this.regionDuration() / 3);
     this.trackGain.gain.setValueAtTime(0, startTime);
-    this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + FADE_IN_DURATION);
+    this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + fadeIn);
 
     source.start(startTime, this.loopStart, this.regionDuration());
     this.slotStartTime[0] = startTime;
     this.sources[0] = source;
     this.gains[0] = gain;
-    this.scheduleNextLoop(startTime + this.regionDuration() - this.crossfadeDuration);
+    this.scheduleNextLoop(startTime + this.regionDuration() - xfade);
   }
 
   scheduleNextLoop(targetTime: number) {
@@ -142,7 +158,7 @@ class TrackEngine {
 
     const outSlot = this.currentSlot;
     const inSlot: 0 | 1 = outSlot === 0 ? 1 : 0;
-    const xfade = this.crossfadeDuration;
+    const xfade = this.effectiveXfade();   // capped at regionDuration/3
 
     const inSource = this.context.createBufferSource();
     inSource.buffer = this.buffer;
