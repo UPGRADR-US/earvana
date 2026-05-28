@@ -208,10 +208,10 @@ class TrackEngine {
     this.scheduleNextLoop(crossStart + this.regionDuration() - xfade);
   }
 
-  pause() {
+  // immediate=true  → hard cut (used when switching tracks; new track fades in)
+  // immediate=false → gentle STOP_FADE_DURATION ramp (used for explicit user stop)
+  pause(immediate = false) {
     this.isPlaying = false;
-    // Stop the loop-scheduling timeout immediately so no new source nodes
-    // are created during the fade tail.
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
@@ -220,30 +220,27 @@ class TrackEngine {
     const ctx = this.context;
     const now = ctx.currentTime;
 
-    // Cancel any in-flight automation curves; after cancelScheduledValues
-    // the .value property is reliable (no mid-curve interpolation).
     this.trackGain.gain.cancelScheduledValues(now);
     const fromGain = this.trackGain.gain.value;
 
-    if (fromGain <= 0.001) {
-      // Already silent — disconnect immediately, no need to fade.
+    if (immediate || fromGain <= 0.001) {
+      // Hard cut — stop sources instantly and clamp gain to 0.
       for (let i = 0; i < 2; i++) {
         try { this.sources[i]?.stop(); } catch { /* already stopped */ }
         this.sources[i]?.disconnect();
         this.gains[i]?.disconnect();
         this.sources[i] = null;
-        this.gains[i] = null;
+        this.gains[i]   = null;
       }
       this.trackGain.gain.setValueAtTime(0, now);
       return;
     }
 
-    // Gentle ramp to silence.
+    // Gentle ramp to silence (explicit stop via PLAY button).
     this.trackGain.gain.setValueAtTime(fromGain, now);
     this.trackGain.gain.linearRampToValueAtTime(0, now + STOP_FADE_DURATION);
 
-    // Null out the refs immediately so a fast re-play() doesn't inherit these
-    // nodes; the local captures below keep them alive for the fade tail.
+    // Null refs immediately so a quick re-play() gets clean nodes.
     const fadeSources = this.sources.slice() as (AudioBufferSourceNode | null)[];
     const fadeGains   = this.gains.slice()   as (GainNode | null)[];
     for (let i = 0; i < 2; i++) {
@@ -251,14 +248,12 @@ class TrackEngine {
       this.gains[i]   = null;
     }
 
-    // Stop & disconnect after the ramp completes.
     setTimeout(() => {
       for (let i = 0; i < 2; i++) {
         try { fadeSources[i]?.stop(); } catch { /* already stopped */ }
         fadeSources[i]?.disconnect();
         fadeGains[i]?.disconnect();
       }
-      // Hard-clamp trackGain to 0 so any subsequent play() starts clean.
       try {
         this.trackGain.gain.cancelScheduledValues(ctx.currentTime);
         this.trackGain.gain.setValueAtTime(0, ctx.currentTime);
@@ -495,11 +490,12 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Pause ALL other engines unconditionally — not just those with isPlaying=true.
+    // Hard-cut ALL other engines unconditionally — not just those with isPlaying=true.
+    // immediate=true prevents the fade tail from overlapping the new track's fade-in.
     // A track that is mid-load has isPlaying=false but will call engine.play() soon;
     // silencing it here prevents ghost playback from async races.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
-      if (id !== trackId) eng.pause();
+      if (id !== trackId) eng.pause(true);
     });
     Object.entries(bgAudioRef.current).forEach(([id, el]) => {
       if (id !== trackId) el.pause(); // always pause — .paused is true while play() promise is pending on iOS
