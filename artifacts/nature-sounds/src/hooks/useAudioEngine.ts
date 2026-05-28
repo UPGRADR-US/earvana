@@ -588,49 +588,57 @@ export function useAudioEngine(): AudioEngineState {
         });
       } else {
         // visible / bfcache restore — Web Audio takes back over.
-        // 1. Silence bgEl immediately (unconditional — .paused is unreliable while
-        //    an iOS play() promise is still pending).
+
+        // 1. Silence all background <audio> elements immediately.
+        //    .paused is unreliable while an iOS play() promise is pending,
+        //    so we pause unconditionally.
         Object.values(bgAudioRef.current).forEach(el => el.pause());
+
         if (ctx) {
-          if (ctx.state === 'suspended') {
-            // 2. Briefly zero the master gain before resuming, then restore it in
-            //    100 ms.  This absorbs any loud burst that would occur if:
-            //    (a) bgEl audio pipeline hasn't fully drained yet, or
-            //    (b) iOS reset GainNode automations during suspension.
-            //    We zero masterGain first, then restore both masterGain and each
-            //    trackGain once the context is running again (see below).
-            const mg  = masterGainRef.current;
-            const vol = masterVolumeRef.current;
+          const mg  = masterGainRef.current;
+          const vol = masterVolumeRef.current;
+
+          // Normalize gains after resume, regardless of prior context state.
+          // iOS sometimes resets GainNode automation even when the context
+          // reports 'running' on return from background.
+          const normalizeGains = () => {
+            const now = ctx.currentTime;
+
             if (mg) {
-              const t = ctx.currentTime;
-              mg.gain.cancelScheduledValues(t);
-              mg.gain.setValueAtTime(0, t);
-              ctx.resume().then(() => {
-                const now = ctx.currentTime;
-                // Restore master gain with a short ramp to avoid any burst.
-                mg.gain.cancelScheduledValues(now);
-                mg.gain.setValueAtTime(0, now);
-                mg.gain.linearRampToValueAtTime(vol, now + 0.1);
-                // Restore per-track gains. iOS resets ALL GainNode automation
-                // state when the AudioContext is suspended — trackGain.gain
-                // reverts to its Web Audio default (1.0) instead of the
-                // track's stored volume, which is what causes the "snap to
-                // maximum" glitch on foreground.  We cancel any stale
-                // automations and pin each playing track to its correct level.
-                // Crossfade curves that were in-flight during suspension are
-                // already lost (iOS advanced currentTime past them), so
-                // touching trackGain here causes no additional disruption.
-                Object.values(engines).forEach(eng => {
-                  if (!eng.isPlaying) return;
-                  eng.trackGain.gain.cancelScheduledValues(now);
-                  eng.trackGain.gain.setValueAtTime(eng.volume, now);
-                });
-              }).catch(() => {});
-            } else {
-              ctx.resume().catch(() => {});
+              // Snap to 0 first — absorbs any burst from iOS resetting gains
+              // to the Web Audio default (1.0).  Then ramp to the UI slider
+              // value over 100 ms so there is no audible pop.
+              mg.gain.cancelScheduledValues(now);
+              mg.gain.setValueAtTime(0, now);
+              mg.gain.linearRampToValueAtTime(vol, now + 0.1);
             }
-          }
+
+            // Restore per-track gains.  iOS wipes scheduled automation on
+            // suspension; trackGain.gain reverts to 1.0 (its default) instead
+            // of the user's chosen level.  We pin each playing track back to
+            // its stored volume immediately — no ramp needed here because the
+            // master gain ramp above already provides the smooth fade-in.
+            Object.values(engines).forEach(eng => {
+              if (!eng.isPlaying) return;
+              eng.trackGain.gain.cancelScheduledValues(now);
+              eng.trackGain.gain.setValueAtTime(eng.volume, now);
+            });
+
+            console.log(
+              `[earvana] AudioContext resumed — state: ${ctx.state}` +
+              `, masterVol: ${vol.toFixed(2)}` +
+              `, tracks: ${Object.values(engines).filter(e => e.isPlaying).map(e => `${e.id}@${e.volume.toFixed(2)}`).join(', ') || 'none'}`
+            );
+          };
+
+          // 2. Explicitly resume the AudioContext, then normalize.
+          //    We call resume() unconditionally — it is a no-op when already
+          //    running, so it is safe regardless of ctx.state.
+          ctx.resume()
+            .then(normalizeGains)
+            .catch(() => {});
         }
+
         startKeepAlive();
         const anyPlaying = Object.values(engines).some(e => e.isPlaying);
         if (anyPlaying) acquireWakeLock();
