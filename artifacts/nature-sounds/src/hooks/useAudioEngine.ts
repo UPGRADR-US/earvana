@@ -267,6 +267,10 @@ export function useAudioEngine(): AudioEngineState {
   const playRef         = useRef<((id: string) => Promise<void>) | null>(null);
   const pauseRef        = useRef<((id: string) => void) | null>(null);
   const resumeRef       = useRef<(() => Promise<void>) | null>(null);
+  // True while the foreground gain-ramp is in progress — blocks play() so
+  // a race between iOS resuming audio and the user tapping a track doesn't
+  // start playback before gains are stable.
+  const isTransitioningRef = useRef<boolean>(false);
 
   // ── Wake Lock (Android Chrome) ───────────────────────────────────────────
   const acquireWakeLock = useCallback(async () => {
@@ -360,6 +364,66 @@ export function useAudioEngine(): AudioEngineState {
     setTimeout(loadNext, 800);
   }, []);
 
+  // ── Foreground recovery: hard-kill gains, resume, delayed ramp-up ────────
+  // Called on both visibilitychange (→ visible) and pageshow to handle iOS
+  // cold-starts from background.  Sequence:
+  //   1. Hard-zero masterGain immediately (kills any burst from iOS gain reset)
+  //   2. ctx.resume() — no-op if already running, essential if suspended
+  //   3. Per-track gains pinned to stored volumes (iOS resets them to 1.0)
+  //   4. 100 ms setTimeout → smooth ramp masterGain back to target level
+  //   5. isTransitioning → false once ramp completes
+  const forceResetAudio = useCallback(() => {
+    const ctx = contextRef.current;
+    const mg  = masterGainRef.current;
+    if (!ctx || !mg) return;
+
+    isTransitioningRef.current = true;
+
+    // Step 1: Hard-zero master gain RIGHT NOW, before resume, so iOS cannot
+    // sneak a full-volume burst through while the context is waking up.
+    const killTime = ctx.currentTime;
+    mg.gain.cancelScheduledValues(killTime);
+    mg.gain.setValueAtTime(0, killTime);
+
+    // Step 2: Force context back to running state.
+    ctx.resume().then(() => {
+      const now = ctx.currentTime;
+      const vol = masterVolumeRef.current;
+
+      // Step 3: Restore per-track gains to stored levels immediately.
+      // iOS wipes all GainNode automation on suspension, reverting them to
+      // the Web Audio default (1.0). We pin each playing track before the
+      // master gain ramps up so no individual track can punch through.
+      Object.values(enginesRef.current).forEach(eng => {
+        if (!eng.isPlaying) return;
+        eng.trackGain.gain.cancelScheduledValues(now);
+        eng.trackGain.gain.setValueAtTime(eng.volume, now);
+      });
+
+      // Step 4: 100 ms pause (master stays at 0), then smooth ramp to target.
+      // The delay ensures the bgEl pipeline has fully drained before Web Audio
+      // takes over, which is what causes the audible 'choke' on fast transitions.
+      window.setTimeout(() => {
+        const t = ctx.currentTime;
+        mg.gain.cancelScheduledValues(t);
+        mg.gain.setValueAtTime(0, t);
+        mg.gain.linearRampToValueAtTime(vol, t + 0.1);
+
+        // Step 5: Release transition lock after ramp finishes (~110 ms total).
+        window.setTimeout(() => {
+          isTransitioningRef.current = false;
+          console.log(
+            `[earvana] forceResetAudio complete — ctx: ${ctx.state}` +
+            `, masterVol: ${vol.toFixed(2)}` +
+            `, tracks: ${Object.values(enginesRef.current).filter(e => e.isPlaying).map(e => `${e.id}@${e.volume.toFixed(2)}`).join(', ') || 'none'}`
+          );
+        }, 120);
+      }, 100);
+    }).catch(() => {
+      isTransitioningRef.current = false;
+    });
+  }, []);
+
   // ── AudioContext init ────────────────────────────────────────────────────
   const initContext = useCallback(() => {
     if (!contextRef.current) {
@@ -382,6 +446,11 @@ export function useAudioEngine(): AudioEngineState {
 
   // ── Playback controls ────────────────────────────────────────────────────
   const play = useCallback(async (trackId: string) => {
+    // Block new playback while the foreground gain-ramp is in progress.
+    // isTransitioning is set true on pagehide/background and cleared ~220 ms
+    // after forceResetAudio() completes, ensuring gains are stable before any
+    // new source node connects.
+    if (isTransitioningRef.current) return;
     initContext();
     const ctx = contextRef.current!;
     const mg  = masterGainRef.current!;
@@ -557,105 +626,77 @@ export function useAudioEngine(): AudioEngineState {
 
   // iOS background audio handoff.
   //
-  // iOS Safari suspends AudioContext when the page is hidden and will NOT allow
-  // ctx.resume() from a non-visible page — even with an active audio session.
-  // The only audio iOS lets continue in background is a native <audio> element
-  // that was already playing before the page was hidden.
-  //
   // Strategy:
-  //   hidden  → hand off to pre-unlocked <audio> elements (loop=true, no WebAudio)
-  //   visible → stop <audio> elements, resume AudioContext (WebAudio takes over)
+  //   pagehide / hidden  → set isTransitioning=true, hand off to <audio> elements
+  //   visible / pageshow → silence <audio> elements, call forceResetAudio()
   //
-  // The <audio> elements are pre-unlocked inside play() while we're still in a
-  // user-gesture context, so iOS allows .play() here without a new gesture.
+  // forceResetAudio is called from BOTH visibilitychange and pageshow because
+  // iOS doesn't always fire them together: pageshow is more reliable for
+  // cold-starts from the app switcher, visibilitychange catches lock-screen
+  // returns and tab switches.  forceResetAudio is idempotent (it always
+  // re-cancels and re-schedules), so double-firing is harmless.
   useEffect(() => {
+    // ── Shared foreground restore ─────────────────────────────────────────
+    const handleForeground = () => {
+      // Silence all bg <audio> elements unconditionally.
+      // .paused is unreliable while an iOS play() promise is still pending.
+      Object.values(bgAudioRef.current).forEach(el => el.pause());
+      // Run the aggressive reset: hard-zero gains, resume context, ramp back.
+      forceResetAudio();
+      startKeepAlive();
+      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
+      if (anyPlaying) acquireWakeLock();
+    };
+
+    // ── Shared background handoff ─────────────────────────────────────────
+    const handleBackground = () => {
+      // Lock immediately so play() is blocked while we're in the background.
+      isTransitioningRef.current = true;
+      const masterGainVal = masterGainRef.current?.gain.value ?? masterVolumeRef.current;
+      const fadeGainVal   = fadeGainRef.current?.gain.value  ?? 1.0;
+      Object.entries(enginesRef.current).forEach(([id, eng]) => {
+        if (!eng.isPlaying) return;
+        const bgEl = bgAudioRef.current[id];
+        if (!bgEl) return;
+        // Match exact output level: trackGain × masterGain × fadeGain
+        bgEl.volume      = Math.min(1, Math.max(0.001, eng.currentGain * masterGainVal * fadeGainVal));
+        bgEl.currentTime = eng.currentFileTime;
+        bgEl.play().catch(() => {});
+      });
+    };
+
+    // ── Event handlers ────────────────────────────────────────────────────
     const onVisibilityChange = () => {
-      const ctx = contextRef.current;
-      const engines = enginesRef.current;
-
-      if (document.visibilityState === 'hidden') {
-        const masterGainVal = masterGainRef.current?.gain.value ?? masterVolumeRef.current;
-        const fadeGainVal   = fadeGainRef.current?.gain.value  ?? 1.0;
-        Object.entries(engines).forEach(([id, eng]) => {
-          if (!eng.isPlaying) return;
-          const bgEl = bgAudioRef.current[id];
-          if (!bgEl) return;
-          // Match exact output level: trackGain × masterGain × fadeGain
-          bgEl.volume      = Math.min(1, Math.max(0.001, eng.currentGain * masterGainVal * fadeGainVal));
-          // Resume from the same position in the file so there's no restart glitch
-          bgEl.currentTime = eng.currentFileTime;
-          bgEl.play().catch(() => {});
-        });
+      if (document.hidden) {
+        handleBackground();
       } else {
-        // visible / bfcache restore — Web Audio takes back over.
-
-        // 1. Silence all background <audio> elements immediately.
-        //    .paused is unreliable while an iOS play() promise is pending,
-        //    so we pause unconditionally.
-        Object.values(bgAudioRef.current).forEach(el => el.pause());
-
-        if (ctx) {
-          const mg  = masterGainRef.current;
-          const vol = masterVolumeRef.current;
-
-          // Normalize gains after resume, regardless of prior context state.
-          // iOS sometimes resets GainNode automation even when the context
-          // reports 'running' on return from background.
-          const normalizeGains = () => {
-            const now = ctx.currentTime;
-
-            if (mg) {
-              // Snap to 0 first — absorbs any burst from iOS resetting gains
-              // to the Web Audio default (1.0).  Then ramp to the UI slider
-              // value over 100 ms so there is no audible pop.
-              mg.gain.cancelScheduledValues(now);
-              mg.gain.setValueAtTime(0, now);
-              mg.gain.linearRampToValueAtTime(vol, now + 0.1);
-            }
-
-            // Restore per-track gains.  iOS wipes scheduled automation on
-            // suspension; trackGain.gain reverts to 1.0 (its default) instead
-            // of the user's chosen level.  We pin each playing track back to
-            // its stored volume immediately — no ramp needed here because the
-            // master gain ramp above already provides the smooth fade-in.
-            Object.values(engines).forEach(eng => {
-              if (!eng.isPlaying) return;
-              eng.trackGain.gain.cancelScheduledValues(now);
-              eng.trackGain.gain.setValueAtTime(eng.volume, now);
-            });
-
-            console.log(
-              `[earvana] AudioContext resumed — state: ${ctx.state}` +
-              `, masterVol: ${vol.toFixed(2)}` +
-              `, tracks: ${Object.values(engines).filter(e => e.isPlaying).map(e => `${e.id}@${e.volume.toFixed(2)}`).join(', ') || 'none'}`
-            );
-          };
-
-          // 2. Explicitly resume the AudioContext, then normalize.
-          //    We call resume() unconditionally — it is a no-op when already
-          //    running, so it is safe regardless of ctx.state.
-          ctx.resume()
-            .then(normalizeGains)
-            .catch(() => {});
-        }
-
-        startKeepAlive();
-        const anyPlaying = Object.values(engines).some(e => e.isPlaying);
-        if (anyPlaying) acquireWakeLock();
+        handleForeground();
       }
     };
 
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) onVisibilityChange(); // bfcache restore
+    // pageshow fires on both initial load and bfcache restores. It is often
+    // more reliable than visibilitychange for iOS cold-starts after the app
+    // switcher. We call handleForeground unconditionally — forceResetAudio
+    // guards itself (no-op if AudioContext hasn't been created yet).
+    const onPageShow = () => {
+      handleForeground();
+    };
+
+    // pagehide is more reliable than visibilitychange 'hidden' on iOS — it
+    // fires before the page is frozen into the bfcache.
+    const onPageHide = () => {
+      handleBackground();
     };
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('pagehide', onPageHide);
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('pagehide', onPageHide);
     };
-  }, [acquireWakeLock, startKeepAlive]);
+  }, [acquireWakeLock, startKeepAlive, forceResetAudio]);
 
   return {
     tracks: tracksState,
