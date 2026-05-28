@@ -4,6 +4,10 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }
 }
+@keyframes trackBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.22; }
+}
 @keyframes settingsPop {
   from { transform: scale(0.06); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }

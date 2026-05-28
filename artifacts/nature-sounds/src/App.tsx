@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
-import { Play, Pause, Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
 import { useAudioEngine } from "./hooks/useAudioEngine";
@@ -435,45 +435,72 @@ function CylinderCarousel({
 
 // ─── Track List ───────────────────────────────────────────────────────────────
 
-function TrackList({ category, engine }: { category: SoundCategory; engine: ReturnType<typeof useAudioEngine> }) {
+function TrackList({
+  category, engine, selectedTrackId, onSelectTrack,
+}: {
+  category: SoundCategory;
+  engine: ReturnType<typeof useAudioEngine>;
+  selectedTrackId: string | null;
+  onSelectTrack: (id: string) => void;
+}) {
   return (
     <div className="w-full h-full overflow-y-auto">
       {category.tracks.map((track: SoundTrack, i: number) => {
-        const state     = engine.tracks[track.id];
-        const isPlaying = state?.isPlaying ?? false;
-        const isLoading = state?.isLoading ?? false;
-        const hasError  = state?.hasError  ?? false;
+        const state      = engine.tracks[track.id];
+        const isPlaying  = state?.isPlaying ?? false;
+        const isLoading  = state?.isLoading ?? false;
+        const hasError   = state?.hasError  ?? false;
+        const isSelected = track.id === selectedTrackId;
+
+        // Green = actively playing. Yellow = selected but paused / not yet started.
+        const showGreen  = isPlaying;
+        const showYellow = isSelected && !isPlaying;
 
         return (
           <button key={track.id}
-            onClick={() => isPlaying ? engine.pause(track.id) : engine.play(track.id)}
-            className="w-full flex items-center gap-3 py-[9px] text-left"
+            onClick={() => onSelectTrack(track.id)}
+            className="relative w-full flex items-center py-[9px] text-left overflow-hidden"
             style={{
-              paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "16px",
+              paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(28px,7cqw,40px)",
               background: "transparent",
-              transformOrigin: "top center",
               animation: `blindDown 0.28s ease both`,
               animationDelay: `${i * 0.07}s`,
             }}
             data-testid={`track-btn-${track.id}`}>
-            <div className="flex-shrink-0 flex items-center justify-start transition-all duration-200"
-              style={{
-                width: "clamp(26px,4cqw,34px)", height: "clamp(26px,4cqw,34px)", transform: "translateY(1px)",
-              }}>
-              {isLoading ? <Loader2 className="animate-spin text-white/60" style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)" }} />
-                : hasError  ? <AlertTriangle style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,180,0,0.7)" }} />
-                : isPlaying ? <Pause style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "#00ff55" }} />
-                : <Play style={{ width: "clamp(18px,3.5cqw,22px)", height: "clamp(18px,3.5cqw,22px)", color: "rgba(255,255,255,0.5)" }} />}
-            </div>
-            <span className="leading-none" style={{
+
+            {/* Highlight bar — drawn behind the text */}
+            {(showGreen || showYellow) && (
+              <img
+                src={img(showGreen ? "TrackHilite-Green.png" : "TrackHilite-Yellow.png")}
+                alt="" className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{
+                  objectFit: "fill",
+                  animation: showYellow ? "trackBlink 1s ease-in-out infinite" : "none",
+                }}
+                draggable={false}
+              />
+            )}
+
+            {/* Track name */}
+            <span className="relative leading-none" style={{
               fontSize: "clamp(15px,4.0cqw,20px)", fontWeight: isPlaying ? 500 : 300,
-              color: isPlaying ? "#00ff88" : hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.8)",
-              textShadow: isPlaying ? "0 0 12px rgba(0,255,80,0.4)" : "none",
+              color: hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.92)",
               letterSpacing: "0.03em",
             }}>
               {track.name}
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
+
+            {/* Loading spinner — right-aligned while decoding */}
+            {isLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-white/60"
+                style={{ width: "clamp(14px,3cqw,18px)", height: "clamp(14px,3cqw,18px)" }} />
+            )}
+            {/* Error icon */}
+            {hasError && !isLoading && (
+              <AlertTriangle className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ width: "clamp(14px,3cqw,18px)", height: "clamp(14px,3cqw,18px)", color: "rgba(255,180,0,0.7)" }} />
+            )}
           </button>
         );
       })}
@@ -775,6 +802,9 @@ function Home() {
   const [eqMode,        setEqMode]        = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
   );
+  // selectedTrackId — the track the user has tapped (yellow blink), independent
+  // of whether audio is actually playing. Goes green once PLAY is pressed.
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
   const LOOP_STEP = DURATION_STEPS.length - 1;
@@ -788,8 +818,14 @@ function Home() {
     if (s < LOOP_STEP) setTimeRemaining(stepToSeconds(s));
   }, [LOOP_STEP]);
 
-  const isPlaying    = Object.values(engine.tracks).some((t) => t.isPlaying);
+  const isPlaying      = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
+
+  // Keep selectedTrackId in sync when a track starts playing externally
+  // (e.g. MediaSession lock-screen Play → engine.resume() → playingTrackId changes).
+  useEffect(() => {
+    if (playingTrackId) setSelectedTrackId(playingTrackId);
+  }, [playingTrackId]);
 
   /* Count down once per second while playing (not in loop mode) */
   useEffect(() => {
@@ -827,11 +863,35 @@ function Home() {
     localStorage.setItem("tr_last_category", id);
   };
   const handleCenterChange = (idx: number) => {
-    const id = CATEGORIES[idx].id;
+    const id  = CATEGORIES[idx].id;
+    const cat = CATEGORIES[idx];
     setCenterIdx(idx);
     setSelectedId(id);
+    // Clear track selection if the selected track isn't in the new category
+    setSelectedTrackId(prev =>
+      prev && cat.tracks.some(t => t.id === prev) ? prev : null
+    );
     localStorage.setItem("tr_last_category", id);
   };
+
+  // Tap a track name → select it (yellow blink). Tapping the currently playing
+  // track is a no-op — use the PLAY button to stop. Tapping a different track
+  // while one is playing pauses the playing track first.
+  const handleTrackSelect = useCallback((id: string) => {
+    if (id === playingTrackId) return; // already green, PLAY button stops it
+    if (playingTrackId) engine.pause(playingTrackId);
+    setSelectedTrackId(prev => (prev === id ? null : id)); // toggle
+  }, [playingTrackId, engine]);
+
+  // PLAY button: start selected track, or pause the currently playing one.
+  const handlePlayButton = useCallback(() => {
+    if (isPlaying) {
+      if (playingTrackId) engine.pause(playingTrackId);
+      // selectedTrackId stays → reverts to yellow blink
+    } else if (selectedTrackId) {
+      engine.play(selectedTrackId);
+    }
+  }, [isPlaying, playingTrackId, selectedTrackId, engine]);
 
   const handleSprocketClick = useCallback(() => {
     setSprocketFlash(true);
@@ -904,7 +964,14 @@ function Home() {
           <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,2.5vh,22px)", paddingBottom: "4px" }}>
             {selectedId && (() => {
               const cat = CATEGORIES.find((c) => c.id === selectedId);
-              return cat ? <TrackList category={cat} engine={engine} /> : null;
+              return cat ? (
+                <TrackList
+                  category={cat}
+                  engine={engine}
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={handleTrackSelect}
+                />
+              ) : null;
             })()}
           </div>
 
@@ -939,12 +1006,21 @@ function Home() {
                 style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
-              {/* Play — truly centered across full bar width */}
+              {/* Play — truly centered across full bar width.
+                  3 states:
+                    idle     → PLAY_off.png      (no track selected)
+                    selected → PLAY_standby.png  (track tapped, not yet playing — blinks)
+                    playing  → PLAY_ON.png       (audio running — static green)       */}
               <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-                <button onClick={() => { if (isPlaying && playingTrackId) engine.pause(playingTrackId); else engine.resume(); }}
-                  className="pointer-events-auto flex-shrink-0 transition-opacity duration-150 active:opacity-60"
-                  style={{ width: "clamp(56px,14cqw,82px)" }} data-testid="btn-play-pause">
-                  <img src={isPlaying ? img("PLAY_ON.png") : img("PLAY_standby.png")}
+                <button onClick={handlePlayButton}
+                  className="pointer-events-auto flex-shrink-0 active:opacity-60"
+                  style={{
+                    width: "clamp(56px,14cqw,82px)",
+                    animation: (!isPlaying && selectedTrackId) ? "trackBlink 1s ease-in-out infinite" : "none",
+                  }}
+                  data-testid="btn-play-pause">
+                  <img
+                    src={img(isPlaying ? "PLAY_ON.png" : selectedTrackId ? "PLAY_standby.png" : "PLAY_off.png")}
                     alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
                 </button>
               </div>
