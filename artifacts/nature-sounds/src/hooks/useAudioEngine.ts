@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
-const DEFAULT_CROSSFADE  = 15;  // seconds
-const FADE_IN_DURATION   = 5;   // seconds
+const DEFAULT_CROSSFADE       = 15;   // seconds — loop crossfade within a single track
+const FADE_IN_DURATION        = 5;    // seconds — initial fade-in when a track starts
+const TRACK_CROSSFADE_DURATION = 2.5; // seconds — inter-track crossfade when switching sounds
 
 
 // Pre-computed equal-power crossfade curves (128 samples)
@@ -229,6 +230,46 @@ class TrackEngine {
     this.trackGain.gain.setValueAtTime(0, t);
   }
 
+  // Gracefully fade this track out over `duration` seconds, then stop.
+  // Used for inter-track crossfades: the outgoing track fades out while the
+  // incoming one does its normal fade-in, so both are audible during the overlap.
+  fadeOut(duration: number) {
+    // Stop the loop scheduler immediately so no new sources are created
+    // while the fade is in progress.
+    if (this.timeoutId !== null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this.isPlaying = false;
+
+    const t = this.context.currentTime;
+    // Use this.volume as the start point.  We cannot rely on trackGain.gain.value
+    // because iOS Safari returns the last explicit setValueAtTime rather than the
+    // live interpolated value during an in-progress ramp.
+    this.trackGain.gain.cancelScheduledValues(t);
+    this.trackGain.gain.setValueAtTime(this.volume, t);
+    this.trackGain.gain.linearRampToValueAtTime(0, t + duration);
+
+    // Snapshot the source/gain references so the timeout closure is safe even if
+    // another play() call recreates them on the same engine before this fires.
+    const srcs = this.sources.slice() as typeof this.sources;
+    const gns  = this.gains.slice()  as typeof this.gains;
+    this.sources = [null, null];
+    this.gains   = [null, null];
+
+    window.setTimeout(() => {
+      for (let i = 0; i < 2; i++) {
+        try { srcs[i]?.stop(); } catch { /* already stopped */ }
+        srcs[i]?.disconnect();
+        gns[i]?.disconnect();
+      }
+      // Silence trackGain now that the ramp has completed
+      const now = this.context.currentTime;
+      this.trackGain.gain.cancelScheduledValues(now);
+      this.trackGain.gain.setValueAtTime(0, now);
+    }, (duration + 0.15) * 1000);
+  }
+
   setVolume(vol: number) {
     this.volume = vol;
     if (!this.isPlaying) return;
@@ -389,11 +430,17 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Pause ALL other engines unconditionally — not just those with isPlaying=true.
-    // A track that is mid-load has isPlaying=false but will call engine.play() soon;
-    // silencing it here prevents ghost playback from async races.
+    // Stop all other engines.  Playing engines get a graceful fade-out so the
+    // transition to the new track sounds like a crossfade rather than a cut.
+    // Engines that are mid-load (isPlaying=false) are hard-paused to prevent
+    // ghost playback from async races.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
-      if (id !== trackId) eng.pause();
+      if (id === trackId) return;
+      if (eng.isPlaying) {
+        eng.fadeOut(TRACK_CROSSFADE_DURATION);
+      } else {
+        eng.pause();
+      }
     });
     Object.entries(bgAudioRef.current).forEach(([id, el]) => {
       if (id !== trackId) el.pause(); // always pause — .paused is true while play() promise is pending on iOS

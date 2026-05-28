@@ -1,0 +1,79 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 // src/lib/audioEngine.ts\
+import \{ useRef, useCallback \} from 'react';\
+\
+export class TinnitusAudioEngine \{\
+  private audioContext: AudioContext;\
+  private currentSource: AudioBufferSourceNode | null = null;\
+  private nextSource: AudioBufferSourceNode | null = null;\
+  private currentGain: GainNode | null = null;\
+  private nextGain: GainNode | null = null;\
+  private isFading = false;\
+\
+  constructor() \{\
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();\
+  \}\
+\
+  async loadSound(url: string): Promise<AudioBuffer> \{\
+    const response = await fetch(url);\
+    const arrayBuffer = await response.arrayBuffer();\
+    return this.audioContext.decodeAudioData(arrayBuffer);\
+  \}\
+\
+  playWithCrossfade(\
+    newBuffer: AudioBuffer,\
+    duration: number = 3.5, // seconds \'97 feels natural\
+    loop: boolean = true\
+  ) \{\
+    if (this.isFading) return;\
+\
+    const newSource = this.audioContext.createBufferSource();\
+    newSource.buffer = newBuffer;\
+    newSource.loop = loop;\
+\
+    const newGain = this.audioContext.createGain();\
+    newGain.gain.value = 0;\
+\
+    // Connect\
+    newSource.connect(newGain);\
+    newGain.connect(this.audioContext.destination);\
+\
+    const now = this.audioContext.currentTime;\
+\
+    if (this.currentSource && this.currentGain) \{\
+      // Fade out current\
+      this.currentGain.gain.linearRampToValueAtTime(0, now + duration);\
+      this.currentSource.stop(now + duration + 0.1);\
+    \}\
+\
+    // Fade in new\
+    newGain.gain.linearRampToValueAtTime(1, now + duration);\
+\
+    newSource.start(now);\
+    \
+    this.nextSource = newSource;\
+    this.nextGain = newGain;\
+\
+    // Swap references after fade\
+    setTimeout(() => \{\
+      this.currentSource = this.nextSource;\
+      this.currentGain = this.nextGain;\
+      this.isFading = false;\
+    \}, (duration + 0.2) * 1000);\
+  \}\
+\
+  stop() \{\
+    if (this.currentSource) this.currentSource.stop();\
+    if (this.nextSource) this.nextSource.stop();\
+  \}\
+\
+  setMasterVolume(volume: number) \{\
+    // You could add a master compressor + gain here for better dynamics\
+  \}\
+\}}
