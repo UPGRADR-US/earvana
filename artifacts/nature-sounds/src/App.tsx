@@ -883,12 +883,18 @@ function Home() {
 
   // Tap a track name → select it (yellow blink). Tapping the currently playing
   // track is a no-op — use the PLAY button to stop. Tapping a different track
-  // while one is playing pauses the playing track first.
+  // while playing crossfades immediately to that track.
   const handleTrackSelect = useCallback((id: string) => {
     if (id === playingTrackId) return; // already green, PLAY button stops it
-    if (playingTrackId) engine.pause(playingTrackId);
-    setSelectedTrackId(prev => (prev === id ? null : id)); // toggle
-  }, [playingTrackId, engine]);
+    if (isPlaying) {
+      // While playing: crossfade straight to the new track, no pause.
+      engine.play(id);
+      setSelectedTrackId(id);
+    } else {
+      // While paused: just select (yellow blink), toggle off if same.
+      setSelectedTrackId(prev => (prev === id ? null : id));
+    }
+  }, [playingTrackId, isPlaying, engine]);
 
   // PLAY button: start selected track, or pause the currently playing one.
   const handlePlayButton = useCallback(() => {
