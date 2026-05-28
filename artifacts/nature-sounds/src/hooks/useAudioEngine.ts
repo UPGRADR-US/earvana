@@ -597,9 +597,8 @@ export function useAudioEngine(): AudioEngineState {
             //    100 ms.  This absorbs any loud burst that would occur if:
             //    (a) bgEl audio pipeline hasn't fully drained yet, or
             //    (b) iOS reset GainNode automations during suspension.
-            //    We touch ONLY the master gain so individual track fade-in /
-            //    crossfade curves are left completely intact — touching per-track
-            //    gains here was what caused mid-fade "jumps" in earlier builds.
+            //    We zero masterGain first, then restore both masterGain and each
+            //    trackGain once the context is running again (see below).
             const mg  = masterGainRef.current;
             const vol = masterVolumeRef.current;
             if (mg) {
@@ -608,9 +607,24 @@ export function useAudioEngine(): AudioEngineState {
               mg.gain.setValueAtTime(0, t);
               ctx.resume().then(() => {
                 const now = ctx.currentTime;
+                // Restore master gain with a short ramp to avoid any burst.
                 mg.gain.cancelScheduledValues(now);
                 mg.gain.setValueAtTime(0, now);
                 mg.gain.linearRampToValueAtTime(vol, now + 0.1);
+                // Restore per-track gains. iOS resets ALL GainNode automation
+                // state when the AudioContext is suspended — trackGain.gain
+                // reverts to its Web Audio default (1.0) instead of the
+                // track's stored volume, which is what causes the "snap to
+                // maximum" glitch on foreground.  We cancel any stale
+                // automations and pin each playing track to its correct level.
+                // Crossfade curves that were in-flight during suspension are
+                // already lost (iOS advanced currentTime past them), so
+                // touching trackGain here causes no additional disruption.
+                Object.values(engines).forEach(eng => {
+                  if (!eng.isPlaying) return;
+                  eng.trackGain.gain.cancelScheduledValues(now);
+                  eng.trackGain.gain.setValueAtTime(eng.volume, now);
+                });
               }).catch(() => {});
             } else {
               ctx.resume().catch(() => {});
