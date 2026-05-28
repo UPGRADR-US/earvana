@@ -3,6 +3,7 @@ import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 5;   // seconds
+const STOP_FADE_DURATION = 1.5; // seconds — gentle ramp-to-silence on pause/stop
 
 
 // Pre-computed equal-power crossfade curves (128 samples)
@@ -209,24 +210,60 @@ class TrackEngine {
 
   pause() {
     this.isPlaying = false;
+    // Stop the loop-scheduling timeout immediately so no new source nodes
+    // are created during the fade tail.
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
-    for (let i = 0; i < 2; i++) {
-      try { this.sources[i]?.stop(); } catch { /* already stopped */ }
-      this.sources[i]?.disconnect();
-      this.gains[i]?.disconnect();
-      this.sources[i] = null;
-      this.gains[i] = null;
+
+    const ctx = this.context;
+    const now = ctx.currentTime;
+
+    // Cancel any in-flight automation curves; after cancelScheduledValues
+    // the .value property is reliable (no mid-curve interpolation).
+    this.trackGain.gain.cancelScheduledValues(now);
+    const fromGain = this.trackGain.gain.value;
+
+    if (fromGain <= 0.001) {
+      // Already silent — disconnect immediately, no need to fade.
+      for (let i = 0; i < 2; i++) {
+        try { this.sources[i]?.stop(); } catch { /* already stopped */ }
+        this.sources[i]?.disconnect();
+        this.gains[i]?.disconnect();
+        this.sources[i] = null;
+        this.gains[i] = null;
+      }
+      this.trackGain.gain.setValueAtTime(0, now);
+      return;
     }
-    // Cancel any scheduled automations on trackGain and clamp to silent.
-    // Without this, a fade-in curve continues running after pause(), meaning
-    // trackGain stays at a non-zero value and any newly connected source node
-    // (from a race or re-play) bleeds through.
-    const t = this.context.currentTime;
-    this.trackGain.gain.cancelScheduledValues(t);
-    this.trackGain.gain.setValueAtTime(0, t);
+
+    // Gentle ramp to silence.
+    this.trackGain.gain.setValueAtTime(fromGain, now);
+    this.trackGain.gain.linearRampToValueAtTime(0, now + STOP_FADE_DURATION);
+
+    // Null out the refs immediately so a fast re-play() doesn't inherit these
+    // nodes; the local captures below keep them alive for the fade tail.
+    const fadeSources = this.sources.slice() as (AudioBufferSourceNode | null)[];
+    const fadeGains   = this.gains.slice()   as (GainNode | null)[];
+    for (let i = 0; i < 2; i++) {
+      this.sources[i] = null;
+      this.gains[i]   = null;
+    }
+
+    // Stop & disconnect after the ramp completes.
+    setTimeout(() => {
+      for (let i = 0; i < 2; i++) {
+        try { fadeSources[i]?.stop(); } catch { /* already stopped */ }
+        fadeSources[i]?.disconnect();
+        fadeGains[i]?.disconnect();
+      }
+      // Hard-clamp trackGain to 0 so any subsequent play() starts clean.
+      try {
+        this.trackGain.gain.cancelScheduledValues(ctx.currentTime);
+        this.trackGain.gain.setValueAtTime(0, ctx.currentTime);
+      } catch { /* context may be closed/suspended */ }
+    }, (STOP_FADE_DURATION + 0.15) * 1000);
   }
 
   setVolume(vol: number) {
