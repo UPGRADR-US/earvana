@@ -37,13 +37,17 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
   return (
     <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
       style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", paddingBottom: bottomPad }}>
+      {/* Width is intentionally not fixed — the base image sets it via h-full + w-auto
+          so the LED overlay matches exactly without stretching either image. */}
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ width: "clamp(24px, 3.2cqw, 40px)", height: "min(clamp(180px,27svh,262px), calc(100svh - 460px))" }}
+        style={{ height: "min(clamp(180px,27svh,262px), calc(100svh - 460px))" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
-        <img src={img("VolSldrBase.png")} alt="" className="absolute inset-0 w-full h-full"
-          style={{ objectFit: "fill" }} draggable={false} />
-        <img src={img("VolSldr_LEDS.png")} alt="" className="absolute inset-0 w-full h-full"
-          style={{ objectFit: "fill", clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
+        <img src={img("VolSldrBase.png")} alt=""
+          className="block h-full w-auto"
+          draggable={false} />
+        <img src={img("VolSldr_LEDS.png")} alt=""
+          className="absolute top-0 left-0 h-full w-auto"
+          style={{ clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
           draggable={false} />
       </div>
       <div className="flex flex-col items-center justify-center gap-[3px]"
