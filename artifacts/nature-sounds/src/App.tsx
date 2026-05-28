@@ -928,7 +928,7 @@ function Home() {
       style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
-      <img src={img("TR-bgV2.png")} alt=""
+      <img src={img("TR-bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
       {/* Settings overlay — hides all other UI when open */}
@@ -944,7 +944,7 @@ function Home() {
         <>
           {/* Top Banner */}
           <div className="relative z-10 flex-shrink-0 w-full">
-            <img src={img("TopBannerV2.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
+            <img src={img("TopBanner+title.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
               className="w-full h-auto block" draggable={false} />
           </div>
 
