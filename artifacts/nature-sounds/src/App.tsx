@@ -468,12 +468,16 @@ function TrackList({
             }}
             data-testid={`track-btn-${track.id}`}>
 
-            {/* Highlight bar — drawn behind the text */}
+            {/* Highlight bar — drawn behind the text.
+                Left/right margins match the mockup proportions:
+                  left  ≈ 4% (small gap from screen edge)
+                  right ≈ 19% (clears the volume-meter column on the right) */}
             {(showGreen || showYellow) && (
               <img
                 src={img(showGreen ? "TrackHilite-Green.png" : "TrackHilite-Yellow.png")}
-                alt="" className="absolute inset-0 w-full h-full pointer-events-none"
+                alt="" className="absolute pointer-events-none"
                 style={{
+                  top: 0, bottom: 0, left: "4%", right: "19%",
                   objectFit: "fill",
                   animation: showYellow ? "trackBlink 1s ease-in-out infinite" : "none",
                 }}
