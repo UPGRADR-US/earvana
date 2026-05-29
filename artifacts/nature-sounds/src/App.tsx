@@ -41,7 +41,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
           sizes itself to h-full w-auto (natural 137×1064 ratio), and the
           LED overlay sits exactly on top at the same intrinsic dimensions. */}
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ height: "min(clamp(180px,27svh,262px), calc(100svh - 460px))" }}
+        style={{ height: "max(150px, calc(100svh - clamp(160px,22vh,210px) - clamp(220px,26svh,280px)))" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt=""
           className="block h-full w-auto" draggable={false} />
@@ -788,6 +788,12 @@ function SettingsPanel({ onClose, eqMode, onEqChange }: {
             </div>
           </SettingsRow>
 
+          {/* Build info — bottom of settings */}
+          <div style={{ textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.22)",
+                        letterSpacing: "0.07em", padding: "18px 0 10px" }}>
+            build&nbsp;23&nbsp;·&nbsp;{new Date(__BUILD_TIME__).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </div>
+
         </div>
       </div>
     </div>
@@ -1002,11 +1008,6 @@ function Home() {
               <div style={{ textAlign: "center", fontSize: "clamp(9px,2.2cqw,12px)", color: "rgba(255,255,255,0.45)", letterSpacing: "0.07em", marginTop: "-19px" }}>
                 duration (hours)
               </div>
-            </div>
-
-            {/* Build timestamp — confirms which deploy is running */}
-            <div style={{ textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.18)", letterSpacing: "0.05em", marginBottom: "2px" }}>
-              {new Date(__BUILD_TIME__).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </div>
 
             {/* Icon row */}
