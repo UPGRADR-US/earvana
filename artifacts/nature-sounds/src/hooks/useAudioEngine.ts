@@ -3,8 +3,7 @@ import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 5;   // seconds
-const STOP_FADE_DURATION = 1.5; // seconds — gentle ramp-to-silence on pause/stop
-
+const STOP_FADE_DURATION = 1.5; // seconds — gentle ramp-to-silence on PLAY button stop
 
 // Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
@@ -37,6 +36,10 @@ export type AudioEngineState = {
   cancelFade: () => void;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TrackEngine — one per track, manages two ping-pong AudioBufferSourceNodes
+// for seamless equal-power crossfade looping.
+// ─────────────────────────────────────────────────────────────────────────────
 class TrackEngine {
   id: string;
   url: string;
@@ -52,28 +55,15 @@ class TrackEngine {
   sources: [AudioBufferSourceNode | null, AudioBufferSourceNode | null] = [null, null];
   gains: [GainNode | null, GainNode | null] = [null, null];
   currentSlot: 0 | 1 = 0;
-  // AudioContext time at which each slot's source started playing
   slotStartTime: [number, number] = [0, 0];
 
   timeoutId: number | null = null;
   isPlaying: boolean = false;
   volume: number = 0.5;
 
-  // Current position within the audio file (seconds), for background sync
-  get currentFileTime(): number {
-    if (!this.buffer || !this.isPlaying) return this.loopStart;
-    const elapsed = this.context.currentTime - this.slotStartTime[this.currentSlot];
-    const pos = this.loopStart + Math.max(0, elapsed) % this.regionDuration();
-    return Math.min(pos, this.buffer.duration - 0.05);
-  }
-
-  // Intended steady-state output gain for this track.
-  // We use this.volume (the stored target) rather than trackGain.gain.value because
-  // Safari/iOS returns the last *explicit* setValueAtTime value during a scheduled
-  // curve, not the live interpolated value — making .value unreliable mid-fade.
-  get currentGain(): number {
-    return this.volume;
-  }
+  // Intended steady-state gain; more reliable than reading .gain.value
+  // mid-automation on Safari/iOS.
+  get currentGain(): number { return this.volume; }
 
   constructor(track: SoundTrack, context: AudioContext, masterGain: GainNode) {
     this.id = track.id;
@@ -93,29 +83,20 @@ class TrackEngine {
     return end - this.loopStart;
   }
 
+  // Cap crossfade at regionDuration/3 — prevents two pathological cases:
+  //   (a) crossfade ≥ regionDuration → crossStart ≤ 0 → fires immediately
+  //   (b) crossfade × 2 > regionDuration → in-curve still running when next
+  //       loop calls cancelScheduledValues on the same GainNode (undefined behaviour)
+  private effectiveXfade(): number {
+    return Math.min(this.crossfadeDuration, this.regionDuration() / 3);
+  }
+
   async load(): Promise<void> {
     if (this.buffer) return;
     const response = await fetch(import.meta.env.BASE_URL + this.url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const arrayBuffer = await response.arrayBuffer();
     this.buffer = await this.context.decodeAudioData(arrayBuffer);
-  }
-
-  // Crossfade duration capped at regionDuration/3 so the crossfade always
-  // occupies the last third of the file.  This prevents two failure modes:
-  //   (a) crossfadeDuration ≥ regionDuration → crossStart ≤ 0, crossfade fires
-  //       immediately at t=0, both sources share the same gain-fade curves from
-  //       the very beginning, audio volume builds across the whole file then snaps.
-  //   (b) crossfadeDuration × 2 > regionDuration → the inGain curve from loop N
-  //       is still running when loop N+1 calls cancelScheduledValues on that same
-  //       GainNode.  cancelScheduledValues cannot cancel a curve whose start time
-  //       predates cancelTime, so the old EQUAL_POWER_IN fights the new
-  //       EQUAL_POWER_OUT events — undefined behaviour on every browser.
-  // With xfade ≤ regionDuration/3, each inGain curve completes a full
-  // regionDuration/3 before the next crossfade even begins, and the crossfade
-  // start is always ≥ 2/3 * regionDuration into the file (safely in the future).
-  private effectiveXfade(): number {
-    return Math.min(this.crossfadeDuration, this.regionDuration() / 3);
   }
 
   play() {
@@ -130,11 +111,9 @@ class TrackEngine {
     source.connect(gain);
     gain.connect(this.trackGain);
 
-    const xfade    = this.effectiveXfade();
+    const xfade = this.effectiveXfade();
     const startTime = this.context.currentTime;
     this.trackGain.gain.cancelScheduledValues(startTime);
-    // Fade-in capped to regionDuration/3 so it always finishes before the
-    // crossfade begins (crossfade starts at 2/3 of the file at the earliest).
     const fadeIn = Math.min(FADE_IN_DURATION, this.regionDuration() / 3);
     this.trackGain.gain.setValueAtTime(0, startTime);
     this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + fadeIn);
@@ -159,20 +138,16 @@ class TrackEngine {
 
     const outSlot = this.currentSlot;
     const inSlot: 0 | 1 = outSlot === 0 ? 1 : 0;
-    const xfade = this.effectiveXfade();   // capped at regionDuration/3
+    const xfade = this.effectiveXfade();
 
     const inSource = this.context.createBufferSource();
     inSource.buffer = this.buffer;
     const inGain = this.context.createGain();
     const crossStart = Math.max(targetTime, this.context.currentTime);
-    // Offset the curves by 10 ms so setValueAtTime and setValueCurveAtTime are
-    // never at the exact same timestamp.  iOS Safari's tie-breaking between these
-    // two event types is undefined — on the first crossfade the curve is often
-    // skipped entirely, leaving inGain frozen at 0 (silent new loop) and outGain
-    // frozen at 1 (no fade-out, abrupt cut when the source expires).  After the
-    // first crossfade the nodes have event history and iOS handles it correctly,
-    // which is why the glitch only ever happens once per track session.
-    // The 10 ms hold (inGain=0, outGain=1) is completely inaudible.
+    // 10 ms offset: never schedule setValueAtTime and setValueCurveAtTime at the
+    // exact same timestamp. iOS Safari's tie-breaking between these event types is
+    // undefined — without the offset, the curve is sometimes silently dropped on
+    // the first crossfade only.
     const curveStart = crossStart + 0.01;
     inGain.gain.setValueAtTime(0, crossStart);
     inGain.gain.setValueCurveAtTime(EQUAL_POWER_IN, curveStart, xfade);
@@ -184,9 +159,8 @@ class TrackEngine {
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
     if (outGain) {
-      // Always start fade-out from 1.  We cannot use outGain.gain.value because
-      // Safari/iOS returns the last *explicit* setValueAtTime (0) after a curve
-      // rather than the curve's final value — causing a loud jump or silent fade.
+      // Always start from 1 — Safari/iOS returns the last explicit setValueAtTime
+      // (which is 0) after a curve ends, not the curve's final value.
       outGain.gain.cancelScheduledValues(crossStart);
       outGain.gain.setValueAtTime(1, crossStart);
       outGain.gain.setValueCurveAtTime(EQUAL_POWER_OUT, curveStart, xfade);
@@ -202,14 +176,14 @@ class TrackEngine {
       outSource?.disconnect();
       outGain?.disconnect();
       if (this.sources[outSlot] === outSource) this.sources[outSlot] = null;
-      if (this.gains[outSlot] === outGain) this.gains[outSlot] = null;
+      if (this.gains[outSlot] === outGain)   this.gains[outSlot]   = null;
     }, Math.max(cleanupDelay, 0));
 
     this.scheduleNextLoop(crossStart + this.regionDuration() - xfade);
   }
 
-  // immediate=true  → hard cut (used when switching tracks; new track fades in)
-  // immediate=false → gentle STOP_FADE_DURATION ramp (used for explicit user stop)
+  // immediate = true  → hard cut (track switching — new track fades in cleanly)
+  // immediate = false → gentle STOP_FADE_DURATION ramp (explicit PLAY button stop)
   pause(immediate = false) {
     this.isPlaying = false;
     if (this.timeoutId !== null) {
@@ -219,12 +193,11 @@ class TrackEngine {
 
     const ctx = this.context;
     const now = ctx.currentTime;
-
     this.trackGain.gain.cancelScheduledValues(now);
     const fromGain = this.trackGain.gain.value;
 
     if (immediate || fromGain <= 0.001) {
-      // Hard cut — stop sources instantly and clamp gain to 0.
+      // Hard cut — stop sources immediately and clamp gain to 0.
       for (let i = 0; i < 2; i++) {
         try { this.sources[i]?.stop(); } catch { /* already stopped */ }
         this.sources[i]?.disconnect();
@@ -236,7 +209,7 @@ class TrackEngine {
       return;
     }
 
-    // Gentle ramp to silence (explicit stop via PLAY button).
+    // Gentle ramp to silence (user pressed PLAY to stop).
     this.trackGain.gain.setValueAtTime(fromGain, now);
     this.trackGain.gain.linearRampToValueAtTime(0, now + STOP_FADE_DURATION);
 
@@ -274,8 +247,10 @@ class TrackEngine {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// useAudioEngine hook
+// ─────────────────────────────────────────────────────────────────────────────
 export function useAudioEngine(): AudioEngineState {
-  // ── State ────────────────────────────────────────────────────────────────
   const [tracksState, setTracksState] = useState<Record<string, TrackState>>(
     TRACKS.reduce((acc, t) => ({
       ...acc,
@@ -284,7 +259,6 @@ export function useAudioEngine(): AudioEngineState {
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
 
-  // ── Refs — ALL declared before any useCallback / useEffect ───────────────
   const contextRef      = useRef<AudioContext | null>(null);
   const masterGainRef   = useRef<GainNode | null>(null);
   const fadeGainRef     = useRef<GainNode | null>(null);
@@ -292,19 +266,13 @@ export function useAudioEngine(): AudioEngineState {
   const lastPlayedIdRef = useRef<string | null>(null);
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null);
   const keepAliveRef    = useRef<HTMLAudioElement | null>(null);
-  // Per-track pre-unlocked <audio> elements for iOS background handoff
-  const bgAudioRef      = useRef<Record<string, HTMLAudioElement>>({});
   const masterVolumeRef = useRef<number>(0.8);
-  // Stable refs for MediaSession callbacks (avoid stale closures)
+  // Stable refs for MediaSession callbacks — avoid stale closures
   const playRef         = useRef<((id: string) => Promise<void>) | null>(null);
   const pauseRef        = useRef<((id: string) => void) | null>(null);
   const resumeRef       = useRef<(() => Promise<void>) | null>(null);
-  // True while the foreground gain-ramp is in progress — blocks play() so
-  // a race between iOS resuming audio and the user tapping a track doesn't
-  // start playback before gains are stable.
-  const isTransitioningRef = useRef<boolean>(false);
 
-  // ── Wake Lock (Android Chrome) ───────────────────────────────────────────
+  // ── Wake Lock (Android Chrome) ─────────────────────────────────────────
   const acquireWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) return;
     try { wakeLockRef.current = await navigator.wakeLock.request('screen'); }
@@ -316,69 +284,49 @@ export function useAudioEngine(): AudioEngineState {
     wakeLockRef.current = null;
   }, []);
 
-  // ── iOS keep-alive: silent HTMLAudioElement keeps audio session active ───
-  // iOS Safari suspends the Web Audio API when the screen locks unless an
-  // HTMLAudioElement is actively playing a real audio src (not a stream —
-  // srcObject/MediaStreamDestination is NOT supported on iOS Safari).
-  // We build a minimal silent WAV in memory, turn it into a blob URL, and
-  // loop it at near-zero volume. iOS treats this as a live audio session and
-  // keeps the Web Audio context running in the background.
+  // ── Silent keep-alive: prevents iOS from suspending the AudioContext ────
+  // A looping near-silent HTMLAudioElement keeps the iOS audio session alive
+  // so the Web Audio context continues running when the screen locks.
   const startKeepAlive = useCallback(() => {
-    // If already created, just make sure it's playing
     if (keepAliveRef.current) {
       if (keepAliveRef.current.paused) keepAliveRef.current.play().catch(() => {});
       return;
     }
     try {
-      // Build a minimal silent WAV: 8000 Hz, mono, 8-bit PCM, 0.5 s
       const sampleRate = 8000;
-      const numSamples = sampleRate / 2;          // 0.5 seconds
-      const dataSize   = numSamples;               // 1 byte per sample (8-bit)
+      const numSamples = sampleRate / 2;
+      const dataSize   = numSamples;
       const header     = new Uint8Array(44);
       const dv         = new DataView(header.buffer);
       const wr32 = (o: number, v: number) => dv.setUint32(o, v, true);
       const wr16 = (o: number, v: number) => dv.setUint16(o, v, true);
       const str  = (o: number, s: string) => s.split('').forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
-      str(0,  'RIFF'); wr32(4, 36 + dataSize);
-      str(8,  'WAVE'); str(12, 'fmt '); wr32(16, 16);
-      wr16(20, 1);           // PCM
-      wr16(22, 1);           // mono
-      wr32(24, sampleRate);  // sample rate
-      wr32(28, sampleRate);  // byte rate (= sampleRate × 1 channel × 1 byte)
-      wr16(32, 1);           // block align
-      wr16(34, 8);           // bits per sample
+      str(0, 'RIFF'); wr32(4, 36 + dataSize);
+      str(8, 'WAVE'); str(12, 'fmt '); wr32(16, 16);
+      wr16(20, 1); wr16(22, 1);
+      wr32(24, sampleRate); wr32(28, sampleRate);
+      wr16(32, 1); wr16(34, 8);
       str(36, 'data'); wr32(40, dataSize);
-      const data = new Uint8Array(numSamples).fill(128); // 128 = silence in 8-bit unsigned PCM
+      const data = new Uint8Array(numSamples).fill(128);
       const url  = URL.createObjectURL(new Blob([header, data], { type: 'audio/wav' }));
-
-      const el  = new Audio(url);
-      el.loop   = true;
-      el.volume = 0.001;   // near-silent but non-zero — iOS skips muted elements
-
-      // If iOS pauses us in background, fight back immediately
-      el.addEventListener('pause', () => { el.play().catch(() => {}); });
-
-      // Each timeupdate tick (fires ~4×/s while playing) nudges a suspended
-      // AudioContext back to running — critical for iOS background playback
+      const el   = new Audio(url);
+      el.loop    = true;
+      el.volume  = 0.001;
+      // Resume suspended context on each tick — handles iOS lock-screen cases
       el.addEventListener('timeupdate', () => {
         const ctx = contextRef.current;
         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
       });
-
       el.play().catch(() => {});
       keepAliveRef.current = el;
-    } catch { /* graceful degradation on browsers without Blob/Audio support */ }
+    } catch { /* no Blob/Audio support */ }
   }, []);
 
-  // ── Background preloader ─────────────────────────────────────────────────
-  // After the first user gesture, load + decode every track's audio buffer
-  // in the background (one at a time, staggered) so subsequent track taps
-  // are instant — no waiting for network fetch + decodeAudioData.
+  // ── Background preloader ────────────────────────────────────────────────
   const preloadInBackground = useCallback(() => {
     const ctx = contextRef.current;
     const mg  = masterGainRef.current;
     if (!ctx || !mg) return;
-
     const unloaded = TRACKS.filter(t => !enginesRef.current[t.id]);
     let i = 0;
     const loadNext = () => {
@@ -387,76 +335,12 @@ export function useAudioEngine(): AudioEngineState {
       const engine = new TrackEngine(track, ctx, mg);
       engine.setVolume(0.5);
       enginesRef.current[track.id] = engine;
-      engine.load().catch(() => {}).finally(() => {
-        // 200 ms gap between decodes to avoid competing with active playback
-        setTimeout(loadNext, 200);
-      });
+      engine.load().catch(() => {}).finally(() => setTimeout(loadNext, 200));
     };
-    // Start 800 ms after first gesture so the selected track loads first
     setTimeout(loadNext, 800);
   }, []);
 
-  // ── Foreground recovery: hard-kill gains, resume, delayed ramp-up ────────
-  // Called on both visibilitychange (→ visible) and pageshow to handle iOS
-  // cold-starts from background.  Sequence:
-  //   1. Hard-zero masterGain immediately (kills any burst from iOS gain reset)
-  //   2. ctx.resume() — no-op if already running, essential if suspended
-  //   3. Per-track gains pinned to stored volumes (iOS resets them to 1.0)
-  //   4. 100 ms setTimeout → smooth ramp masterGain back to target level
-  //   5. isTransitioning → false once ramp completes
-  const forceResetAudio = useCallback(() => {
-    const ctx = contextRef.current;
-    const mg  = masterGainRef.current;
-    if (!ctx || !mg) return;
-
-    isTransitioningRef.current = true;
-
-    // Step 1: Hard-zero master gain RIGHT NOW, before resume, so iOS cannot
-    // sneak a full-volume burst through while the context is waking up.
-    const killTime = ctx.currentTime;
-    mg.gain.cancelScheduledValues(killTime);
-    mg.gain.setValueAtTime(0, killTime);
-
-    // Step 2: Force context back to running state.
-    ctx.resume().then(() => {
-      const now = ctx.currentTime;
-      const vol = masterVolumeRef.current;
-
-      // Step 3: Restore per-track gains to stored levels immediately.
-      // iOS wipes all GainNode automation on suspension, reverting them to
-      // the Web Audio default (1.0). We pin each playing track before the
-      // master gain ramps up so no individual track can punch through.
-      Object.values(enginesRef.current).forEach(eng => {
-        if (!eng.isPlaying) return;
-        eng.trackGain.gain.cancelScheduledValues(now);
-        eng.trackGain.gain.setValueAtTime(eng.volume, now);
-      });
-
-      // Step 4: 100 ms pause (master stays at 0), then smooth ramp to target.
-      // The delay ensures the bgEl pipeline has fully drained before Web Audio
-      // takes over, which is what causes the audible 'choke' on fast transitions.
-      window.setTimeout(() => {
-        const t = ctx.currentTime;
-        mg.gain.cancelScheduledValues(t);
-        mg.gain.setValueAtTime(0, t);
-        mg.gain.linearRampToValueAtTime(vol, t + 0.1);
-
-        // Step 5: Release transition lock after ramp finishes (~110 ms total).
-        window.setTimeout(() => {
-          isTransitioningRef.current = false;
-          console.log(
-            `[earvana] forceResetAudio complete — ctx: ${ctx.state}` +
-            `, masterVol: ${vol.toFixed(2)}` +
-            `, tracks: ${Object.values(enginesRef.current).filter(e => e.isPlaying).map(e => `${e.id}@${e.volume.toFixed(2)}`).join(', ') || 'none'}`
-          );
-        }, 120);
-      }, 100);
-    }).catch(() => {
-      isTransitioningRef.current = false;
-    });
-  }, []);
-
-  // ── AudioContext init ────────────────────────────────────────────────────
+  // ── AudioContext init ───────────────────────────────────────────────────
   const initContext = useCallback(() => {
     if (!contextRef.current) {
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
@@ -467,22 +351,16 @@ export function useAudioEngine(): AudioEngineState {
       fadeGainRef.current.gain.value = 1.0;
       masterGainRef.current.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
-      // Kick off background preload on very first init only
       setTimeout(preloadInBackground, 0);
     }
     if (contextRef.current.state === 'suspended') {
       contextRef.current.resume().catch(() => {});
     }
     startKeepAlive();
-  }, [masterVolume, startKeepAlive]);
+  }, [masterVolume, startKeepAlive, preloadInBackground]);
 
-  // ── Playback controls ────────────────────────────────────────────────────
+  // ── Playback controls ───────────────────────────────────────────────────
   const play = useCallback(async (trackId: string) => {
-    // Block new playback while the foreground gain-ramp is in progress.
-    // isTransitioning is set true on pagehide/background and cleared ~220 ms
-    // after forceResetAudio() completes, ensuring gains are stable before any
-    // new source node connects.
-    if (isTransitioningRef.current) return;
     initContext();
     const ctx = contextRef.current!;
     const mg  = masterGainRef.current!;
@@ -490,15 +368,10 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Hard-cut ALL other engines unconditionally — not just those with isPlaying=true.
-    // immediate=true prevents the fade tail from overlapping the new track's fade-in.
-    // A track that is mid-load has isPlaying=false but will call engine.play() soon;
-    // silencing it here prevents ghost playback from async races.
+    // Hard-cut all other engines — immediate=true so their fade tail doesn't
+    // overlap the new track's fade-in.  Covers mid-load ghost tracks too.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
       if (id !== trackId) eng.pause(true);
-    });
-    Object.entries(bgAudioRef.current).forEach(([id, el]) => {
-      if (id !== trackId) el.pause(); // always pause — .paused is true while play() promise is pending on iOS
     });
     setTracksState(s => {
       const ns = { ...s };
@@ -506,9 +379,9 @@ export function useAudioEngine(): AudioEngineState {
       return ns;
     });
 
-    // If track previously errored, destroy the stale engine so we get a clean fetch
+    // If track previously errored, destroy stale engine for a clean fetch
     if (tracksState[trackId]?.hasError && enginesRef.current[trackId]) {
-      enginesRef.current[trackId].pause();
+      enginesRef.current[trackId].pause(true);
       delete enginesRef.current[trackId];
     }
 
@@ -516,19 +389,12 @@ export function useAudioEngine(): AudioEngineState {
       enginesRef.current[trackId] = new TrackEngine(track, ctx, mg);
     }
 
-    // Guard: if the engine is already playing (e.g. a MediaSession 'play' action
-    // fired while the track is live, or a fast re-tap before React state settles),
-    // initContext() above has already resumed the AudioContext — nothing more needed.
-    // DO NOT call setVolume() here: it calls cancelScheduledValues on trackGain,
-    // which kills any in-progress fade-in curve, causes an audible pop, and then
-    // engine.play() returns early leaving orphaned source nodes with no way to stop.
+    // Guard: already playing (e.g. MediaSession re-fired) — nothing to do
     if (enginesRef.current[trackId].isPlaying) {
       lastPlayedIdRef.current = trackId;
       return;
     }
 
-    // Only sync volume when the engine is stopped — safe to set without interfering
-    // with scheduled gain automations.
     enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
 
     const engine = enginesRef.current[trackId];
@@ -536,31 +402,18 @@ export function useAudioEngine(): AudioEngineState {
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
     try {
       await engine.load();
-      // If the user tapped a different track while this one was loading,
-      // lastPlayedIdRef will have moved on — don't start a ghost second track.
+      // User may have tapped a different track while this was loading
       if (lastPlayedIdRef.current !== trackId) {
         setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false } }));
         return;
       }
-      // Pause any engine that finished loading concurrently (edge case)
+      // Catch any concurrent loads that finished at the same time
       Object.entries(enginesRef.current).forEach(([id, eng]) => {
-        if (id !== trackId && eng.isPlaying) eng.pause();
+        if (id !== trackId && eng.isPlaying) eng.pause(true);
       });
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
-      // Pre-unlock a background <audio> element for this track while we're still
-      // inside a user-gesture context — iOS requires this so we can call .play()
-      // from the visibilitychange handler without a new gesture.
-      // volume=0 during unlock so the user never hears this bleed over Web Audio.
-      if (!bgAudioRef.current[trackId]) {
-        const bgEl = new Audio(import.meta.env.BASE_URL + track.file);
-        bgEl.loop    = true;
-        bgEl.preload = 'auto';
-        bgEl.volume  = 0;
-        bgEl.play().then(() => bgEl.pause()).catch(() => {});
-        bgAudioRef.current[trackId] = bgEl;
-      }
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: track.name,
@@ -581,9 +434,7 @@ export function useAudioEngine(): AudioEngineState {
 
   const pause = useCallback((trackId: string) => {
     const engine = enginesRef.current[trackId];
-    if (engine) engine.pause();
-    const bgEl = bgAudioRef.current[trackId];
-    if (bgEl) bgEl.pause(); // always pause — .paused may be true while iOS play() promise is still pending
+    if (engine) engine.pause(false); // gentle fade — this is the PLAY button stop
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
     releaseWakeLock();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
@@ -606,8 +457,7 @@ export function useAudioEngine(): AudioEngineState {
   }, []);
 
   const stopAll = useCallback(() => {
-    Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause());
-    Object.values(bgAudioRef.current).forEach(el => el.pause()); // always — .paused unreliable on iOS
+    Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause(true));
     setTracksState(s => {
       const ns = { ...s };
       Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
@@ -636,14 +486,13 @@ export function useAudioEngine(): AudioEngineState {
     fg.gain.setValueAtTime(1.0, t);
   }, []);
 
-  // ── Effects ──────────────────────────────────────────────────────────────
+  // ── Effects ─────────────────────────────────────────────────────────────
 
-  // Keep stable refs current so MediaSession handlers never hold stale closures
   useEffect(() => { playRef.current   = play;   }, [play]);
   useEffect(() => { pauseRef.current  = pause;  }, [pause]);
   useEffect(() => { resumeRef.current = resume; }, [resume]);
 
-  // Wire MediaSession lock-screen controls once on mount
+  // MediaSession lock-screen controls
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.setActionHandler('play',  () => { resumeRef.current?.(); });
@@ -651,85 +500,38 @@ export function useAudioEngine(): AudioEngineState {
       const id = lastPlayedIdRef.current;
       if (id) pauseRef.current?.(id);
     });
-    navigator.mediaSession.setActionHandler('stop',  () => {
+    navigator.mediaSession.setActionHandler('stop', () => {
       const id = lastPlayedIdRef.current;
       if (id) pauseRef.current?.(id);
     });
   }, []);
 
-  // iOS background audio handoff.
-  //
-  // Strategy:
-  //   pagehide / hidden  → set isTransitioning=true, hand off to <audio> elements
-  //   visible / pageshow → silence <audio> elements, call forceResetAudio()
-  //
-  // forceResetAudio is called from BOTH visibilitychange and pageshow because
-  // iOS doesn't always fire them together: pageshow is more reliable for
-  // cold-starts from the app switcher, visibilitychange catches lock-screen
-  // returns and tab switches.  forceResetAudio is idempotent (it always
-  // re-cancels and re-schedules), so double-firing is harmless.
+  // Visibility / page-lifecycle — resume AudioContext when coming to foreground.
+  // No native-audio handoff: Web Audio handles background on its own with the
+  // keep-alive element nudging the context back if iOS suspends it.
   useEffect(() => {
-    // ── Shared foreground restore ─────────────────────────────────────────
-    const handleForeground = () => {
-      // Silence all bg <audio> elements unconditionally.
-      // .paused is unreliable while an iOS play() promise is still pending.
-      Object.values(bgAudioRef.current).forEach(el => el.pause());
-      // Run the aggressive reset: hard-zero gains, resume context, ramp back.
-      forceResetAudio();
-      startKeepAlive();
-      const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
-      if (anyPlaying) acquireWakeLock();
-    };
-
-    // ── Shared background handoff ─────────────────────────────────────────
-    const handleBackground = () => {
-      // Lock immediately so play() is blocked while we're in the background.
-      isTransitioningRef.current = true;
-      const masterGainVal = masterGainRef.current?.gain.value ?? masterVolumeRef.current;
-      const fadeGainVal   = fadeGainRef.current?.gain.value  ?? 1.0;
-      Object.entries(enginesRef.current).forEach(([id, eng]) => {
-        if (!eng.isPlaying) return;
-        const bgEl = bgAudioRef.current[id];
-        if (!bgEl) return;
-        // Match exact output level: trackGain × masterGain × fadeGain
-        bgEl.volume      = Math.min(1, Math.max(0.001, eng.currentGain * masterGainVal * fadeGainVal));
-        bgEl.currentTime = eng.currentFileTime;
-        bgEl.play().catch(() => {});
-      });
-    };
-
-    // ── Event handlers ────────────────────────────────────────────────────
     const onVisibilityChange = () => {
-      if (document.hidden) {
-        handleBackground();
-      } else {
-        handleForeground();
+      const ctx = contextRef.current;
+      if (!ctx) return;
+      if (document.visibilityState === 'visible') {
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        startKeepAlive();
+        const anyPlaying = Object.values(enginesRef.current).some(e => e.isPlaying);
+        if (anyPlaying) acquireWakeLock();
       }
     };
 
-    // pageshow fires on both initial load and bfcache restores. It is often
-    // more reliable than visibilitychange for iOS cold-starts after the app
-    // switcher. We call handleForeground unconditionally — forceResetAudio
-    // guards itself (no-op if AudioContext hasn't been created yet).
-    const onPageShow = () => {
-      handleForeground();
-    };
-
-    // pagehide is more reliable than visibilitychange 'hidden' on iOS — it
-    // fires before the page is frozen into the bfcache.
-    const onPageHide = () => {
-      handleBackground();
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) onVisibilityChange(); // bfcache restore
     };
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('pagehide', onPageHide);
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('pagehide', onPageHide);
     };
-  }, [acquireWakeLock, startKeepAlive, forceResetAudio]);
+  }, [acquireWakeLock, startKeepAlive]);
 
   return {
     tracks: tracksState,
