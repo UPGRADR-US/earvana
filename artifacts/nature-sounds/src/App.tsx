@@ -962,7 +962,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="calc(clamp(190px,24vh,235px) + env(safe-area-inset-bottom, 0px))"
+            bottomPad="calc(clamp(210px,26vh,255px) + env(safe-area-inset-bottom, 0px))"
           />
 
           {/* Carousel */}
@@ -996,8 +996,8 @@ function Home() {
           {/* Bottom controls */}
           <div className="relative z-10 flex-shrink-0">
 
-            {/* Duration slider — extra top padding gives breathing room above the bar */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(16px,2.4vh,28px)" }}>
+            {/* Duration slider — raised further to clear the taller bottom bar */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(20px,3.2vh,36px)" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
@@ -1009,9 +1009,10 @@ function Home() {
               </div>
             </div>
 
-            {/* Icon row — CPanl_bar_btm fills the row background */}
+            {/* Icon row — CPanl_bar_btm fills the row background.
+                Generous equal top/bottom padding keeps play icon vertically centred. */}
             <div className="relative flex items-center"
-              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(8px,1.4vh,14px)", paddingBottom: "calc(clamp(10px,1.8vh,18px) + env(safe-area-inset-bottom, 0px))" }}>
+              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(18px,3vh,28px)", paddingBottom: "calc(clamp(18px,3vh,28px) + env(safe-area-inset-bottom, 0px))" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
