@@ -41,7 +41,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
           sizes itself to h-full w-auto (natural 137×1064 ratio), and the
           LED overlay sits exactly on top at the same intrinsic dimensions. */}
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ height: "max(150px, calc(100svh - clamp(160px,22vh,210px) - clamp(220px,26svh,280px)))" }}
+        style={{ height: "clamp(150px, 27svh, 250px)" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt=""
           className="block h-full w-auto" draggable={false} />
