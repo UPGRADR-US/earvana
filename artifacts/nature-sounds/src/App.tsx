@@ -962,7 +962,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="calc(clamp(160px,22vh,210px) + env(safe-area-inset-bottom, 0px))"
+            bottomPad="calc(clamp(190px,24vh,235px) + env(safe-area-inset-bottom, 0px))"
           />
 
           {/* Carousel */}
@@ -993,12 +993,11 @@ function Home() {
             })()}
           </div>
 
-          {/* Bottom controls — no background banner */}
-          <div className="relative z-10 flex-shrink-0"
-            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+          {/* Bottom controls */}
+          <div className="relative z-10 flex-shrink-0">
 
-            {/* Duration slider */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(6px,1vh,10px)" }}>
+            {/* Duration slider — extra top padding gives breathing room above the bar */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(16px,2.4vh,28px)" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
@@ -1010,9 +1009,12 @@ function Home() {
               </div>
             </div>
 
-            {/* Icon row */}
+            {/* Icon row — CPanl_bar_btm fills the row background */}
             <div className="relative flex items-center"
-              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(4px,0.8vh,10px)", paddingBottom: "clamp(8px,1.5vh,18px)" }}>
+              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(8px,1.4vh,14px)", paddingBottom: "calc(clamp(10px,1.8vh,18px) + env(safe-area-inset-bottom, 0px))" }}>
+              <img src={img("CPanl_bar_btm.png")} alt=""
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ objectFit: "fill" }} draggable={false} />
               {/* Speaker */}
               <button onClick={handleSpeakerClick}
                 className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
