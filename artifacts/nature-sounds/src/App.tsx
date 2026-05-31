@@ -1019,7 +1019,7 @@ function Home() {
             {/* Icon row — CPanl_bar_btm fills the row background.
                 Generous equal top/bottom padding keeps play icon vertically centred. */}
             <div className="relative flex items-center"
-              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(18px,3vh,28px)", paddingBottom: "calc(clamp(18px,3vh,28px) + env(safe-area-inset-bottom, 0px))" }}>
+              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
