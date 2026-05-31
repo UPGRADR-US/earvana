@@ -118,7 +118,7 @@ function DurationSlider({
       {/* Timer readout — floats above the bar, horizontally aligned with the knob.
           Hidden in loop mode. While playing it slides left continuously in sync
           with timeRemaining — position = (timeRemaining/3600 - 1) / (N-1) * 100%. */}
-      {step < loopStep && (
+      {step < loopStep && !slotActive && (
         <div className="absolute pointer-events-none"
           style={{
             bottom: "calc(100% + 10px)",
@@ -131,7 +131,7 @@ function DurationSlider({
           }}>
           <span style={{
             color: isPlaying && timeRemaining <= 300
-              ? "#ffcc00"
+              ? "#ff2020"
               : isPlaying
                 ? "#00ff55"
                 : "rgba(0,255,85,0.55)",
@@ -140,7 +140,7 @@ function DurationSlider({
             letterSpacing: "0.05em",
             fontVariantNumeric: "tabular-nums",
             textShadow: isPlaying && timeRemaining <= 300
-              ? "0 0 12px #ffcc00, 0 0 28px #ff9900"
+              ? "0 0 12px #ff2020, 0 0 28px #cc0000"
               : isPlaying
                 ? "0 0 12px #00ff55, 0 0 28px #00ff33"
                 : "0 0 8px rgba(0,255,85,0.3)",
