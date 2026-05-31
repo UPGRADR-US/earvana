@@ -116,16 +116,18 @@ function DurationSlider({
       data-testid="duration-slider">
 
       {/* Timer readout — floats above the bar, horizontally aligned with the knob.
-          Hidden in loop mode. Uses same pct(step) formula as knob for perfect alignment. */}
+          Hidden in loop mode. While playing it slides left continuously in sync
+          with timeRemaining — position = (timeRemaining/3600 - 1) / (N-1) * 100%. */}
       {step < loopStep && (
         <div className="absolute pointer-events-none"
           style={{
-            /* bottom: 100% = top of trackRef; add ~24px to clear the space
-               between trackRef top and the top edge of the control bar */
-            bottom: "calc(100% + 24px)",
-            left: pct(step),
+            bottom: "calc(100% + 10px)",
+            left: isPlaying
+              ? `${Math.max(0, (timeRemaining / 3600 - 1) / (N - 1)) * 100}%`
+              : pct(step),
             transform: "translateX(-50%)",
             whiteSpace: "nowrap",
+            transition: isPlaying ? "left 1s linear" : "none",
           }}>
           <span style={{
             color: isPlaying && timeRemaining <= 300
@@ -133,7 +135,7 @@ function DurationSlider({
               : isPlaying
                 ? "#00ff55"
                 : "rgba(0,255,85,0.55)",
-            fontSize: "clamp(22px,6cqw,32px)",
+            fontSize: "clamp(11px,3cqw,16px)",
             fontWeight: 700,
             letterSpacing: "0.05em",
             fontVariantNumeric: "tabular-nums",
