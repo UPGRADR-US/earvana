@@ -1003,8 +1003,8 @@ function Home() {
           {/* Bottom controls */}
           <div className="relative z-10 flex-shrink-0">
 
-            {/* Duration slider — paddingBottom pushes it up away from the icon bar */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(20px,3.2vh,36px)", paddingBottom: "clamp(28px,4vh,44px)" }}>
+            {/* Duration slider — 5px above the bottom bar image */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(20px,3.2vh,36px)", paddingBottom: "5px" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
