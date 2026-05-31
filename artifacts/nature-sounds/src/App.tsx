@@ -147,7 +147,7 @@ function DurationSlider({
             animation: isPlaying && timeRemaining <= 300
               ? "timerFlash 1.8s ease-in-out infinite"
               : "none",
-            transition: "color 0.5s, text-shadow 0.5s",
+            transition: "text-shadow 0.5s",
           }}>
             {formatTime(timeRemaining)}
           </span>

@@ -3,7 +3,8 @@ import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 5;   // seconds
-const STOP_FADE_DURATION = 0.75; // seconds — gentle ramp-to-silence on PLAY button stop
+const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
+const TRACK_SWITCH_FADE   = 1.5;  // seconds — outgoing track crossfade when switching titles
 
 // Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
@@ -182,9 +183,11 @@ class TrackEngine {
     this.scheduleNextLoop(crossStart + this.regionDuration() - xfade);
   }
 
-  // immediate = true  → hard cut (track switching — new track fades in cleanly)
-  // immediate = false → gentle STOP_FADE_DURATION ramp (explicit PLAY button stop)
-  pause(immediate = false) {
+  // immediate = true        → hard cut (emergency stop / stopAll)
+  // immediate = false       → gentle ramp; fadeDuration controls the ramp length:
+  //   STOP_FADE_DURATION    → PLAY button / timer auto-stop (0.75 s)
+  //   TRACK_SWITCH_FADE     → outgoing crossfade when user taps a new title (1.5 s)
+  pause(immediate = false, fadeDuration = STOP_FADE_DURATION) {
     this.isPlaying = false;
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
@@ -209,9 +212,9 @@ class TrackEngine {
       return;
     }
 
-    // Gentle ramp to silence (user pressed PLAY to stop).
+    // Gentle ramp to silence.
     this.trackGain.gain.setValueAtTime(fromGain, now);
-    this.trackGain.gain.linearRampToValueAtTime(0, now + STOP_FADE_DURATION);
+    this.trackGain.gain.linearRampToValueAtTime(0, now + fadeDuration);
 
     // Null refs immediately so a quick re-play() gets clean nodes.
     const fadeSources = this.sources.slice() as (AudioBufferSourceNode | null)[];
@@ -231,7 +234,7 @@ class TrackEngine {
         this.trackGain.gain.cancelScheduledValues(ctx.currentTime);
         this.trackGain.gain.setValueAtTime(0, ctx.currentTime);
       } catch { /* context may be closed/suspended */ }
-    }, (STOP_FADE_DURATION + 0.15) * 1000);
+    }, (fadeDuration + 0.15) * 1000);
   }
 
   setVolume(vol: number) {
@@ -407,9 +410,9 @@ export function useAudioEngine(): AudioEngineState {
         setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false } }));
         return;
       }
-      // Catch any concurrent loads that finished at the same time
+      // Fade out any other playing track over TRACK_SWITCH_FADE for a smooth crossfade.
       Object.entries(enginesRef.current).forEach(([id, eng]) => {
-        if (id !== trackId && eng.isPlaying) eng.pause(true);
+        if (id !== trackId && eng.isPlaying) eng.pause(false, TRACK_SWITCH_FADE);
       });
       engine.play();
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
