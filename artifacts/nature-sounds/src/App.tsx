@@ -465,22 +465,20 @@ function TrackList({
             onClick={() => onSelectTrack(track.id)}
             className="relative w-full flex items-center py-[9px] text-left overflow-hidden"
             style={{
-              paddingLeft: "clamp(38px,9cqw,48px)", paddingRight: "clamp(28px,7cqw,40px)",
+              paddingLeft: "clamp(60px,14cqw,72px)", paddingRight: "clamp(28px,7cqw,40px)",
               background: "transparent",
               animation: `blindDown 0.28s ease both`,
               animationDelay: `${i * 0.07}s`,
             }}
             data-testid={`track-btn-${track.id}`}>
 
-            {/* Highlight bar — wrapper div carries the position + size;
-                img fills it 100% × 100% with objectFit:fill so the PNG
-                stretches to exactly the box we specify.
-                  left  ≈ 4%  (small gap from left screen edge)
-                  right ≈ 19% (clears the volume-meter column)       */}
+            {/* Highlight bar — left edge pinned to 52px, matching the duration
+                slider's paddingLeft so it aligns with the "1" label.
+                right ≈ 19% clears the volume-meter column.            */}
             {(showGreen || showYellow) && (
               <div className="absolute pointer-events-none overflow-hidden"
                 style={{
-                  top: 0, bottom: 0, left: "4%", right: "19%",
+                  top: 0, bottom: 0, left: "52px", right: "19%",
                   animation: showYellow ? "trackBlink 1s ease-in-out infinite" : "none",
                 }}>
                 <img
