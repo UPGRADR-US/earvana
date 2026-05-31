@@ -16,15 +16,36 @@
 
 @font-face {
   font-family: 'Kallisto';
+  src: url('/fonts/Kallisto_Thin.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kallisto';
+  src: url('/fonts/Kallisto_Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kallisto';
   src: url('/fonts/Kallisto_Medium.otf') format('opentype');
-  font-weight: 300 500; /* covers Light (300) and Medium (500) */
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Kallisto';
   src: url('/fonts/Kallisto_Bold.otf') format('opentype');
-  font-weight: 700 900; /* covers Bold (700) and Heavy (900) */
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kallisto';
+  src: url('/fonts/Kallisto_Heavy.otf') format('opentype');
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
