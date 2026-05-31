@@ -503,7 +503,7 @@ function TrackList({
                 if (sep === -1) return <span style={{ fontWeight: 700 }}>{track.name}</span>;
                 return (
                   <>
-                    <span style={{ fontWeight: 900 }}>{track.name.slice(0, sep + 1)}</span>
+                    <span style={{ fontWeight: 900 }}>{track.name.slice(0, sep)} :</span>
                     <span style={{ fontWeight: 300 }}>{track.name.slice(sep + 1)}</span>
                   </>
                 );
