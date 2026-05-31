@@ -465,7 +465,7 @@ function TrackList({
             onClick={() => onSelectTrack(track.id)}
             className="relative w-full flex items-center py-[9px] text-left overflow-hidden"
             style={{
-              paddingLeft: "clamp(60px,14cqw,72px)", paddingRight: "clamp(28px,7cqw,40px)",
+              paddingLeft: "clamp(56px,13cqw,68px)", paddingRight: "clamp(28px,7cqw,40px)",
               background: "transparent",
               animation: `blindDown 0.28s ease both`,
               animationDelay: `${i * 0.07}s`,
@@ -478,7 +478,7 @@ function TrackList({
             {(showGreen || showYellow) && (
               <div className="absolute pointer-events-none overflow-hidden"
                 style={{
-                  top: 0, bottom: 0, left: "52px", right: "19%",
+                  top: 0, bottom: 0, left: "48px", right: "19%",
                   animation: showYellow ? "trackBlink 1s ease-in-out infinite" : "none",
                 }}>
                 <img
