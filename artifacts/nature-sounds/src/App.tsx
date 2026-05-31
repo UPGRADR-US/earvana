@@ -867,7 +867,7 @@ function Home() {
   useEffect(() => {
     if (!isPlaying || durationStep >= LOOP_STEP) return;
     if (timeRemaining === 300) {
-      engine.startFadeOut(300);
+      engine.startFadeOut(150);
     }
     if (timeRemaining === 0) {
       if (playingTrackId) engine.pause(playingTrackId);

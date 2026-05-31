@@ -3,7 +3,7 @@ import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 5;   // seconds
-const STOP_FADE_DURATION = 1.5; // seconds — gentle ramp-to-silence on PLAY button stop
+const STOP_FADE_DURATION = 0.75; // seconds — gentle ramp-to-silence on PLAY button stop
 
 // Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
