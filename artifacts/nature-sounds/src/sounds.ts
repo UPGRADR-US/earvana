@@ -1,19 +1,19 @@
 export type SoundTrack = {
   id: string;
-  name: string;
-  file: string;       // path relative to public/, e.g. "sounds/rain.mp3"
-  icon: string;       // lucide-react icon name as a string
+  name: string;       // format: "prefix: track name" — split on ": " for styled rendering
+  file: string;       // path relative to public/, e.g. "sounds/ocean-HighTideBeach.mp3"
+  icon: string;       // lucide-react icon name
 
-  // Optional per-track loop settings — engine falls back to global defaults if omitted
-  crossfadeDuration?: number; // seconds — how long the crossfade overlap lasts
-  loopStart?: number;         // seconds into the file where the loop region begins
-  loopEnd?: number;           // seconds into the file where the loop region ends
+  // Optional per-track loop settings
+  crossfadeDuration?: number; // seconds
+  loopStart?: number;         // seconds
+  loopEnd?: number;           // seconds
 };
 
 export type SoundCategory = {
   id: string;
   name: string;
-  thumbnail: string;   // filename in public/sounds/, e.g. "TR_tn_oceans.png"
+  thumbnail: string;
   tracks: SoundTrack[];
 };
 
@@ -23,10 +23,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Oceans",
     thumbnail: "sounds/TR_tn_oceans.png",
     tracks: [
-      { id: "ocean_night_calm",   name: "Night-Calm",   file: "sounds/ocean_night_calm.mp3",   icon: "Waves" },
-      { id: "ocean_night_active", name: "Night-Active", file: "sounds/ocean_night_active.mp3", icon: "Waves" },
-      { id: "ocean_day_calm",     name: "Day-Calm",     file: "sounds/ocean_day_calm.mp3",     icon: "Waves" },
-      { id: "ocean_day_active",   name: "Day-Active",   file: "sounds/ocean_day_active.mp3",   icon: "Waves" },
+      { id: "ocean_high_tide_beach",  name: "ocean: high-tide beach",  file: "sounds/ocean-HighTideBeach.mp3",  icon: "Waves" },
+      { id: "ocean_low_tide_beach",   name: "ocean: low-tide beach",   file: "sounds/ocean-LowTideBeach.mp3",   icon: "Waves" },
+      { id: "ocean_low_tide_bay",     name: "ocean: low-tide bay",     file: "sounds/ocean-LowTideBay.mp3",     icon: "Waves" },
+      { id: "ocean_waterlaps_cove",   name: "ocean: waterlaps cove",   file: "sounds/ocean-WaterlapsCove.mp3",  icon: "Waves" },
     ],
   },
   {
@@ -34,11 +34,11 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Rains",
     thumbnail: "sounds/TR_tn_rains.png",
     tracks: [
-      { id: "rain_drizzle",      name: "Drizzle",      file: "sounds/rain_drizzle.mp3",  icon: "CloudRain" },
-      { id: "rain_moderate",     name: "Moderate",     file: "sounds/rain_moderate.mp3", icon: "CloudRain" },
-      { id: "rain_downpour",     name: "Downpour",     file: "sounds/rain_downpour.mp3", icon: "CloudRain" },
-      { id: "rain_storm_gentle", name: "Storm-Gentle", file: "sounds/Storm(calm).mp3",   icon: "CloudLightning" },
-      { id: "rain_storm_active", name: "Storm-Active", file: "sounds/Storm(active).mp3", icon: "CloudLightning" },
+      { id: "rain_lite_drizzle",          name: "rain: lite drizzle",          file: "sounds/rain-LiteDrizzle.mp3",          icon: "CloudRain" },
+      { id: "rain_lite_shower",           name: "rain: lite shower",           file: "sounds/rain-LiteShower.mp3",           icon: "CloudRain" },
+      { id: "rain_downpour",              name: "rain: downpour",              file: "sounds/rain-Downpour.mp3",             icon: "CloudRain" },
+      { id: "rain_quiet_storm",           name: "rain: quiet storm",           file: "sounds/rain-QuietStorm.mp3",           icon: "CloudLightning" },
+      { id: "rain_rolling_thunderstorm",  name: "rain: rolling thunderstorm",  file: "sounds/rain-RollingThunderstorm.mp3",  icon: "CloudLightning" },
     ],
   },
   {
@@ -46,10 +46,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Streams",
     thumbnail: "sounds/TR_tn_streams.png",
     tracks: [
-      { id: "stream_fountain",    name: "Fountain",    file: "sounds/stream_fountain.mp3",    icon: "Droplets" },
-      { id: "stream_brook",       name: "Brook",       file: "sounds/stream_brook.mp3",       icon: "Droplets" },
-      { id: "stream_small_river", name: "Small-River", file: "sounds/stream_small_river.mp3", icon: "Droplets" },
-      { id: "stream_big_river",   name: "Big-River",   file: "sounds/stream_big_river.mp3",   icon: "Droplets" },
+      { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets" },
+      { id: "stream_mountain_spring", name: "stream: mountain spring", file: "sounds/stream-MountainSpring.mp3",  icon: "Droplets" },
+      { id: "stream_gentle_brook",    name: "stream: gentle brook",    file: "sounds/stream-GentleBrook.mp3",     icon: "Droplets" },
+      { id: "stream_cascading_river", name: "stream: cascading river", file: "sounds/stream-CascadingRiver.mp3",  icon: "Droplets" },
     ],
   },
   {
@@ -57,9 +57,9 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Forests",
     thumbnail: "sounds/TR_tn_forests.png",
     tracks: [
-      { id: "forest_calm",   name: "Calm",   file: "sounds/Forest(calm).mp3",   icon: "TreePine" },
-      { id: "forest_active", name: "Active", file: "sounds/Forest(active).mp3", icon: "TreePine" },
-      { id: "forest_amazon", name: "Amazon", file: "sounds/Forest(amzn).mp3",   icon: "TreePine" },
+      { id: "forest_dusk_calm",     name: "forest: dusk calm",     file: "sounds/forest-DuskCalm.mp3",     icon: "TreePine" },
+      { id: "forest_night_chorus",  name: "forest: night chorus",  file: "sounds/forest-NightChorus.mp3",  icon: "TreePine" },
+      { id: "forest_amazon_jungle", name: "forest: amazon jungle", file: "sounds/forest-AmazonJungle.mp3", icon: "TreePine" },
     ],
   },
   {
@@ -67,8 +67,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Fields",
     thumbnail: "sounds/TR_tn_fields.png",
     tracks: [
-      { id: "field_calm",   name: "Flower-Field", file: "sounds/Field(calm).mp3", icon: "Leaf" },
-      { id: "field_active", name: "Prairie-Field", file: "sounds/Field(actv).mp3", icon: "Leaf" },
+      { id: "field_dusk_meadow",       name: "field: dusk meadow",       file: "sounds/field-DuskMeadow.mp3",       icon: "Leaf" },
+      { id: "field_midnight_wetlands", name: "field: midnight wetlands", file: "sounds/field-MidnightWetlands.mp3", icon: "Leaf" },
     ],
   },
   {
@@ -76,8 +76,8 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Gardens",
     thumbnail: "sounds/TR_tn_gardens.png",
     tracks: [
-      { id: "garden_calm",   name: "Day-Calm",   file: "sounds/Garden(calm).mp3", icon: "Leaf" },
-      { id: "garden_active", name: "Day-Active", file: "sounds/Garden(actv).mp3", icon: "Leaf" },
+      { id: "garden_tranquil_koi_pond", name: "garden: tranquil koi pond", file: "sounds/garden-TranquilKoiPond.mp3", icon: "Leaf" },
+      { id: "garden_spa_moon_garden",   name: "garden: spa moon garden",   file: "sounds/garden-SpaMoonGarden.mp3",   icon: "Leaf" },
     ],
   },
   {
@@ -85,8 +85,9 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Fire",
     thumbnail: "sounds/TR_tn_fire.png",
     tracks: [
-      { id: "fire_crackle", name: "Crackle", file: "sounds/ev-Fire(fireplce).mp3", icon: "Flame" },
-      { id: "fire_bonfire", name: "Bonfire", file: "sounds/ev-Fire(bonfire).mp3",  icon: "Flame" },
+      { id: "fire_chalet_stone_hearth", name: "fire: chalet stone hearth", file: "sounds/fire-ChaletStoneHearth.mp3", icon: "Flame" },
+      { id: "fire_campside_firepit",    name: "fire: campside firepit",    file: "sounds/fire-CampsideFirepit.mp3",    icon: "Flame" },
+      { id: "fire_ceremonial_bonfire",  name: "fire: ceremonial bonfire",  file: "sounds/fire-CeremonialBonfire.mp3",  icon: "Flame" },
     ],
   },
   {
@@ -94,8 +95,9 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Winds",
     thumbnail: "sounds/TR_tn_winds.png",
     tracks: [
-      { id: "wind_breezy",    name: "Breezy",    file: "sounds/(t)Wind(gusty).mp3",     icon: "Wind" },
-      { id: "wind_whistling", name: "Whistling", file: "sounds/(t)Wind(whistling).mp3", icon: "Wind" },
+      { id: "wind_light_breeze",     name: "wind: light breeze",     file: "sounds/wind-LightBreeze.mp3",     icon: "Wind" },
+      { id: "wind_gusty_winds",      name: "wind: gusty winds",      file: "sounds/wind-GustyWinds.mp3",      icon: "Wind" },
+      { id: "wind_whistling_chinook",name: "wind: whistling chinook", file: "sounds/wind-WhistlingChinook.mp3", icon: "Wind" },
     ],
   },
   {
@@ -103,10 +105,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Noise",
     thumbnail: "sounds/TR_tn_noise.png",
     tracks: [
-      { id: "noise_white_rolling", name: "White-Wave",         file: "sounds/(t)Noise-Rolling(WHT).mp3", icon: "Radio" },
-      { id: "noise_pink_rolling",  name: "Pink-Wave",          file: "sounds/(t)Noise-Rolling(PNK).mp3", icon: "Radio" },
-      { id: "noise_white_static",  name: "White-Static", file: "sounds/Noise-static(WHT).mp3", icon: "Radio", crossfadeDuration: 2 },
-      { id: "noise_pink_static",   name: "Pink-Static",  file: "sounds/Noise-static(PNK).mp3", icon: "Radio", crossfadeDuration: 2 },
+      { id: "noise_white_wave",   name: "noise: white wave",        file: "sounds/noise-WhiteWave.mp3",   icon: "Radio" },
+      { id: "noise_pink_wave",    name: "noise: pink wave",         file: "sounds/noise-PinkWave.mp3",    icon: "Radio" },
+      { id: "noise_white_static", name: "noise: white noise-static",file: "sounds/noise-WhiteStatic.mp3", icon: "Radio", crossfadeDuration: 2 },
+      { id: "noise_pink_static",  name: "noise: pink noise-static", file: "sounds/noise-PinkStatic.mp3",  icon: "Radio", crossfadeDuration: 2 },
     ],
   },
 ];

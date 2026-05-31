@@ -492,13 +492,22 @@ function TrackList({
               </div>
             )}
 
-            {/* Track name */}
+            {/* Track name — "prefix: label" split: prefix → Kallisto Heavy (700), label → Kallisto Light (300) */}
             <span className="relative leading-none" style={{
-              fontSize: "clamp(15px,4.0cqw,20px)", fontWeight: isPlaying ? 500 : 300,
+              fontSize: "clamp(15px,4.0cqw,20px)",
               color: hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.92)",
               letterSpacing: "0.03em",
             }}>
-              {track.name}
+              {(() => {
+                const sep = track.name.indexOf(': ');
+                if (sep === -1) return <span style={{ fontWeight: 700 }}>{track.name}</span>;
+                return (
+                  <>
+                    <span style={{ fontWeight: 900 }}>{track.name.slice(0, sep + 1)}</span>
+                    <span style={{ fontWeight: 300 }}>{track.name.slice(sep + 1)}</span>
+                  </>
+                );
+              })()}
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
 
