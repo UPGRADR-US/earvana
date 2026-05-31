@@ -448,7 +448,7 @@ function TrackList({
   onSelectTrack: (id: string) => void;
 }) {
   return (
-    <div className="w-full h-full overflow-y-auto">
+    <div className="w-full max-h-full overflow-y-auto">
       {category.tracks.map((track: SoundTrack, i: number) => {
         const state      = engine.tracks[track.id];
         const isPlaying  = state?.isPlaying ?? false;
@@ -985,8 +985,8 @@ function Home() {
             </div>
           </div>
 
-          {/* Track list */}
-          <div className="relative flex-1 min-h-0 z-10 overflow-hidden" style={{ paddingTop: "clamp(14px,2.5vh,22px)", paddingBottom: "4px" }}>
+          {/* Track list — flex+justify-center keeps content equidistant between carousel and slider regardless of track count */}
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col justify-center" style={{ paddingTop: "clamp(6px,1vh,12px)", paddingBottom: "clamp(6px,1vh,12px)" }}>
             {selectedId && (() => {
               const cat = CATEGORIES.find((c) => c.id === selectedId);
               return cat ? (
