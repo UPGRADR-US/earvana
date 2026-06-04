@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
 const DEFAULT_CROSSFADE  = 15;  // seconds
-const FADE_IN_DURATION   = 5;   // seconds
+const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
 const TRACK_SWITCH_FADE   = 1.5;  // seconds — outgoing track crossfade when switching titles
 
