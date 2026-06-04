@@ -41,12 +41,12 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
           sizes itself to h-full w-auto (natural 137×1064 ratio), and the
           LED overlay sits exactly on top at the same intrinsic dimensions. */}
       <div ref={meterRef} className="relative cursor-pointer touch-none"
-        style={{ height: "clamp(150px, 27svh, 250px)" }}
+        style={{ height: "clamp(150px, 27svh, 250px)", WebkitTouchCallout: "none", userSelect: "none" }}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} data-testid="vol-meter">
         <img src={img("VolSldrBase.png")} alt=""
-          className="block h-full w-auto" draggable={false} />
+          className="block h-full w-auto pointer-events-none" draggable={false} />
         <img src={img("VolSldr_LEDS.png")} alt=""
-          className="absolute top-0 left-0 h-full w-auto"
+          className="absolute top-0 left-0 h-full w-auto pointer-events-none"
           style={{ clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
           draggable={false} />
       </div>
@@ -838,10 +838,16 @@ function Home() {
     durationStep < LOOP_STEP ? stepToSeconds(durationStep) : 0,
   );
 
-  /* Reset to full duration whenever the user moves the slider (only when stopped) */
+  /* Tracks whether the 5-min fade-out has already been armed for this countdown cycle */
+  const fadeOutStartedRef = useRef(false);
+
+  /* Reset to full duration whenever the user moves the slider */
   const handleDurationChange = useCallback((s: number) => {
     setDurationStep(s);
-    if (s < LOOP_STEP) setTimeRemaining(stepToSeconds(s));
+    if (s < LOOP_STEP) {
+      setTimeRemaining(stepToSeconds(s));
+      fadeOutStartedRef.current = false;
+    }
   }, [LOOP_STEP]);
 
   const isPlaying      = Object.values(engine.tracks).some((t) => t.isPlaying);
@@ -853,30 +859,49 @@ function Home() {
     if (playingTrackId) setSelectedTrackId(playingTrackId);
   }, [playingTrackId]);
 
-  /* Count down once per second while playing (not in loop mode) */
+  /* Count down every second regardless of play/pause state (not in loop mode).
+     Uses Date.now() so any time spent with the screen locked / tab backgrounded
+     is recovered as elapsed seconds when the page becomes visible again. */
   useEffect(() => {
-    if (!isPlaying || durationStep >= LOOP_STEP) return;
-    const id = setInterval(() => {
-      setTimeRemaining(prev => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isPlaying, durationStep, LOOP_STEP]);
+    if (durationStep >= LOOP_STEP) return;
+    let lastTick = Date.now();
 
-  /* At exactly 5 minutes remaining: start the exponential fade-out.
-     At 0:00: auto-stop and reset. */
+    const tick = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastTick) / 1000);
+      if (elapsed < 1) return;
+      lastTick += elapsed * 1000;
+      setTimeRemaining(prev => Math.max(0, prev - elapsed));
+    };
+
+    const id = setInterval(tick, 1000);
+    // Catch up when the page becomes visible after being backgrounded / screen locked.
+    const onVisible = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [durationStep, LOOP_STEP]);
+
+  /* React to timeRemaining changes: arm fade-out at ≤5 min, auto-stop at 0. */
   useEffect(() => {
-    if (!isPlaying || durationStep >= LOOP_STEP) return;
-    if (timeRemaining === 300) {
+    if (durationStep >= LOOP_STEP) return;
+    // Arm the fade-out once when we cross the 5-minute mark (skip if paused).
+    if (isPlaying && timeRemaining <= 300 && timeRemaining > 0 && !fadeOutStartedRef.current) {
+      fadeOutStartedRef.current = true;
       engine.startFadeOut(150);
     }
-    if (timeRemaining === 0) {
+    if (timeRemaining <= 0) {
+      fadeOutStartedRef.current = false;
       if (playingTrackId) engine.pause(playingTrackId);
       engine.cancelFade();
       setTimeRemaining(stepToSeconds(durationStep));
     }
   // engine methods are stable useCallback refs — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining]);
+  }, [timeRemaining, isPlaying]);
 
   /* Cancel fade whenever playback stops (manual or auto) */
   useEffect(() => {
