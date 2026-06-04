@@ -1,24 +1,12 @@
 @import "tailwindcss";
 
-/* In landscape on a real touch device, rotate the root 90° so the portrait
-   layout stays upright. hover:none + pointer:coarse = touchscreen only —
-   desktop browsers (hover:hover, pointer:fine) are unaffected. */
-@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
-  body {
-    overflow: hidden;
-    background: #0a1f1a;
-  }
-  #root {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 100svh;
-    height: 100svw;
-    margin-left: calc(-50svh);
-    margin-top: calc(-50svw);
-    transform: rotate(90deg);
-    transform-origin: center center;
-    overflow: hidden;
+/* Landscape lock overlay — hidden in portrait, covers everything in landscape */
+.landscape-block {
+  display: none;
+}
+@media (orientation: landscape) {
+  .landscape-block {
+    display: flex;
   }
 }
 
