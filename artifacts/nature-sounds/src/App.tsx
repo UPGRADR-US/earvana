@@ -533,14 +533,85 @@ function TrackList({
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 const EQ_MODES = [
-  { id: "normal",   label: "Normal",   sub: ""                      },
-  { id: "hf_boost", label: "HF Boost", sub: "crisper"               },
-  { id: "hf_cut",   label: "HF Cut",   sub: "duller"                },
-  { id: "lf_boost", label: "LF Boost", sub: "warmer"                },
-  { id: "lf_cut",   label: "LF Cut",   sub: "thinner"               },
-  { id: "custom",   label: "Custom",   sub: "5-band · coming soon"  },
+  { id: "normal",   label: "Normal",   sub: ""           },
+  { id: "hf_boost", label: "HF Boost", sub: "crisper"    },
+  { id: "hf_cut",   label: "HF Cut",   sub: "duller"     },
+  { id: "lf_boost", label: "LF Boost", sub: "warmer"     },
+  { id: "lf_cut",   label: "LF Cut",   sub: "thinner"    },
+  { id: "custom",   label: "Custom",   sub: "5-band"     },
 ] as const;
 type EqModeId = typeof EQ_MODES[number]["id"];
+
+// Gain values (dB) for each preset: [100Hz, 330Hz, 1kHz, 3.3kHz, 10kHz]
+const EQ_PRESETS: Record<string, number[]> = {
+  normal:   [ 0,  0, 0,  0,  0],
+  hf_boost: [ 0,  0, 0, +3, +6],
+  hf_cut:   [ 0,  0, 0, -3, -6],
+  lf_boost: [+6, +3, 0,  0,  0],
+  lf_cut:   [-6, -3, 0,  0,  0],
+};
+const EQ_BAND_LABELS = ["100", "330", "1k", "3.3k", "10k"] as const;
+
+// ─── 5-band EQ slider ────────────────────────────────────────────────────────
+function EqBandSlider({ label, value, onChange }: {
+  label: string; value: number; onChange: (v: number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const RANGE = 12;
+
+  const compute = (clientY: number) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const pct  = 1 - (clientY - rect.top) / rect.height;
+    const raw  = Math.max(-RANGE, Math.min(RANGE, (Math.max(0, Math.min(1, pct)) * 2 * RANGE) - RANGE));
+    onChange(Math.round(raw));
+  };
+
+  const thumbPct = ((value + RANGE) / (2 * RANGE)) * 100;
+  const col = value > 0 ? "#00ff55" : value < 0 ? "#ff6b6b" : "rgba(255,255,255,0.5)";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "38px" }}>
+      {/* dB readout */}
+      <div style={{ fontSize: "10px", height: "15px", textAlign: "center", color: col, lineHeight: 1.5 }}>
+        {value === 0 ? "0" : value > 0 ? `+${value}` : value}
+      </div>
+      {/* Vertical track */}
+      <div ref={trackRef}
+        style={{ width: "6px", height: "80px", background: "rgba(255,255,255,0.1)", borderRadius: "3px",
+          position: "relative", cursor: "ns-resize", WebkitTouchCallout: "none", userSelect: "none" }}
+        onPointerDown={e => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); compute(e.clientY); }}
+        onPointerMove={e => { if (dragging.current) compute(e.clientY); }}
+        onPointerUp={() => { dragging.current = false; }}>
+        {/* 0 dB hairline */}
+        <div style={{ position: "absolute", left: "-4px", right: "-4px", top: "50%", height: "1px", background: "rgba(255,255,255,0.22)" }} />
+        {/* Filled segment between centre and thumb */}
+        {value !== 0 && (
+          <div style={{
+            position: "absolute", left: 0, right: 0, borderRadius: "3px",
+            background: col,
+            ...(value > 0
+              ? { bottom: "50%", height: `${thumbPct - 50}%` }
+              : { top: "50%",    height: `${50 - thumbPct}%` }),
+          }} />
+        )}
+        {/* Thumb */}
+        <div style={{
+          position: "absolute", left: "50%", transform: "translate(-50%, 50%)",
+          bottom: `${thumbPct}%`,
+          width: "14px", height: "6px", borderRadius: "2px",
+          background: col,
+          boxShadow: value !== 0 ? `0 0 6px ${col}` : "none",
+        }} />
+      </div>
+      {/* Frequency label */}
+      <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.42)", marginTop: "5px", letterSpacing: "0.02em" }}>
+        {label}
+      </div>
+    </div>
+  );
+}
 
 const FAQ_ITEMS: { q: string; a: string }[] = [
   { q: "How can this help mask my tinnitus?",
@@ -633,10 +704,12 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
   );
 }
 
-function SettingsPanel({ onClose, eqMode, onEqChange }: {
+function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }: {
   onClose: () => void;
   eqMode: EqModeId;
-  onEqChange: (m: EqModeId) => void;
+  eqBands: number[];
+  onEqChange: (m: EqModeId, bands: number[]) => void;
+  onEqBandsChange: (bands: number[]) => void;
 }) {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [openSub,     setOpenSub]     = useState<string | null>(null);
@@ -687,19 +760,44 @@ function SettingsPanel({ onClose, eqMode, onEqChange }: {
               <div style={{ marginBottom: "8px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>
                 EQ / SOUND:
               </div>
-              {/* Presets — 2 tab indent */}
+              {/* Presets */}
               <div style={{ paddingLeft: "14px" }}>
                 {EQ_MODES.map(m => (
-                  <button key={m.id} onClick={() => m.id !== "custom" && onEqChange(m.id as EqModeId)}
+                  <button key={m.id}
+                    onClick={() => {
+                      const bands = m.id === "custom" ? eqBands : (EQ_PRESETS[m.id] ?? [0,0,0,0,0]);
+                      onEqChange(m.id as EqModeId, bands);
+                    }}
                     className="block w-full text-left"
-                    style={{ padding: "4px 0", background: "none", border: "none", cursor: m.id === "custom" ? "default" : "pointer" }}>
-                    <span style={{ color: eqMode === m.id ? "#00ff55" : m.id === "custom" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
+                    style={{ padding: "4px 0", background: "none", border: "none", cursor: "pointer" }}>
+                    <span style={{ color: eqMode === m.id ? "#00ff55" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
                       {">"}&nbsp;{m.label}
                     </span>
                     {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "11px", marginLeft: "6px" }}>({m.sub})</span>}
                   </button>
                 ))}
               </div>
+              {/* Custom 5-band EQ sliders — shown when Custom is active */}
+              {eqMode === "custom" && (
+                <div style={{ marginTop: "14px", paddingLeft: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingRight: "4px" }}>
+                    {eqBands.map((gain, i) => (
+                      <EqBandSlider
+                        key={i}
+                        label={EQ_BAND_LABELS[i]}
+                        value={gain}
+                        onChange={v => {
+                          const next = eqBands.map((g, j) => j === i ? v : g);
+                          onEqBandsChange(next);
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ marginTop: "10px", fontSize: "10px", color: "rgba(255,255,255,0.28)", textAlign: "center" }}>
+                    drag each band · ±12 dB
+                  </div>
+                </div>
+              )}
             </div>
           </SettingsRow>
 
@@ -825,9 +923,20 @@ function Home() {
   });
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
-  const [eqMode,        setEqMode]        = useState<EqModeId>(
+  const [eqMode,  setEqMode]  = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
   );
+  const [eqBands, setEqBands] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem("tr_eq_bands");
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr) && arr.length === 5) return arr as number[];
+      }
+    } catch { /* malformed — fall through */ }
+    const mode = (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal";
+    return EQ_PRESETS[mode] ?? [0, 0, 0, 0, 0];
+  });
   // selectedTrackId — the track the user has tapped (yellow blink), independent
   // of whether audio is actually playing. Goes green once PLAY is pressed.
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -950,9 +1059,27 @@ function Home() {
     setTimeout(() => { setSprocketFlash(false); setSettingsOpen(true); }, 180);
   }, []);
 
-  const handleEqChange = useCallback((mode: EqModeId) => {
+  const handleEqChange = useCallback((mode: EqModeId, bands: number[]) => {
     setEqMode(mode);
+    setEqBands(bands);
     localStorage.setItem("tr_eq_mode", mode);
+    localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
+    engine.setEq(bands);
+  }, [engine]);
+
+  const handleEqBandsChange = useCallback((bands: number[]) => {
+    setEqBands(bands);
+    setEqMode("custom");
+    localStorage.setItem("tr_eq_mode", "custom");
+    localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
+    engine.setEq(bands);
+  }, [engine]);
+
+  // Apply saved EQ into the audio engine's pending queue on first mount.
+  // The engine reads this when AudioContext is created on first play.
+  useEffect(() => {
+    engine.setEq(eqBands);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSpeakerClick = useCallback(() => {
@@ -980,7 +1107,9 @@ function Home() {
         <SettingsPanel
           onClose={() => setSettingsOpen(false)}
           eqMode={eqMode}
+          eqBands={eqBands}
           onEqChange={handleEqChange}
+          onEqBandsChange={handleEqBandsChange}
         />
       )}
 

@@ -6,6 +6,10 @@ const FADE_IN_DURATION   = 5;   // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
 const TRACK_SWITCH_FADE   = 1.5;  // seconds — outgoing track crossfade when switching titles
 
+// 5-band parametric EQ: centre frequencies and Q values
+const EQ_FREQUENCIES = [100, 330, 1000, 3300, 10000] as const;
+const EQ_Q_VALUES    = [0.9, 1.0, 1.0,  1.0,  0.9]  as const;
+
 // Pre-computed equal-power crossfade curves (128 samples)
 const CURVE_N = 128;
 const EQUAL_POWER_IN  = new Float32Array(CURVE_N);
@@ -31,6 +35,7 @@ export type AudioEngineState = {
   resume: () => Promise<void>;
   setVolume: (trackId: string, volume: number) => void;
   setMasterVolume: (volume: number) => void;
+  setEq: (gains: number[]) => void;
   stopAll: () => void;
   lastPlayedId: string | null;
   startFadeOut: (durationSeconds: number) => void;
@@ -265,6 +270,8 @@ export function useAudioEngine(): AudioEngineState {
   const contextRef      = useRef<AudioContext | null>(null);
   const masterGainRef   = useRef<GainNode | null>(null);
   const fadeGainRef     = useRef<GainNode | null>(null);
+  const eqFiltersRef    = useRef<BiquadFilterNode[]>([]);
+  const pendingEqRef    = useRef<number[]>([0, 0, 0, 0, 0]);
   const enginesRef      = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null);
@@ -352,7 +359,20 @@ export function useAudioEngine(): AudioEngineState {
       masterGainRef.current.gain.value = masterVolume;
       fadeGainRef.current = contextRef.current.createGain();
       fadeGainRef.current.gain.value = 1.0;
-      masterGainRef.current.connect(fadeGainRef.current);
+      // Build 5-band peaking EQ chain and apply any pending gains.
+      const filters = EQ_FREQUENCIES.map((freq, i) => {
+        const f = contextRef.current!.createBiquadFilter();
+        f.type = "peaking";
+        f.frequency.value = freq;
+        f.Q.value = EQ_Q_VALUES[i];
+        f.gain.value = pendingEqRef.current[i] ?? 0;
+        return f;
+      });
+      eqFiltersRef.current = filters;
+      // Chain: masterGain → eq[0..4] → fadeGain → destination
+      let prev: AudioNode = masterGainRef.current;
+      for (const f of filters) { prev.connect(f); prev = f; }
+      prev.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
       setTimeout(preloadInBackground, 0);
     }
@@ -459,6 +479,16 @@ export function useAudioEngine(): AudioEngineState {
     }
   }, []);
 
+  // Apply 5 gain values (dB) to the peaking EQ filters.
+  // Stores values in pendingEqRef so they're applied automatically
+  // if initContext hasn't been called yet.
+  const setEq = useCallback((gains: number[]) => {
+    pendingEqRef.current = gains.slice(0, 5);
+    eqFiltersRef.current.forEach((f, i) => {
+      if (gains[i] !== undefined) f.gain.value = gains[i];
+    });
+  }, []);
+
   const stopAll = useCallback(() => {
     Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause(true));
     setTracksState(s => {
@@ -545,6 +575,7 @@ export function useAudioEngine(): AudioEngineState {
     resume,
     setVolume,
     setMasterVolume,
+    setEq,
     stopAll,
     startFadeOut,
     cancelFade,
