@@ -780,6 +780,15 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
               {/* Custom 5-band EQ sliders — shown when Custom is active */}
               {eqMode === "custom" && (
                 <div style={{ marginTop: "14px", paddingLeft: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>custom 5-band</span>
+                    <button
+                      onClick={() => onEqBandsChange([0, 0, 0, 0, 0])}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 0",
+                        fontSize: "11px", color: "rgba(0,200,255,0.75)", letterSpacing: "0.05em" }}>
+                      reset
+                    </button>
+                  </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingRight: "4px" }}>
                     {eqBands.map((gain, i) => (
                       <EqBandSlider
