@@ -751,7 +751,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
 
         <div className="absolute overflow-y-auto"
-          style={{ top: "calc(14% + 15px)", bottom: "15px", left: "5%", right: "5%", paddingLeft: "0", paddingRight: "0" }}>
+          style={{ top: "calc(12% + 15px)", bottom: "15px", left: "5%", right: "5%", paddingLeft: "0", paddingRight: "0" }}>
 
           {/* AUDIO */}
           <SettingsRow label="audio" isOpen={openSection === "audio"} onToggle={() => toggleSection("audio")}>
