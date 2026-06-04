@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Landscape lock overlay — hidden in portrait, covers everything in landscape */
+.landscape-block {
+  display: none;
+}
+@media (orientation: landscape) {
+  .landscape-block {
+    display: flex;
+  }
+}
+
 @keyframes timerFlash {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }
