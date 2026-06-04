@@ -1107,20 +1107,6 @@ function Home() {
     <div className="relative flex flex-col w-full overflow-hidden select-none"
       style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
-      {/* Landscape block — shown only when device is rotated sideways */}
-      <div className="landscape-block fixed inset-0 z-[9999] flex-col items-center justify-center gap-4"
-        style={{ background: "#0a1f1a" }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none"
-          stroke="#4fc3c3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-          <path d="M9 22v-4h6v4"/><path d="M12 6v4"/><path d="M10 8l2-2 2 2"/>
-        </svg>
-        <p style={{ color: "#4fc3c3", fontFamily: "Kallisto, sans-serif", fontWeight: 300,
-          letterSpacing: "0.12em", fontSize: "0.85rem", textAlign: "center", margin: 0 }}>
-          please rotate to portrait
-        </p>
-      </div>
-
       {/* Full-screen background — always visible */}
       <img src={img("TR-bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
