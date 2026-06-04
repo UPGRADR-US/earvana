@@ -391,10 +391,10 @@ export function useAudioEngine(): AudioEngineState {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Hard-cut all other engines — immediate=true so their fade tail doesn't
-    // overlap the new track's fade-in.  Covers mid-load ghost tracks too.
+    // Fade out all other engines so the outgoing track ramps down smoothly
+    // while the new track loads and fades in.
     Object.entries(enginesRef.current).forEach(([id, eng]) => {
-      if (id !== trackId) eng.pause(true);
+      if (id !== trackId && eng.isPlaying) eng.pause(false, TRACK_SWITCH_FADE);
     });
     setTracksState(s => {
       const ns = { ...s };
