@@ -4,7 +4,7 @@ import { TRACKS, SoundTrack } from "../sounds";
 const DEFAULT_CROSSFADE  = 15;  // seconds
 const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
-const TRACK_SWITCH_FADE   = 1.5;  // seconds — outgoing track crossfade when switching titles
+const TRACK_SWITCH_FADE   = 0.75; // seconds — outgoing track fade when switching titles
 
 // 5-band parametric EQ: centre frequencies and Q values
 const EQ_FREQUENCIES = [100, 330, 1000, 3300, 10000] as const;
