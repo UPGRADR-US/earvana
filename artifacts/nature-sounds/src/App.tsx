@@ -976,6 +976,12 @@ function Home() {
   const isPlaying      = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
 
+  // Optimistic play-button visual: flips instantly on click so the icon
+  // doesn't wait for the audio fade to finish before changing state.
+  const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null);
+  useEffect(() => { setOptimisticPlaying(null); }, [isPlaying]);
+  const btnPlaying = optimisticPlaying ?? isPlaying;
+
   // Keep selectedTrackId in sync when a track starts playing externally
   // (e.g. MediaSession lock-screen Play → engine.resume() → playingTrackId changes).
   useEffect(() => {
@@ -1061,9 +1067,11 @@ function Home() {
   // PLAY button: start selected track, or pause the currently playing one.
   const handlePlayButton = useCallback(() => {
     if (isPlaying) {
+      setOptimisticPlaying(false);
       if (playingTrackId) engine.pause(playingTrackId);
       // selectedTrackId stays → reverts to yellow blink
     } else if (selectedTrackId) {
+      setOptimisticPlaying(true);
       engine.play(selectedTrackId);
     }
   }, [isPlaying, playingTrackId, selectedTrackId, engine]);
@@ -1215,12 +1223,12 @@ function Home() {
                   className="pointer-events-auto flex-shrink-0 active:opacity-60"
                   style={{
                     width: "clamp(56px,14cqw,82px)",
-                    animation: (!isPlaying && selectedTrackId) ? "trackBlink 1s ease-in-out infinite" : "none",
+                    animation: (!btnPlaying && selectedTrackId) ? "trackBlink 1s ease-in-out infinite" : "none",
                   }}
                   data-testid="btn-play-pause">
                   <img
-                    src={img(isPlaying ? "PLAY_ON.png" : selectedTrackId ? "PLAY_standby.png" : "PLAY_off.png")}
-                    alt={isPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
+                    src={img(btnPlaying ? "PLAY_ON.png" : selectedTrackId ? "PLAY_standby.png" : "PLAY_off.png")}
+                    alt={btnPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
                 </button>
               </div>
               {/* Sprocket — pinned right */}
