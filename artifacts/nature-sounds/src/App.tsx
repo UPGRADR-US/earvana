@@ -1139,7 +1139,7 @@ function Home() {
           <VolumeMeter
             volume={engine.masterVolume}
             onChange={engine.setMasterVolume}
-            bottomPad="calc(clamp(220px,28vh,270px) + env(safe-area-inset-bottom, 0px))"
+            bottomPad="calc(clamp(230px,30.5vh,288px) + env(safe-area-inset-bottom, 0px))"
           />
 
           {/* Carousel */}
@@ -1179,8 +1179,8 @@ function Home() {
               iOS WebKit picks the outermost relative ancestor when there are nested ones. */}
           <div className="z-10 flex-shrink-0">
 
-            {/* Duration slider — lifted away from bottom bar with increased top padding */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(30px,5vh,50px)", paddingBottom: "5px" }}>
+            {/* Duration slider — paddingBottom creates the gap between "duration" label and CPanl_bar_btm */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(30px,5vh,50px)", paddingBottom: "clamp(14px,2.5vh,22px)" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
