@@ -1,12 +1,17 @@
 @import "tailwindcss";
 
-/* Landscape lock overlay — hidden in portrait, covers everything in landscape */
-.landscape-block {
-  display: none;
-}
+/* Force portrait layout in landscape by rotating the root 90° */
 @media (orientation: landscape) {
-  .landscape-block {
-    display: flex;
+  #root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vh;
+    height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: top left;
+    translate: 0 -100vw;
+    overflow: hidden;
   }
 }
 
