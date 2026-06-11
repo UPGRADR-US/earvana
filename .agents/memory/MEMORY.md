@@ -1,2 +1,3 @@
 - [iOS Safari AudioParam .value bug](ios-webaudio-gain-value.md) — reading .gain.value after setValueCurveAtTime returns 0 on iOS; use stored volume or hardcode 1
 - [iOS Capacitor flex centering bug](ios-flex-justify-center.md) — justify-content:center on overflow:hidden flex-column containers silently fails in iOS Safari/Capacitor; use margin:auto on the inner child instead
+- [iOS WebKit nested relative containing block bug](ios-nested-relative-containing-block.md) — absolute inset-0 child may resolve against outermost relative ancestor, not direct parent; remove relative from outer wrappers that don't need it

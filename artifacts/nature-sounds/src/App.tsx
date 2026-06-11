@@ -1174,8 +1174,10 @@ function Home() {
             </div>
           </div>
 
-          {/* Bottom controls */}
-          <div className="relative z-10 flex-shrink-0">
+          {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
+              resolves against only the icon-row's own relative parent, not this outer wrapper.
+              iOS WebKit picks the outermost relative ancestor when there are nested ones. */}
+          <div className="z-10 flex-shrink-0">
 
             {/* Duration slider — 5px above the bottom bar image */}
             <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(20px,3.2vh,36px)", paddingBottom: "5px" }}>
