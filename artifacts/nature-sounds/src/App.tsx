@@ -19,6 +19,7 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
 }) {
   const meterRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const [pressed, setPressed] = useState(false);
 
   const computeVol = useCallback((clientY: number) => {
     if (!meterRef.current) return;
@@ -28,15 +29,21 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
 
   const onPD = useCallback((e: React.PointerEvent) => {
     dragging.current = true;
+    setPressed(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     computeVol(e.clientY);
   }, [computeVol]);
   const onPM = useCallback((e: React.PointerEvent) => { if (dragging.current) computeVol(e.clientY); }, [computeVol]);
-  const onPU = useCallback(() => { dragging.current = false; }, []);
+  const onPU = useCallback(() => { dragging.current = false; setPressed(false); }, []);
 
   return (
     <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
-      style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", paddingBottom: bottomPad }}>
+      style={{
+        paddingRight: "clamp(6px, 1.5cqw, 14px)",
+        paddingBottom: bottomPad,
+        opacity: pressed ? 1 : 0.5,
+        transition: "opacity 0.15s ease",
+      }}>
       {/* Width intentionally omitted from the container — the base image
           sizes itself to h-full w-auto (natural 137×1064 ratio), and the
           LED overlay sits exactly on top at the same intrinsic dimensions. */}
