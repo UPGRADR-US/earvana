@@ -1,1 +1,2 @@
 - [iOS Safari AudioParam .value bug](ios-webaudio-gain-value.md) — reading .gain.value after setValueCurveAtTime returns 0 on iOS; use stored volume or hardcode 1
+- [iOS Capacitor flex centering bug](ios-flex-justify-center.md) — justify-content:center on overflow:hidden flex-column containers silently fails in iOS Safari/Capacitor; use margin:auto on the inner child instead

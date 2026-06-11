@@ -1155,19 +1155,23 @@ function Home() {
             </div>
           </div>
 
-          {/* Track list — flex+justify-center keeps content equidistant between carousel and slider regardless of track count */}
-          <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col justify-center" style={{ paddingTop: "clamp(6px,1vh,12px)", paddingBottom: "clamp(6px,1vh,12px)" }}>
-            {selectedId && (() => {
-              const cat = CATEGORIES.find((c) => c.id === selectedId);
-              return cat ? (
-                <TrackList
-                  category={cat}
-                  engine={engine}
-                  selectedTrackId={selectedTrackId}
-                  onSelectTrack={handleTrackSelect}
-                />
-              ) : null;
-            })()}
+          {/* Track list — margin:auto on the inner wrapper centers content between carousel and
+              timer panel on all screen sizes. justify-content:center is avoided here because
+              iOS Safari / Capacitor mishandles it on overflow:hidden flex-column containers. */}
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col">
+            <div style={{ margin: "auto 0", paddingTop: "clamp(6px,1vh,12px)", paddingBottom: "clamp(6px,1vh,12px)" }}>
+              {selectedId && (() => {
+                const cat = CATEGORIES.find((c) => c.id === selectedId);
+                return cat ? (
+                  <TrackList
+                    category={cat}
+                    engine={engine}
+                    selectedTrackId={selectedTrackId}
+                    onSelectTrack={handleTrackSelect}
+                  />
+                ) : null;
+              })()}
+            </div>
           </div>
 
           {/* Bottom controls */}
