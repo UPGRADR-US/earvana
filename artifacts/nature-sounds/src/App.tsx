@@ -1240,13 +1240,6 @@ function Home() {
 }
 
 // ─── Play Button ─────────────────────────────────────────────────────────────
-// Sequence: [1,4,4,1] repeating — crossfade on 1→4 and 4→1; silent advance on 4→4 and 1→1.
-function playSeqVal(i: number): 1 | 4 {
-  return ([1, 4, 4, 1] as const)[i % 4];
-}
-
-const PLAY_HOLD_MS  = 1000;  // each frame holds for 1 second before crossfading
-const PLAY_XFADE_MS = 1000;  // crossfade duration (1 second)
 
 function PlayButton({
   isPlaying, isStandby, onClick,
@@ -1255,62 +1248,20 @@ function PlayButton({
   isStandby: boolean;
   onClick: () => void;
 }) {
-  // Two green layers always mounted while playing — no mount/unmount flicker.
-  // "bottom" is always fully visible; "top" crossfades in then snaps back to 0.
-  const [bottomFrame, setBottomFrame] = useState<1 | 4>(1);
-  const [topFrame, setTopFrame]       = useState<1 | 4>(1);
-  const [topOpacity, setTopOpacity]   = useState(0);
-  // xfading=true applies the CSS transition; false = instant snap (no fade-out artifact)
-  const [xfading, setXfading]         = useState(false);
-  const seqIdxRef = useRef(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Play/pause the video in sync with playback state.
+  // Video stays in the DOM so it's preloaded; visibility is toggled via display.
   useEffect(() => {
-    if (!isPlaying) {
-      setBottomFrame(1); setTopFrame(1); setTopOpacity(0); setXfading(false);
-      seqIdxRef.current = 0;
-      return;
+    const v = videoRef.current;
+    if (!v) return;
+    if (isPlaying) {
+      v.currentTime = 0;
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+      v.currentTime = 0;
     }
-
-    let cancelled = false;
-
-    function scheduleHold() {
-      if (cancelled) return;
-      const curr = playSeqVal(seqIdxRef.current);
-      const next = playSeqVal(seqIdxRef.current + 1);
-
-      setTimeout(() => {
-        if (cancelled) return;
-        if (curr !== next) {
-          // Snap top layer to opacity 0 (no transition), load incoming frame
-          setTopFrame(next);
-          setTopOpacity(0);
-          setXfading(false);
-          // Double rAF: browser must paint the opacity:0 state before we
-          // enable the transition, otherwise it skips straight to 1.
-          requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (cancelled) return;
-            setXfading(true);
-            setTopOpacity(1);
-          }));
-          // After crossfade + 200ms buffer, promote top → bottom and reset
-          setTimeout(() => {
-            if (cancelled) return;
-            seqIdxRef.current += 1;
-            setBottomFrame(next);
-            setXfading(false);   // instant snap — no fade-out
-            setTopOpacity(0);
-            scheduleHold();
-          }, PLAY_XFADE_MS + 200);
-        } else {
-          // Same image — advance silently
-          seqIdxRef.current += 1;
-          scheduleHold();
-        }
-      }, PLAY_HOLD_MS);
-    }
-
-    scheduleHold();
-    return () => { cancelled = true; };
   }, [isPlaying]);
 
   return (
@@ -1320,11 +1271,13 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Base — always present regardless of state */}
+      {/* Base — visible in off and standby states; hidden during play (video covers it) */}
       <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
-        className="block w-full h-auto" draggable={false} />
+        className="block w-full h-auto"
+        style={{ visibility: isPlaying ? "hidden" : "visible" }}
+        draggable={false} />
 
-      {/* Yellow standby — blinks when track is selected but not playing */}
+      {/* Yellow standby — blinks when track selected but not playing */}
       {isStandby && (
         <img src={img("PlayYellow.png")} alt=""
           className="absolute top-0 left-0 w-full h-auto pointer-events-none"
@@ -1332,23 +1285,20 @@ function PlayButton({
           draggable={false} />
       )}
 
-      {/* Green bottom layer — always fully visible while playing */}
-      {isPlaying && (
-        <img src={img(`PlayGreen${bottomFrame}.png`)} alt=""
-          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-          draggable={false} />
-      )}
-
-      {/* Green top layer — crossfades in; snaps back to invisible instantly */}
-      {isPlaying && (
-        <img src={img(`PlayGreen${topFrame}.png`)} alt=""
-          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-          style={{
-            opacity: topOpacity,
-            transition: xfading ? `opacity ${PLAY_XFADE_MS}ms ease-in-out` : "none",
-          }}
-          draggable={false} />
-      )}
+      {/* Animated video — preloaded, shown only during playback.
+          mix-blend-mode:screen makes the black MP4 background transparent
+          so the drop-shadow and glow composite over the bar naturally. */}
+      <video
+        ref={videoRef}
+        loop muted playsInline
+        className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+        style={{
+          display: isPlaying ? "block" : "none",
+          mixBlendMode: "screen",
+        }}
+      >
+        <source src={img("PlayAnim.mp4")} type="video/mp4" />
+      </video>
     </button>
   );
 }
