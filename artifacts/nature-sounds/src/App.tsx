@@ -1240,15 +1240,13 @@ function Home() {
 }
 
 // ─── Play Button ─────────────────────────────────────────────────────────────
-// Sequence: 1-4-4-1-1-4-4-1-1-4-4 ...
-// After index 0 (value=1), the repeating unit is [4,4,1,1] (period 4).
+// Sequence: 1-4-1-4-1-4 ... pure alternation, every transition is a crossfade.
 function playSeqVal(i: number): 1 | 4 {
-  if (i === 0) return 1;
-  return ([4, 4, 1, 1][(i - 1) % 4] as 1 | 4);
+  return i % 2 === 0 ? 1 : 4;
 }
 
-const PLAY_HOLD_MS  = 1000;  // each frame holds for 1 second before transitioning
-const PLAY_XFADE_MS = 1450;  // crossfade duration between mismatched frames
+const PLAY_HOLD_MS  = 1000;  // each frame holds for 1 second before crossfading
+const PLAY_XFADE_MS = 1000;  // crossfade duration (1 second)
 
 function PlayButton({
   isPlaying, isStandby, onClick,
