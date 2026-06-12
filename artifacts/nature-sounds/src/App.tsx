@@ -1240,9 +1240,9 @@ function Home() {
 }
 
 // ─── Play Button ─────────────────────────────────────────────────────────────
-// Sequence: 1-4-1-4-1-4 ... pure alternation, every transition is a crossfade.
+// Sequence: [1,4,4,1] repeating — crossfade on 1→4 and 4→1; silent advance on 4→4 and 1→1.
 function playSeqVal(i: number): 1 | 4 {
-  return i % 2 === 0 ? 1 : 4;
+  return ([1, 4, 4, 1] as const)[i % 4];
 }
 
 const PLAY_HOLD_MS  = 1000;  // each frame holds for 1 second before crossfading
