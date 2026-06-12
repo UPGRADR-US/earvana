@@ -1257,21 +1257,25 @@ function PlayButton({
   isStandby: boolean;
   onClick: () => void;
 }) {
-  const [frameA, setFrameA]     = useState<1 | 4>(1);
-  const [frameB, setFrameB]     = useState<1 | 4 | null>(null);
-  const [bOpacity, setBOpacity] = useState(0);
+  // Two green layers always mounted while playing — no mount/unmount flicker.
+  // "bottom" is always fully visible; "top" crossfades in then snaps back to 0.
+  const [bottomFrame, setBottomFrame] = useState<1 | 4>(1);
+  const [topFrame, setTopFrame]       = useState<1 | 4>(1);
+  const [topOpacity, setTopOpacity]   = useState(0);
+  // xfading=true applies the CSS transition; false = instant snap (no fade-out artifact)
+  const [xfading, setXfading]         = useState(false);
   const seqIdxRef = useRef(0);
 
   useEffect(() => {
     if (!isPlaying) {
-      setFrameA(1); setFrameB(null); setBOpacity(0);
+      setBottomFrame(1); setTopFrame(1); setTopOpacity(0); setXfading(false);
       seqIdxRef.current = 0;
       return;
     }
 
     let cancelled = false;
 
-    function schedule() {
+    function scheduleHold() {
       if (cancelled) return;
       const curr = playSeqVal(seqIdxRef.current);
       const next = playSeqVal(seqIdxRef.current + 1);
@@ -1279,28 +1283,35 @@ function PlayButton({
       setTimeout(() => {
         if (cancelled) return;
         if (curr !== next) {
-          // Mount layer B invisible, then ramp opacity to 1 on next frame
-          setFrameB(next);
-          setBOpacity(0);
-          setTimeout(() => { if (!cancelled) setBOpacity(1); }, 16);
-          // After crossfade, promote B → A and clear B
+          // Snap top layer to opacity 0 (no transition), load incoming frame
+          setTopFrame(next);
+          setTopOpacity(0);
+          setXfading(false);
+          // Double rAF: browser must paint the opacity:0 state before we
+          // enable the transition, otherwise it skips straight to 1.
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (cancelled) return;
+            setXfading(true);
+            setTopOpacity(1);
+          }));
+          // After crossfade + 200ms buffer, promote top → bottom and reset
           setTimeout(() => {
             if (cancelled) return;
             seqIdxRef.current += 1;
-            setFrameA(next);
-            setFrameB(null);
-            setBOpacity(0);
-            schedule();
-          }, PLAY_XFADE_MS + 16);
+            setBottomFrame(next);
+            setXfading(false);   // instant snap — no fade-out
+            setTopOpacity(0);
+            scheduleHold();
+          }, PLAY_XFADE_MS + 200);
         } else {
-          // Same image — advance silently, no visual change
+          // Same image — advance silently
           seqIdxRef.current += 1;
-          schedule();
+          scheduleHold();
         }
       }, PLAY_HOLD_MS);
     }
 
-    schedule();
+    scheduleHold();
     return () => { cancelled = true; };
   }, [isPlaying]);
 
@@ -1323,18 +1334,21 @@ function PlayButton({
           draggable={false} />
       )}
 
-      {/* Green layer A — current stable frame */}
+      {/* Green bottom layer — always fully visible while playing */}
       {isPlaying && (
-        <img src={img(`PlayGreen${frameA}.png`)} alt=""
+        <img src={img(`PlayGreen${bottomFrame}.png`)} alt=""
           className="absolute top-0 left-0 w-full h-auto pointer-events-none"
           draggable={false} />
       )}
 
-      {/* Green layer B — incoming frame during crossfade */}
-      {isPlaying && frameB !== null && (
-        <img src={img(`PlayGreen${frameB}.png`)} alt=""
+      {/* Green top layer — crossfades in; snaps back to invisible instantly */}
+      {isPlaying && (
+        <img src={img(`PlayGreen${topFrame}.png`)} alt=""
           className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-          style={{ opacity: bOpacity, transition: `opacity ${PLAY_XFADE_MS}ms ease-in-out` }}
+          style={{
+            opacity: topOpacity,
+            transition: xfading ? `opacity ${PLAY_XFADE_MS}ms ease-in-out` : "none",
+          }}
           draggable={false} />
       )}
     </button>
