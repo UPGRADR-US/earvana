@@ -161,17 +161,16 @@ function DurationSlider({
 
       {/* Labels — centred at i/(N-1)*100% of trackRef width */}
       {(() => {
-        // Which whole-hour bracket is the countdown currently in?
-        // step i corresponds to (i+1) hours. During active countdown, the label
-        // whose hour value === Math.floor(timeRemaining/3600) gets highlighted —
-        // this travels left with the countdown independently of the knob.
-        const countdownHour = (isPlaying && step < loopStep)
-          ? Math.floor(timeRemaining / 3600)
-          : -1;
+        // A marker at step i (label = i+1 hours) lights up once the countdown
+        // reaches that exact hour mark — i.e. timeRemaining ≤ (i+1)*3600 —
+        // and stays lit for the remainder of the countdown. Markers only light
+        // up to the left of the knob (i < step); the knob itself stays green
+        // via knobActive regardless.
+        const counting = isPlaying && step < loopStep;
 
         return DURATION_STEPS.map((label, i) => {
           const knobActive     = step === i;
-          const countdownActive = (i + 1) === countdownHour;  // label "i+1" matches current hour
+          const countdownActive = counting && i < step && timeRemaining <= (i + 1) * 3600;
           const highlighted    = knobActive || countdownActive;
 
           if (i === loopStep) {
