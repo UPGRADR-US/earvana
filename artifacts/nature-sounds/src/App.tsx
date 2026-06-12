@@ -1298,15 +1298,15 @@ function PlayButton({
       )}
 
       {/* Animated video — preloaded, shown only during playback.
-          mix-blend-mode:screen composites over PLAYbase: black pixels vanish,
-          bright glow/highlights add light. PLAYbase is hidden while video plays. */}
+          WebM has black keyed out via colorkey filter → real transparency, no blend mode. */}
       <video
         ref={videoRef}
         loop muted playsInline
         className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-        style={{ display: isPlaying ? "block" : "none", mixBlendMode: "screen" }}
+        style={{ display: isPlaying ? "block" : "none" }}
       >
-        <source src={img("PlayAnim.mp4")} type="video/mp4" />
+        <source src={img("PlayAnim.webm")} type="video/webm" />
+        <source src={img("PlayAnim.mp4")}  type="video/mp4" />
       </video>
     </button>
   );
