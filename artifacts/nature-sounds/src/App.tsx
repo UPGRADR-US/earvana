@@ -160,34 +160,47 @@ function DurationSlider({
       )}
 
       {/* Labels — centred at i/(N-1)*100% of trackRef width */}
-      {DURATION_STEPS.map((label, i) => {
-        const active = step === i;
-        if (i === loopStep) {
+      {(() => {
+        // Which whole-hour bracket is the countdown currently in?
+        // step i corresponds to (i+1) hours. During active countdown, the label
+        // whose hour value === Math.floor(timeRemaining/3600) gets highlighted —
+        // this travels left with the countdown independently of the knob.
+        const countdownHour = (isPlaying && step < loopStep)
+          ? Math.floor(timeRemaining / 3600)
+          : -1;
+
+        return DURATION_STEPS.map((label, i) => {
+          const knobActive     = step === i;
+          const countdownActive = (i + 1) === countdownHour;  // label "i+1" matches current hour
+          const highlighted    = knobActive || countdownActive;
+
+          if (i === loopStep) {
+            return (
+              <button key={i} onClick={() => onChange(i)}
+                className="absolute transition-all duration-150 pointer-events-auto"
+                style={{
+                  top: 0, left: pct(i), transform: "translateX(-50%)",
+                  width: "clamp(18px,4.5cqw,26px)", opacity: knobActive ? 1 : 0.45, padding: 0,
+                }}
+                data-testid={`duration-step-${i}`}>
+                <img src={img(knobActive ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
+              </button>
+            );
+          }
           return (
             <button key={i} onClick={() => onChange(i)}
-              className="absolute transition-all duration-150 pointer-events-auto"
+              className="absolute leading-none transition-all duration-300 pointer-events-auto"
               style={{
-                top: 0, left: pct(i), transform: "translateX(-50%)",
-                width: "clamp(18px,4.5cqw,26px)", opacity: active ? 1 : 0.45, padding: 0,
+                top: 0, left: pct(i), transform: "translateX(-50%)", padding: 0,
+                color: highlighted ? "#00ff55" : "rgba(200,220,255,0.45)",
+                textShadow: highlighted ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
+                fontWeight: highlighted ? 600 : 300,
+                fontSize: "clamp(15px,3.4cqw,21px)",
               }}
-              data-testid={`duration-step-${i}`}>
-              <img src={img(active ? "LoopIcon(OnCLK).png" : "LoopIcon.png")} alt="loop" className="w-full h-auto" draggable={false} />
-            </button>
+              data-testid={`duration-step-${i}`}>{label}</button>
           );
-        }
-        return (
-          <button key={i} onClick={() => onChange(i)}
-            className="absolute leading-none transition-all duration-150 pointer-events-auto"
-            style={{
-              top: 0, left: pct(i), transform: "translateX(-50%)", padding: 0,
-              color: active ? "#00ff55" : "rgba(200,220,255,0.45)",
-              textShadow: active ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
-              fontWeight: active ? 600 : 300,
-              fontSize: "clamp(15px,3.4cqw,21px)",
-            }}
-            data-testid={`duration-step-${i}`}>{label}</button>
-        );
-      })}
+        });
+      })()}
 
       {/* Slot base — full-width static track, swaps to OnCLK while pointer is held */}
       <img src={img(slotActive ? "SliderSlot_Base(OnCLK).png" : "SliderSlot_Base.png")} alt=""
