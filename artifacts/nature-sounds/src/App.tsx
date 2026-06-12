@@ -1298,18 +1298,15 @@ function PlayButton({
       )}
 
       {/* Animated video — preloaded, shown only during playback.
-          mix-blend-mode:screen makes the black MP4 background transparent
-          so the drop-shadow and glow composite over the bar naturally. */}
+          WebM VP9 with yuva420p alpha: transparent background, no blend mode needed. */}
       <video
         ref={videoRef}
         loop muted playsInline
         className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-        style={{
-          display: isPlaying ? "block" : "none",
-          mixBlendMode: "screen",
-        }}
+        style={{ display: isPlaying ? "block" : "none" }}
       >
-        <source src={img("PlayAnim.mp4")} type="video/mp4" />
+        <source src={img("PlayAnim.webm")} type="video/webm" />
+        <source src={img("PlayAnim.mp4")}  type="video/mp4" />
       </video>
     </button>
   );
