@@ -1214,22 +1214,14 @@ function Home() {
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
               {/* Play — truly centered across full bar width.
-                  3 states:
-                    idle     → PLAY_off.png      (no track selected)
-                    selected → PLAY_standby.png  (track tapped, not yet playing — blinks)
-                    playing  → PLAY_ON.png       (audio running — static green)       */}
+                  PLAYbase always visible; PlayYellow blinks in standby;
+                  PlayGreen1/4 alternate with crossfade during playback. */}
               <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-                <button onClick={handlePlayButton}
-                  className="pointer-events-auto flex-shrink-0 active:opacity-60"
-                  style={{
-                    width: "clamp(56px,14cqw,82px)",
-                    animation: (!btnPlaying && selectedTrackId) ? "trackBlink 1s ease-in-out infinite" : "none",
-                  }}
-                  data-testid="btn-play-pause">
-                  <img
-                    src={img(btnPlaying ? "PLAY_ON.png" : selectedTrackId ? "PLAY_standby.png" : "PLAY_off.png")}
-                    alt={btnPlaying ? "Stop" : "Play"} className="w-full h-auto" draggable={false} />
-                </button>
+                <PlayButton
+                  isPlaying={btnPlaying}
+                  isStandby={!btnPlaying && !!selectedTrackId}
+                  onClick={handlePlayButton}
+                />
               </div>
               {/* Sprocket — pinned right */}
               <div className="flex-1" />
@@ -1244,6 +1236,108 @@ function Home() {
         </>
       )}
     </div>
+  );
+}
+
+// ─── Play Button ─────────────────────────────────────────────────────────────
+// Sequence: 1-4-4-1-1-4-4-1-1-4-4 ...
+// After index 0 (value=1), the repeating unit is [4,4,1,1] (period 4).
+function playSeqVal(i: number): 1 | 4 {
+  if (i === 0) return 1;
+  return ([4, 4, 1, 1][(i - 1) % 4] as 1 | 4);
+}
+
+const PLAY_HOLD_MS  = 1000;  // each frame holds for 1 second before transitioning
+const PLAY_XFADE_MS = 1450;  // crossfade duration between mismatched frames
+
+function PlayButton({
+  isPlaying, isStandby, onClick,
+}: {
+  isPlaying: boolean;
+  isStandby: boolean;
+  onClick: () => void;
+}) {
+  const [frameA, setFrameA]     = useState<1 | 4>(1);
+  const [frameB, setFrameB]     = useState<1 | 4 | null>(null);
+  const [bOpacity, setBOpacity] = useState(0);
+  const seqIdxRef = useRef(0);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setFrameA(1); setFrameB(null); setBOpacity(0);
+      seqIdxRef.current = 0;
+      return;
+    }
+
+    let cancelled = false;
+
+    function schedule() {
+      if (cancelled) return;
+      const curr = playSeqVal(seqIdxRef.current);
+      const next = playSeqVal(seqIdxRef.current + 1);
+
+      setTimeout(() => {
+        if (cancelled) return;
+        if (curr !== next) {
+          // Mount layer B invisible, then ramp opacity to 1 on next frame
+          setFrameB(next);
+          setBOpacity(0);
+          setTimeout(() => { if (!cancelled) setBOpacity(1); }, 16);
+          // After crossfade, promote B → A and clear B
+          setTimeout(() => {
+            if (cancelled) return;
+            seqIdxRef.current += 1;
+            setFrameA(next);
+            setFrameB(null);
+            setBOpacity(0);
+            schedule();
+          }, PLAY_XFADE_MS + 16);
+        } else {
+          // Same image — advance silently, no visual change
+          seqIdxRef.current += 1;
+          schedule();
+        }
+      }, PLAY_HOLD_MS);
+    }
+
+    schedule();
+    return () => { cancelled = true; };
+  }, [isPlaying]);
+
+  return (
+    <button
+      onClick={onClick}
+      className="pointer-events-auto flex-shrink-0 active:opacity-60"
+      style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
+      data-testid="btn-play-pause"
+    >
+      {/* Base — always present regardless of state */}
+      <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
+        className="block w-full h-auto" draggable={false} />
+
+      {/* Yellow standby — blinks when track is selected but not playing */}
+      {isStandby && (
+        <img src={img("PlayYellow.png")} alt=""
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          style={{ animation: "trackBlink 1s ease-in-out infinite" }}
+          draggable={false} />
+      )}
+
+      {/* Green layer A — current stable frame */}
+      {isPlaying && (
+        <img src={img(`PlayGreen${frameA}.png`)} alt=""
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          draggable={false} />
+      )}
+
+      {/* Green layer B — incoming frame during crossfade */}
+      {isPlaying && frameB !== null && (
+        <img src={img(`PlayGreen${frameB}.png`)} alt=""
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          style={{ opacity: bOpacity, transition: `opacity ${PLAY_XFADE_MS}ms ease-in-out` }}
+          draggable={false} />
+      )}
+    </button>
   );
 }
 
