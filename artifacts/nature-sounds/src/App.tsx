@@ -1260,19 +1260,46 @@ function PlayButton({
   isStandby: boolean;
   onClick: () => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef  = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>(0);
 
-  // Play/pause the video in sync with playback state.
-  // Video stays in the DOM so it's preloaded; visibility is toggled via display.
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
+    const c = canvasRef.current;
+    if (!v || !c) return;
+
     if (isPlaying) {
+      const ctx = c.getContext("2d", { alpha: true });
+      if (!ctx) return;
+
+      // Draw every frame into the canvas — ctx.drawImage correctly
+      // extracts VP9 alpha, unlike the <video> element itself.
+      const draw = () => {
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        rafRef.current = requestAnimationFrame(draw);
+      };
+
+      // Wait for actual frame data before starting the loop so
+      // the canvas never shows a blank frame.
+      const onPlaying = () => { rafRef.current = requestAnimationFrame(draw); };
+      v.addEventListener("playing", onPlaying, { once: true });
       v.currentTime = 0;
       v.play().catch(() => {});
+
+      return () => {
+        v.removeEventListener("playing", onPlaying);
+        cancelAnimationFrame(rafRef.current);
+      };
     } else {
+      // Stop playback and clear canvas so PLAYbase shows through.
+      cancelAnimationFrame(rafRef.current);
       v.pause();
       v.currentTime = 0;
+      const ctx = c.getContext("2d", { alpha: true });
+      ctx?.clearRect(0, 0, c.width, c.height);
+      return undefined;
     }
   }, [isPlaying]);
 
@@ -1283,11 +1310,10 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Base — visible in off/standby; hidden during play (transparent video covers it) */}
+      {/* Base — always visible; canvas paints over it once the first frame arrives,
+          so there is never a blank gap between tap and animation start. */}
       <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
-        className="block w-full h-auto"
-        style={{ visibility: isPlaying ? "hidden" : "visible" }}
-        draggable={false} />
+        className="block w-full h-auto" draggable={false} />
 
       {/* Yellow standby — blinks when track selected but not playing */}
       {isStandby && (
@@ -1297,16 +1323,15 @@ function PlayButton({
           draggable={false} />
       )}
 
-      {/* Animated video — real VP9 alpha, no blend mode needed. */}
-      <video
-        ref={videoRef}
-        loop muted playsInline
-        className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-        style={{ display: isPlaying ? "block" : "none" }}
-      >
+      {/* Hidden video — provides decoded frames; canvas renders them with alpha. */}
+      <video ref={videoRef} loop muted playsInline style={{ display: "none" }}>
         <source src={img("PlayAnim.webm")} type="video/webm" />
         <source src={img("PlayAnim.mp4")}  type="video/mp4" />
       </video>
+
+      {/* Canvas — transparent bg, draws video frames with correct VP9 alpha. */}
+      <canvas ref={canvasRef} width={238} height={270}
+        className="absolute top-0 left-0 w-full h-auto pointer-events-none" />
     </button>
   );
 }
