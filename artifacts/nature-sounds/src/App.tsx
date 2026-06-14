@@ -1212,30 +1212,36 @@ function Home() {
               </div>
             </div>
 
-            {/* Icon row — 4 items evenly spaced: Speaker · Play · EQ bars · Sprocket */}
-            <div className="relative flex items-center justify-between"
+            {/* Icon row — Speaker pinned left, Sprocket pinned right,
+                Play+EQ absolutely centred as a pair. */}
+            <div className="relative flex items-center"
               style={{ paddingLeft: "clamp(12px,3cqw,22px)", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
-              {/* Speaker */}
+              {/* Speaker — left edge */}
               <button onClick={handleSpeakerClick}
                 className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
                 style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
-              {/* Play */}
-              <PlayButton
-                isPlaying={btnPlaying}
-                isStandby={!btnPlaying && !!selectedTrackId}
-                onClick={handlePlayButton}
-              />
-              {/* EQ bars — fixed-width slot so spacing stays stable when bars appear/disappear */}
-              <div className="flex items-center justify-center flex-shrink-0"
-                style={{ width: "clamp(22px,5.5cqw,30px)" }}>
-                {btnPlaying && <EqBars />}
+              {/* Play + EQ bars — absolutely centred; EQ slot always present so
+                  the pair doesn't shift when bars appear/disappear */}
+              <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
+                style={{ gap: "clamp(6px,1.8cqw,11px)" }}>
+                <PlayButton
+                  isPlaying={btnPlaying}
+                  isStandby={!btnPlaying && !!selectedTrackId}
+                  onClick={handlePlayButton}
+                />
+                {/* Fixed-width EQ slot — bars animate inside it */}
+                <div className="flex items-center justify-center flex-shrink-0"
+                  style={{ width: "clamp(22px,5.5cqw,30px)" }}>
+                  {btnPlaying && <EqBars />}
+                </div>
               </div>
-              {/* Sprocket */}
+              {/* Sprocket — right edge */}
+              <div className="flex-1" />
               <button onClick={handleSprocketClick}
                 className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
                 style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
