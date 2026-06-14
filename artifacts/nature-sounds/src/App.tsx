@@ -1309,7 +1309,7 @@ function PlayButton({
       {isPlaying && (
         <img src={img("PLAYgreen.png")} alt=""
           className="absolute pointer-events-none"
-          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 10px), calc(-50% - 4px))", width: "75.2%" }}
+          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 5px), calc(-50% - 2px))", width: "75.2%" }}
           draggable={false} />
       )}
 
@@ -1317,7 +1317,7 @@ function PlayButton({
       {isStandby && (
         <img src={img("PLAYyellow.png")} alt=""
           className="absolute pointer-events-none"
-          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 10px), calc(-50% - 4px))", width: "75.2%", animation: "trackBlink 1s ease-in-out infinite" }}
+          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 5px), calc(-50% - 2px))", width: "75.2%", animation: "trackBlink 1s ease-in-out infinite" }}
           draggable={false} />
       )}
     </button>
