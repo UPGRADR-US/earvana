@@ -1212,10 +1212,9 @@ function Home() {
               </div>
             </div>
 
-            {/* Icon row — CPanl_bar_btm fills the row background.
-                Generous equal top/bottom padding keeps play icon vertically centred. */}
-            <div className="relative flex items-center"
-              style={{ paddingLeft: "38px", paddingRight: "30px", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
+            {/* Icon row — 4 items evenly spaced: Speaker · Play · EQ bars · Sprocket */}
+            <div className="relative flex items-center justify-between"
+              style={{ paddingLeft: "clamp(12px,3cqw,22px)", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
@@ -1225,18 +1224,18 @@ function Home() {
                 style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
-              {/* Play + EQ bars — centered as a unit; bars appear to the left of the button. */}
-              <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
-                style={{ gap: "clamp(6px,1.8cqw,11px)" }}>
+              {/* Play */}
+              <PlayButton
+                isPlaying={btnPlaying}
+                isStandby={!btnPlaying && !!selectedTrackId}
+                onClick={handlePlayButton}
+              />
+              {/* EQ bars — fixed-width slot so spacing stays stable when bars appear/disappear */}
+              <div className="flex items-center justify-center flex-shrink-0"
+                style={{ width: "clamp(22px,5.5cqw,30px)" }}>
                 {btnPlaying && <EqBars />}
-                <PlayButton
-                  isPlaying={btnPlaying}
-                  isStandby={!btnPlaying && !!selectedTrackId}
-                  onClick={handlePlayButton}
-                />
               </div>
-              {/* Sprocket — pinned right */}
-              <div className="flex-1" />
+              {/* Sprocket */}
               <button onClick={handleSprocketClick}
                 className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
                 style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
@@ -1296,11 +1295,16 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Solid green when playing, dark base otherwise */}
-      <img
-        src={img(isPlaying ? "PlayGreen4.png" : "PLAYbase.png")}
-        alt={isPlaying ? "Stop" : "Play"}
+      {/* Base — always present underneath */}
+      <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
         className="block w-full h-auto" draggable={false} />
+
+      {/* Green overlay — stacked on top when playing */}
+      {isPlaying && (
+        <img src={img("PLAYgreen.png")} alt=""
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          draggable={false} />
+      )}
 
       {/* Yellow standby blink */}
       {isStandby && (
