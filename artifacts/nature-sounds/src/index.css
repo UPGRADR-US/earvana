@@ -19,6 +19,10 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }
 }
+@keyframes eqBar {
+  0%, 100% { transform: scaleY(0.18); }
+  50%      { transform: scaleY(1); }
+}
 @keyframes trackBlink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.22; }
