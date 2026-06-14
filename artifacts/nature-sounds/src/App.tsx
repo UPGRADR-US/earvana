@@ -1301,22 +1301,23 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Base — always present underneath */}
+      {/* Base — always present underneath, sets container size */}
       <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
         className="block w-full h-auto" draggable={false} />
 
-      {/* Green overlay — stacked on top when playing */}
+      {/* Green overlay — centred on base when playing (179×205 on 238×270 base) */}
       {isPlaying && (
         <img src={img("PLAYgreen.png")} alt=""
-          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          className="absolute pointer-events-none"
+          style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "75.2%" }}
           draggable={false} />
       )}
 
-      {/* Yellow standby blink */}
+      {/* Yellow standby blink — same centred sizing */}
       {isStandby && (
-        <img src={img("PlayYellow.png")} alt=""
-          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-          style={{ animation: "trackBlink 1s ease-in-out infinite" }}
+        <img src={img("PLAYyellow.png")} alt=""
+          className="absolute pointer-events-none"
+          style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "75.2%", animation: "trackBlink 1s ease-in-out infinite" }}
           draggable={false} />
       )}
     </button>
