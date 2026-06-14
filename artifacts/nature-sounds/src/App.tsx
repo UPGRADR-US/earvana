@@ -1225,10 +1225,10 @@ function Home() {
                 style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
-              {/* Play — truly centered across full bar width.
-                  PLAYbase always visible; PlayYellow blinks in standby;
-                  PlayGreen1/4 alternate with crossfade during playback. */}
-              <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+              {/* Play + EQ bars — centered as a unit; bars appear to the left of the button. */}
+              <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
+                style={{ gap: "clamp(6px,1.8cqw,11px)" }}>
+                {btnPlaying && <EqBars />}
                 <PlayButton
                   isPlaying={btnPlaying}
                   isStandby={!btnPlaying && !!selectedTrackId}
@@ -1261,6 +1261,27 @@ const EQ_BARS = [
   { dur: "0.72s", delay: "0.10s" },
 ];
 
+function EqBars() {
+  return (
+    <svg
+      width="clamp(18px,4.5cqw,26px)" viewBox="0 0 46 32"
+      style={{ overflow: "visible", filter: "drop-shadow(0 0 4px #00ff55)", flexShrink: 0 }}
+    >
+      {EQ_BARS.map((bar, i) => (
+        <rect
+          key={i}
+          x={i * 12} y={0} width={8} height={32} rx={3}
+          fill="#00ff55"
+          style={{
+            transformOrigin: `${i * 12 + 4}px 32px`,
+            animation: `eqBar ${bar.dur} ease-in-out ${bar.delay} infinite`,
+          }}
+        />
+      ))}
+    </svg>
+  );
+}
+
 function PlayButton({
   isPlaying, isStandby, onClick,
 }: {
@@ -1275,8 +1296,10 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Base — always present */}
-      <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
+      {/* Solid green when playing, dark base otherwise */}
+      <img
+        src={img(isPlaying ? "PlayGreen4.png" : "PLAYbase.png")}
+        alt={isPlaying ? "Stop" : "Play"}
         className="block w-full h-auto" draggable={false} />
 
       {/* Yellow standby blink */}
@@ -1285,29 +1308,6 @@ function PlayButton({
           className="absolute top-0 left-0 w-full h-auto pointer-events-none"
           style={{ animation: "trackBlink 1s ease-in-out infinite" }}
           draggable={false} />
-      )}
-
-      {/* Equalizer bars — 4 green bars that bounce while playing.
-          Pure CSS, no files, no transparency issues. */}
-      {isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <svg
-            width="58%" viewBox="0 0 46 32"
-            style={{ overflow: "visible", filter: "drop-shadow(0 0 4px #00ff55)" }}
-          >
-            {EQ_BARS.map((bar, i) => (
-              <rect
-                key={i}
-                x={i * 12} y={0} width={8} height={32} rx={3}
-                fill="#00ff55"
-                style={{
-                  transformOrigin: `${i * 12 + 4}px 32px`,
-                  animation: `eqBar ${bar.dur} ease-in-out ${bar.delay} infinite`,
-                }}
-              />
-            ))}
-          </svg>
-        </div>
       )}
     </button>
   );
