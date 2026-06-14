@@ -1305,19 +1305,18 @@ function PlayButton({
       <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
         className="block w-full h-auto" draggable={false} />
 
-      {/* Green overlay — centred on base when playing, nudged up 4px left 10px */}
+      {/* Green overlay — exact same canvas as PLAYbase, no offset needed */}
       {isPlaying && (
         <img src={img("PLAYgreen.png")} alt=""
-          className="absolute pointer-events-none"
-          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 5px), calc(-50% - 2px))", width: "75.2%" }}
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
           draggable={false} />
       )}
 
-      {/* Yellow standby blink — same offset */}
+      {/* Yellow standby blink — exact same canvas as PLAYbase */}
       {isStandby && (
         <img src={img("PLAYyellow.png")} alt=""
-          className="absolute pointer-events-none"
-          style={{ top: "50%", left: "50%", transform: "translate(calc(-50% - 5px), calc(-50% - 2px))", width: "75.2%", animation: "trackBlink 1s ease-in-out infinite" }}
+          className="absolute top-0 left-0 w-full h-auto pointer-events-none"
+          style={{ animation: "trackBlink 1s ease-in-out infinite" }}
           draggable={false} />
       )}
     </button>
