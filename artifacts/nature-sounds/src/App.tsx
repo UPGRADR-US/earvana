@@ -1283,9 +1283,10 @@ function PlayButton({
       style={{ width: "clamp(56px,14cqw,82px)", position: "relative" }}
       data-testid="btn-play-pause"
     >
-      {/* Base — always visible; video composites on top via screen blend */}
+      {/* Base — visible in off/standby; hidden during play (transparent video covers it) */}
       <img src={img("PLAYbase.png")} alt={isPlaying ? "Stop" : "Play"}
         className="block w-full h-auto"
+        style={{ visibility: isPlaying ? "hidden" : "visible" }}
         draggable={false} />
 
       {/* Yellow standby — blinks when track selected but not playing */}
@@ -1296,13 +1297,12 @@ function PlayButton({
           draggable={false} />
       )}
 
-      {/* Animated video — preloaded, shown only during playback.
-          mix-blend-mode:screen over PLAYbase: black→transparent, bright glow adds light. */}
+      {/* Animated video — real VP9 alpha, no blend mode needed. */}
       <video
         ref={videoRef}
         loop muted playsInline
         className="absolute top-0 left-0 w-full h-auto pointer-events-none"
-        style={{ display: isPlaying ? "block" : "none", mixBlendMode: "screen" }}
+        style={{ display: isPlaying ? "block" : "none" }}
       >
         <source src={img("PlayAnim.webm")} type="video/webm" />
         <source src={img("PlayAnim.mp4")}  type="video/mp4" />
