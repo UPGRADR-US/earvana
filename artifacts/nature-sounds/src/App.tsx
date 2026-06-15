@@ -1256,7 +1256,7 @@ function Home() {
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
               <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
-                style={{ gap: "clamp(6px,1.8cqw,11px)" }}>
+                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(10px)" }}>
                 <PlayButton
                   isPlaying={btnPlaying}
                   isStandby={!btnPlaying && !!selectedTrackId}
