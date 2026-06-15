@@ -1159,7 +1159,7 @@ function Home() {
         />
       )}
 
-      {!settingsOpen && (
+      {!settingsOpen && !diagOpen && (
         <>
           {/* Top Banner */}
           <div className="relative z-10 flex-shrink-0 w-full">
