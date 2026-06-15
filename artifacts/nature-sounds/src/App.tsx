@@ -7,6 +7,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
 import { useAudioEngine } from "./hooks/useAudioEngine";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
@@ -948,6 +949,7 @@ function Home() {
     return CATEGORIES.some((c) => c.id === id) ? id : CATEGORIES[0].id;
   });
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
+  const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
   const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
   const [eqMode,  setEqMode]  = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
@@ -1136,7 +1138,7 @@ function Home() {
       <img src={img("TR-bg.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
 
-      {/* Settings overlay — hides all other UI when open */}
+      {/* Settings overlay */}
       {settingsOpen && (
         <SettingsPanel
           onClose={() => setSettingsOpen(false)}
@@ -1144,6 +1146,15 @@ function Home() {
           eqBands={eqBands}
           onEqChange={handleEqChange}
           onEqBandsChange={handleEqBandsChange}
+        />
+      )}
+
+      {/* Diagnostics overlay — floats above the app */}
+      {diagOpen && !settingsOpen && (
+        <DiagnosticsPanel
+          onClose={() => setDiagOpen(false)}
+          onNotch={(freq) => engine.setNotch(freq)}
+          currentNotch={engine.notchedFreq}
         />
       )}
 
@@ -1224,6 +1235,46 @@ function Home() {
                 className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
                 style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
+              </button>
+
+              {/* Diagnostics button — rounded square with EKG waveform icon */}
+              <button
+                onClick={() => setDiagOpen(d => !d)}
+                className="flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
+                style={{
+                  width: "clamp(30px,7.5cqw,42px)",
+                  height: "clamp(30px,7.5cqw,42px)",
+                  marginLeft: "clamp(6px,1.8cqw,12px)",
+                  borderRadius: "clamp(6px,1.5cqw,9px)",
+                  background: diagOpen
+                    ? "rgba(0,255,85,0.18)"
+                    : engine.notchedFreq
+                      ? "rgba(0,180,60,0.22)"
+                      : "rgba(10,40,18,0.82)",
+                  border: diagOpen
+                    ? "1.5px solid rgba(0,255,85,0.7)"
+                    : engine.notchedFreq
+                      ? "1.5px solid rgba(0,255,85,0.4)"
+                      : "1.5px solid rgba(0,255,85,0.28)",
+                  boxShadow: diagOpen ? "0 0 10px rgba(0,255,85,0.3)" : "none",
+                }}
+                data-testid="btn-diagnostics"
+                aria-label="Tinnitus diagnostics"
+              >
+                {/* EKG waveform SVG */}
+                <svg viewBox="0 0 44 28" style={{ width: "66%", overflow: "visible" }}>
+                  <polyline
+                    points="0,14 8,14 12,4 16,24 20,9 24,19 27,14 36,14 44,14"
+                    fill="none"
+                    stroke={diagOpen ? "#00ff55" : engine.notchedFreq ? "#00dd55" : "#00cc44"}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {engine.notchedFreq && (
+                    <circle cx="40" cy="5" r="3" fill="#00ff55" />
+                  )}
+                </svg>
               </button>
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}

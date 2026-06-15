@@ -40,6 +40,8 @@ export type AudioEngineState = {
   lastPlayedId: string | null;
   startFadeOut: (durationSeconds: number) => void;
   cancelFade: () => void;
+  notchedFreq: number | null;
+  setNotch: (freq: number | null) => void;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -266,11 +268,17 @@ export function useAudioEngine(): AudioEngineState {
     }), {})
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
+  const savedNotch = localStorage.getItem("tr_notch_freq");
+  const [notchedFreq, setNotchedFreqState] = useState<number | null>(
+    savedNotch ? Number(savedNotch) : null
+  );
+  const notchedFreqRef = useRef<number | null>(savedNotch ? Number(savedNotch) : null);
 
   const contextRef      = useRef<AudioContext | null>(null);
   const masterGainRef   = useRef<GainNode | null>(null);
   const fadeGainRef     = useRef<GainNode | null>(null);
   const eqFiltersRef    = useRef<BiquadFilterNode[]>([]);
+  const notchFilterRef  = useRef<BiquadFilterNode | null>(null);
   const pendingEqRef    = useRef<number[]>([0, 0, 0, 0, 0]);
   const enginesRef      = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
@@ -369,10 +377,19 @@ export function useAudioEngine(): AudioEngineState {
         return f;
       });
       eqFiltersRef.current = filters;
-      // Chain: masterGain → eq[0..4] → fadeGain → destination
+      // Notch filter — sits between EQ and fadeGain for tinnitus therapy.
+      // Frequency is set to 22050 (inaudible) when no notch is active.
+      const notch = contextRef.current.createBiquadFilter();
+      notch.type = "notch";
+      notch.frequency.value = notchedFreqRef.current ?? 22050;
+      notch.Q.value = notchedFreqRef.current ? 20 : 0.001;
+      notchFilterRef.current = notch;
+
+      // Chain: masterGain → eq[0..4] → notch → fadeGain → destination
       let prev: AudioNode = masterGainRef.current;
       for (const f of filters) { prev.connect(f); prev = f; }
-      prev.connect(fadeGainRef.current);
+      prev.connect(notch);
+      notch.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
       setTimeout(preloadInBackground, 0);
     }
@@ -519,6 +536,25 @@ export function useAudioEngine(): AudioEngineState {
     fg.gain.setValueAtTime(1.0, t);
   }, []);
 
+  const setNotch = useCallback((freq: number | null) => {
+    notchedFreqRef.current = freq;
+    setNotchedFreqState(freq);
+    if (freq !== null) {
+      localStorage.setItem("tr_notch_freq", String(freq));
+    } else {
+      localStorage.removeItem("tr_notch_freq");
+    }
+    const n = notchFilterRef.current;
+    if (!n) return;
+    if (freq !== null) {
+      n.frequency.value = freq;
+      n.Q.value = 20;
+    } else {
+      n.frequency.value = 22050;
+      n.Q.value = 0.001;
+    }
+  }, []);
+
   // ── Effects ─────────────────────────────────────────────────────────────
 
   useEffect(() => { playRef.current   = play;   }, [play]);
@@ -579,5 +615,7 @@ export function useAudioEngine(): AudioEngineState {
     stopAll,
     startFadeOut,
     cancelFade,
+    notchedFreq,
+    setNotch,
   };
 }
