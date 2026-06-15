@@ -951,6 +951,7 @@ function Home() {
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
   const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
+  const [diagFlash,     setDiagFlash]     = useState<boolean>(false);
   const [eqMode,  setEqMode]  = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
   );
@@ -1237,44 +1238,20 @@ function Home() {
                 <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
               </button>
 
-              {/* Diagnostics button — rounded square with EKG waveform icon */}
+              {/* Diagnostics button — Diag_Butt.png graphic */}
               <button
-                onClick={() => setDiagOpen(d => !d)}
-                className="flex-shrink-0 flex items-center justify-center active:opacity-60 transition-opacity"
-                style={{
-                  width: "clamp(30px,7.5cqw,42px)",
-                  height: "clamp(30px,7.5cqw,42px)",
-                  marginLeft: "clamp(6px,1.8cqw,12px)",
-                  borderRadius: "clamp(6px,1.5cqw,9px)",
-                  background: diagOpen
-                    ? "rgba(0,255,85,0.18)"
-                    : engine.notchedFreq
-                      ? "rgba(0,180,60,0.22)"
-                      : "rgba(10,40,18,0.82)",
-                  border: diagOpen
-                    ? "1.5px solid rgba(0,255,85,0.7)"
-                    : engine.notchedFreq
-                      ? "1.5px solid rgba(0,255,85,0.4)"
-                      : "1.5px solid rgba(0,255,85,0.28)",
-                  boxShadow: diagOpen ? "0 0 10px rgba(0,255,85,0.3)" : "none",
-                }}
+                onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); setDiagOpen(d => !d); }, 160); }}
+                className="flex-shrink-0"
+                style={{ marginLeft: "clamp(4px,1.2cqw,8px)", width: "clamp(42px,10.5cqw,58px)" }}
                 data-testid="btn-diagnostics"
                 aria-label="Tinnitus diagnostics"
               >
-                {/* EKG waveform SVG */}
-                <svg viewBox="0 0 44 28" style={{ width: "66%", overflow: "visible" }}>
-                  <polyline
-                    points="0,14 8,14 12,4 16,24 20,9 24,19 27,14 36,14 44,14"
-                    fill="none"
-                    stroke={diagOpen ? "#00ff55" : engine.notchedFreq ? "#00dd55" : "#00cc44"}
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {engine.notchedFreq && (
-                    <circle cx="40" cy="5" r="3" fill="#00ff55" />
-                  )}
-                </svg>
+                <img
+                  src={diagFlash || diagOpen ? img("Diag_Butt(OnCLK).png") : img("Diag_Butt.png")}
+                  alt="Diagnostics"
+                  className="w-full h-auto block"
+                  draggable={false}
+                />
               </button>
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
