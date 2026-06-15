@@ -5,7 +5,7 @@ const img  = (name: string) => `${BASE}${name}`;
 
 const KALLISTO: React.CSSProperties = { fontFamily: "'Kallisto', sans-serif" };
 
-// ─── Frequency data (matches DiagFreqBreakdown.rtf) ───────────────────────────
+// ─── Frequency data ───────────────────────────────────────────────────────────
 
 const COARSE_FREQS = [500, 750, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000];
 
@@ -15,24 +15,25 @@ function getSubBands(freq: number): number[] {
   return Array.from({ length: 10 }, (_, i) => freq + i * 100);
 }
 
-function fmtCoarse(hz: number): { bold: string; light: string } {
-  if (hz < 1000) return { bold: `${hz}`, light: "hz" };
-  return { bold: `${hz / 1000}k`, light: "hz" };
+function fmtCoarse(hz: number): string {
+  return hz < 1000 ? `${hz} hz` : `${hz / 1000}k hz`;
 }
 
-function fmtSub(hz: number): { bold: string; light: string } {
-  if (hz < 1000) return { bold: `${hz}`, light: "hz" };
-  return { bold: `${(hz / 1000).toFixed(1)}k`, light: "hz" };
+function fmtSub(hz: number): string {
+  if (hz < 1000) return `${hz} hz`;
+  return `${(hz / 1000).toFixed(1)}k hz`;
 }
 
 // ─── Play triangle ────────────────────────────────────────────────────────────
 
 function TriPlay({ active, size = 18 }: { active: boolean; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+    <svg width={size} height={size} viewBox="0 0 20 20"
+      style={{ flexShrink: 0, display: "block" }}>
       {active
         ? <polygon points="3,2 18,10 3,18" fill="#00ff55" />
-        : <polygon points="3,2 18,10 3,18" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />}
+        : <polygon points="3,2 18,10 3,18" fill="none"
+            stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" />}
     </svg>
   );
 }
@@ -58,8 +59,8 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
   // ── Tone engine ──────────────────────────────────────────────────────────────
 
   const killOsc = useCallback(() => {
-    if (oscRef.current)  { try { oscRef.current.stop();        } catch { /* ok */ } oscRef.current.disconnect();  oscRef.current  = null; }
-    if (gainRef.current) { try { gainRef.current.disconnect(); } catch { /* ok */ } gainRef.current = null; }
+    if (oscRef.current)  { try { oscRef.current.stop();        } catch { /**/ } oscRef.current.disconnect();  oscRef.current  = null; }
+    if (gainRef.current) { try { gainRef.current.disconnect(); } catch { /**/ } gainRef.current = null; }
   }, []);
 
   const playTone = useCallback((freq: number) => {
@@ -75,9 +76,7 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
     osc.type            = "sine";
     osc.frequency.value = freq;
     g.gain.value        = 0.22;
-    osc.connect(g);
-    g.connect(ctx.destination);
-    osc.start();
+    osc.connect(g); g.connect(ctx.destination); osc.start();
     oscRef.current  = osc;
     gainRef.current = g;
     setPlayingFreq(freq);
@@ -91,70 +90,66 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
 
   useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
 
-  // ── Expand / collapse ────────────────────────────────────────────────────────
+  // ── Chevron toggle (accordion) ───────────────────────────────────────────────
+  // Only one row expanded at a time. Clicking an already-expanded row collapses it.
+  // Clicking a different row collapses the previous one and stops any tone playing.
 
-  const handleChevron    = useCallback((freq: number) => { stopTone(); setExpandedFreq(freq); }, [stopTone]);
-  const collapseToCoarse = useCallback(() =>             { stopTone(); setExpandedFreq(null); }, [stopTone]);
+  const handleChevron = useCallback((freq: number) => {
+    setExpandedFreq(prev => {
+      if (prev === freq) { return null; }   // collapse
+      stopTone();                            // stop tone when switching rows
+      return freq;                           // expand new
+    });
+  }, [stopTone]);
 
   // ── NOTCH confirm ────────────────────────────────────────────────────────────
 
   const handleNotchConfirm = () => {
-    if (notchCandidate !== null) { onNotch(notchCandidate); setNotchCandidate(null); stopTone(); onClose(); }
+    if (notchCandidate !== null) {
+      onNotch(notchCandidate);
+      setNotchCandidate(null);
+      stopTone();
+      onClose();
+    }
   };
 
-  // ── Derived list data ────────────────────────────────────────────────────────
-
-  const isExpanded   = expandedFreq !== null;
-  const expandedIdx  = isExpanded ? COARSE_FREQS.indexOf(expandedFreq!) : -1;
-  const subBands     = isExpanded ? getSubBands(expandedFreq!) : [];
-  const contextAbove = expandedIdx > 0
-    ? COARSE_FREQS.slice(Math.max(0, expandedIdx - 2), expandedIdx) : [];
-  const contextBelow = expandedIdx >= 0 && expandedIdx < COARSE_FREQS.length - 1
-    ? COARSE_FREQS.slice(expandedIdx + 1, Math.min(COARSE_FREQS.length, expandedIdx + 3)) : [];
+  const anyExpanded = expandedFreq !== null;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    /* Outermost: full-screen, no overflow-hidden so X button can poke out */
+    /* Full-screen, no overflow-hidden so X button can touch the pane corner */
     <div className="absolute inset-0 z-50">
 
       {/* Blurred background fills the screen */}
       <img src={img("homepage_BLUR.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
-      {/* Panel container — inset with margins, NOT overflow-hidden so X can spill out */}
+      {/* Panel container — inset with margins, NOT overflow-hidden */}
       <div style={{
-        position:      "absolute",
-        top:           "clamp(18px,3vh,28px)",
-        left:          "clamp(8px,2cqw,14px)",
-        right:         "clamp(8px,2cqw,14px)",
-        bottom:        "clamp(10px,2vh,20px)",
-        display:       "flex",
-        flexDirection: "column",
+        position: "absolute",
+        top:    "clamp(18px,3vh,28px)",
+        left:   "clamp(8px,2cqw,14px)",
+        right:  "clamp(8px,2cqw,14px)",
+        bottom: "clamp(10px,2vh,20px)",
+        display: "flex", flexDirection: "column",
       }}>
 
-        {/* ── X close — oversized, sticks outside the top-left corner ── */}
+        {/* ── X close — pinned to the top-left corner of the panel container,
+            physically touching the pane edge ── */}
         <button
           onClick={() => { stopTone(); onClose(); }}
           aria-label="Close"
           style={{
-            position:       "absolute",
-            top:            -20,
-            left:           -20,
-            zIndex:         10,
-            width:          52,
-            height:         52,
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-            color:          "rgba(255,255,255,0.82)",
-            fontSize:       "1.55rem",
-            lineHeight:     1,
-            ...KALLISTO,
-            fontWeight:     500,
+            position: "absolute", top: 0, left: 0, zIndex: 20,
+            width: 48, height: 48,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            ...KALLISTO, fontWeight: 500,
+            fontSize: "1.55rem", lineHeight: 1,
+            color: "rgba(255,255,255,0.85)",
           }}>✕</button>
 
-        {/* Panel card — overflow-hidden for rounded corners + bgpane graphic */}
+        {/* Panel card — overflow-hidden + rounded corners */}
         <div className="relative flex-1 flex flex-col overflow-hidden rounded-2xl">
 
           {/* Panel background image */}
@@ -162,135 +157,133 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ objectFit: "fill" }} draggable={false} />
 
-          {/* Header image — 15 px margin from every panel edge */}
-          <div className="flex-shrink-0 relative z-10">
+          {/* Header image — 65 % of panel width, centered, 12 px top margin */}
+          <div className="relative z-10 flex-shrink-0 flex justify-center"
+            style={{ marginTop: 12 }}>
             <img
-              src={img(isExpanded ? "diag_headertext_p2.png" : "diag_headertext_p1.png")}
+              src={img(anyExpanded ? "diag_headertext_p2.png" : "diag_headertext_p1.png")}
               alt=""
-              style={{ display: "block", width: "calc(100% - 30px)", margin: "15px 15px 0 15px", height: "auto" }}
+              style={{ width: "65%", height: "auto", display: "block" }}
               draggable={false}
             />
           </div>
 
-          {/* ← back link (phase 2 only) */}
-          {isExpanded && (
-            <div className="relative z-10 flex-shrink-0" style={{ padding: "6px 15px 0" }}>
-              <button onClick={collapseToCoarse}
-                style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(10px,2.5cqw,13px)", color: "rgba(0,255,85,0.6)", textDecoration: "underline" }}>
-                ← all frequencies
-              </button>
-            </div>
-          )}
-
-          {/* Frequency list — scrollable; outer centers the block, inner left-aligns items */}
+          {/* Frequency list — scrollable accordion */}
           <div className="relative z-10 flex-1 overflow-y-auto"
-            style={{ scrollbarWidth: "none", padding: "10px 15px 16px" }}>
+            style={{ scrollbarWidth: "none", padding: "10px 12px 16px" }}>
 
-            {/* Centering wrapper */}
-            <div style={{ display: "flex", justifyContent: "center", height: "100%" }}>
-              {/* Left-aligned item column, width driven by content */}
-              <div style={{ display: "flex", flexDirection: "column", gap: isExpanded ? "clamp(5px,1.4vh,9px)" : "clamp(7px,1.8vh,12px)", width: "fit-content" }}>
+            {/*
+              Centering strategy: center the inner column, but add paddingRight
+              equal to the left-side decorators (chevron + gap + triangle + gap ≈ 52px)
+              so the number labels land near the panel midpoint.
+            */}
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{
+                display: "flex", flexDirection: "column",
+                gap: "clamp(6px,1.6vh,10px)",
+                width: "fit-content",
+                paddingRight: 52,   /* offsets chevron+triangle to re-center numbers */
+              }}>
 
-                {!isExpanded ? (
-                  /* ── Phase 1: coarse list ── */
-                  <>
-                    {COARSE_FREQS.map(freq => {
-                      const active = playingFreq === freq;
-                      const { bold, light } = fmtCoarse(freq);
-                      return (
-                        <div key={freq} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {/* » expand chevron — visible only on active row */}
-                          <button
-                            onClick={() => active && handleChevron(freq)}
-                            tabIndex={active ? 0 : -1}
-                            style={{
-                              width: 24, flexShrink: 0, textAlign: "center",
-                              ...KALLISTO, fontWeight: 700,
-                              fontSize: "clamp(12px,3cqw,16px)",
-                              color: "#ffcc00",
-                              opacity: active ? 1 : 0,
-                              cursor: active ? "pointer" : "default",
-                            }}>»</button>
+                {COARSE_FREQS.map(freq => {
+                  const isActive   = playingFreq === freq;
+                  const isExpanded = expandedFreq === freq;
+                  const subs       = getSubBands(freq);
+                  const label      = fmtCoarse(freq);
 
-                          {/* Play triangle */}
-                          <button onClick={() => handleTriangle(freq)} style={{ flexShrink: 0 }}>
-                            <TriPlay active={active} size={18} />
-                          </button>
+                  return (
+                    <div key={freq}>
 
-                          {/* Label */}
-                          <span style={{ ...KALLISTO, fontSize: "clamp(14px,3.5cqw,18px)", color: active ? "#fff" : "rgba(255,255,255,0.6)" }}>
-                            <span style={{ fontWeight: 700 }}>{bold}</span>
-                            <span style={{ fontWeight: 300, fontSize: "0.78em", color: "rgba(255,255,255,0.38)", marginLeft: 1 }}>{light}</span>
-                          </span>
+                      {/* ── Coarse row ── */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+                        {/* Chevron — always visible; rotates on expand */}
+                        <button
+                          onClick={() => handleChevron(freq)}
+                          style={{
+                            flexShrink: 0,
+                            width: 28, height: 28,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "clamp(18px,4.5cqw,24px)",
+                            lineHeight: 1,
+                            color: isExpanded ? "#ffcc00" : "rgba(255,255,255,0.45)",
+                            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                            transition: "transform 0.25s ease, color 0.2s ease",
+                            ...KALLISTO, fontWeight: 700,
+                          }}>›</button>
+
+                        {/* Play area — triangle + label, whole thing is one tap target */}
+                        <button
+                          onClick={() => handleTriangle(freq)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8,
+                            cursor: "pointer",
+                          }}>
+                          <TriPlay active={isActive} size={18} />
+                          <span style={{
+                            ...KALLISTO,
+                            fontSize: "clamp(14px,3.5cqw,18px)",
+                            fontWeight: isActive ? 700 : 400,
+                            color: isActive ? "#00ff55" : "rgba(255,255,255,0.62)",
+                            letterSpacing: "0.01em",
+                          }}>{label}</span>
+                        </button>
+
+                      </div>
+
+                      {/* ── Sub-bands — accordion with max-height transition ── */}
+                      <div style={{
+                        maxHeight: isExpanded ? `${subs.length * 38}px` : "0px",
+                        overflow: "hidden",
+                        transition: "max-height 0.28s ease",
+                      }}>
+                        <div style={{ paddingTop: 4, paddingBottom: 2,
+                          display: "flex", flexDirection: "column", gap: "clamp(4px,1vh,7px)" }}>
+                          {subs.map(sf => {
+                            const sfActive = playingFreq === sf;
+                            return (
+                              <div key={sf}
+                                style={{ display: "flex", alignItems: "center", gap: 8,
+                                  paddingLeft: 34 /* one tab indent */ }}>
+
+                                {/* Full row is tap target */}
+                                <button
+                                  onClick={() => handleTriangle(sf)}
+                                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                  <TriPlay active={sfActive} size={15} />
+                                  <span style={{
+                                    ...KALLISTO,
+                                    fontSize: "clamp(12px,3cqw,15px)",
+                                    fontWeight: sfActive ? 700 : 400,
+                                    color: sfActive ? "#00ff55" : "rgba(255,255,255,0.58)",
+                                  }}>{fmtSub(sf)}</span>
+                                </button>
+
+                                {sfActive && (
+                                  <button
+                                    onClick={() => setNotchCandidate(sf)}
+                                    style={{
+                                      display: "flex", alignItems: "center", gap: 3,
+                                      flexShrink: 0,
+                                      ...KALLISTO, fontWeight: 700,
+                                      fontSize: "clamp(9px,2.2cqw,12px)",
+                                      color: "#ffcc00",
+                                    }}>
+                                    NOTCH
+                                    <svg width="7" height="7" viewBox="0 0 20 20">
+                                      <polygon points="3,2 18,10 3,18" fill="#ffcc00" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </>
-                ) : (
-                  /* ── Phase 2: expanded sub-bands ── */
-                  <>
-                    {/* Context above */}
-                    {contextAbove.map(freq => {
-                      const { bold, light } = fmtCoarse(freq);
-                      return (
-                        <div key={freq} style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.35 }}>
-                          <div style={{ width: 24, flexShrink: 0 }} />
-                          <button onClick={() => { collapseToCoarse(); setTimeout(() => playTone(freq), 40); }} style={{ flexShrink: 0 }}>
-                            <TriPlay active={false} size={16} />
-                          </button>
-                          <span style={{ ...KALLISTO, fontSize: "clamp(12px,3cqw,15px)", color: "#fff" }}>
-                            <span style={{ fontWeight: 700 }}>{bold}</span>
-                            <span style={{ fontWeight: 300, marginLeft: 4, opacity: 0.5 }}>{light}</span>
-                          </span>
-                        </div>
-                      );
-                    })}
+                      </div>
 
-                    {/* Sub-bands */}
-                    {subBands.map(freq => {
-                      const active = playingFreq === freq;
-                      const { bold, light } = fmtSub(freq);
-                      return (
-                        <div key={freq} style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 22 }}>
-                          <button onClick={() => handleTriangle(freq)} style={{ flexShrink: 0 }}>
-                            <TriPlay active={active} size={18} />
-                          </button>
-                          <span style={{ ...KALLISTO, fontSize: "clamp(14px,3.5cqw,18px)", color: active ? "#fff" : "rgba(255,255,255,0.6)" }}>
-                            <span style={{ fontWeight: 700 }}>{bold}</span>
-                            <span style={{ fontWeight: 300, fontSize: "0.78em", color: "rgba(255,255,255,0.38)", marginLeft: 1 }}>{light}</span>
-                          </span>
-                          {active && (
-                            <button
-                              onClick={() => setNotchCandidate(freq)}
-                              style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5cqw,13px)", color: "#ffcc00" }}>
-                              NOTCH
-                              <svg width="8" height="8" viewBox="0 0 20 20">
-                                <polygon points="3,2 18,10 3,18" fill="#ffcc00" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Context below */}
-                    {contextBelow.map(freq => {
-                      const { bold, light } = fmtCoarse(freq);
-                      return (
-                        <div key={freq} style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.35 }}>
-                          <div style={{ width: 24, flexShrink: 0 }} />
-                          <button onClick={() => { collapseToCoarse(); setTimeout(() => playTone(freq), 40); }} style={{ flexShrink: 0 }}>
-                            <TriPlay active={false} size={16} />
-                          </button>
-                          <span style={{ ...KALLISTO, fontSize: "clamp(12px,3cqw,15px)", color: "#fff" }}>
-                            <span style={{ fontWeight: 700 }}>{bold}</span>
-                            <span style={{ fontWeight: 300, marginLeft: 4, opacity: 0.5 }}>{light}</span>
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
+                    </div>
+                  );
+                })}
 
               </div>
             </div>
@@ -300,21 +293,21 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
 
       {/* ── NOTCH confirmation popup ── */}
       {notchCandidate !== null && (() => {
-        const { bold, light } = fmtSub(notchCandidate);
+        const label = fmtSub(notchCandidate);
         return (
           <div className="absolute inset-0 z-60 flex items-end justify-center"
-            style={{ paddingBottom: "clamp(40px,8vh,80px)", paddingLeft: "clamp(8px,2cqw,14px)", paddingRight: "clamp(8px,2cqw,14px)" }}>
+            style={{
+              paddingBottom: "clamp(40px,8vh,80px)",
+              paddingLeft:   "clamp(8px,2cqw,14px)",
+              paddingRight:  "clamp(8px,2cqw,14px)",
+            }}>
             <div className="relative w-full" style={{ maxWidth: 420 }}>
-
-              {/* Popup panel with burned-in text */}
               <img src={img("diag_pane2+txt.png")} alt=""
                 className="w-full h-auto block" draggable={false} />
 
-              {/* Buttons — bottom ~17% of popup image */}
               <div className="absolute left-0 right-0 flex"
                 style={{ bottom: "8%", gap: "clamp(8px,2cqw,14px)", padding: "0 clamp(14px,3.5cqw,24px)" }}>
 
-                {/* Cancel */}
                 <button
                   onClick={() => setNotchCandidate(null)}
                   className="flex-1 flex items-center justify-center"
@@ -323,11 +316,8 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
                     background: "rgba(90,90,90,0.65)", color: "rgba(255,255,255,0.75)",
                     border: "1px solid rgba(255,255,255,0.15)",
                     ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.8cqw,14px)",
-                  }}>
-                  cancel
-                </button>
+                  }}>cancel</button>
 
-                {/* Notch confirm */}
                 <button
                   onClick={handleNotchConfirm}
                   onPointerDown={() => setButtPressed(true)}
@@ -336,10 +326,11 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
                   className="relative flex-1 flex items-center justify-center overflow-hidden"
                   style={{ height: "clamp(34px,5vh,46px)", borderRadius: 8 }}>
                   <img src={img(buttPressed ? "diag_pane2Butt(OnCLK).png" : "diag_pane2Butt.png")}
-                    alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
+                    alt="" className="absolute inset-0 w-full h-full"
+                    style={{ objectFit: "fill" }} draggable={false} />
                   <span className="relative z-10"
                     style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8cqw,14px)", color: "#00ff55" }}>
-                    ✓ notch {bold}{light}
+                    ✓ notch {label}
                   </span>
                 </button>
 
