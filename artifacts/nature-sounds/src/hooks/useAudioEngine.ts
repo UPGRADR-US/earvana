@@ -382,7 +382,9 @@ export function useAudioEngine(): AudioEngineState {
       const notch = contextRef.current.createBiquadFilter();
       notch.type = "notch";
       notch.frequency.value = notchedFreqRef.current ?? 22050;
-      notch.Q.value = notchedFreqRef.current ? 20 : 0.001;
+      // Q=1000 → bandwidth = 22050/1000 = 22 Hz — effectively bypassed when inactive.
+      // Q=30  → bandwidth = freq/30 — tight therapeutic notch when active.
+      notch.Q.value = notchedFreqRef.current ? 30 : 1000;
       notchFilterRef.current = notch;
 
       // Chain: masterGain → eq[0..4] → notch → fadeGain → destination
@@ -548,10 +550,10 @@ export function useAudioEngine(): AudioEngineState {
     if (!n) return;
     if (freq !== null) {
       n.frequency.value = freq;
-      n.Q.value = 20;
+      n.Q.value = 30;   // tight therapeutic notch, bandwidth = freq/30
     } else {
       n.frequency.value = 22050;
-      n.Q.value = 0.001;
+      n.Q.value = 1000; // effectively bypassed — 22 Hz bandwidth at inaudible freq
     }
   }, []);
 

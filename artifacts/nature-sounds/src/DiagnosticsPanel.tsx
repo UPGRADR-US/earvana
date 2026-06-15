@@ -90,16 +90,11 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
 
   useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
 
-  // ── Chevron toggle (accordion) ───────────────────────────────────────────────
-  // Only one row expanded at a time. Clicking an already-expanded row collapses it.
-  // Clicking a different row collapses the previous one and stops any tone playing.
+  // ── Accordion — always stops tone; one row expanded at a time ────────────────
 
   const handleChevron = useCallback((freq: number) => {
-    setExpandedFreq(prev => {
-      if (prev === freq) { return null; }   // collapse
-      stopTone();                            // stop tone when switching rows
-      return freq;                           // expand new
-    });
+    stopTone();  // always stop tone on any chevron tap (#5)
+    setExpandedFreq(prev => prev === freq ? null : freq);
   }, [stopTone]);
 
   // ── NOTCH confirm ────────────────────────────────────────────────────────────
@@ -118,14 +113,13 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    /* Full-screen, no overflow-hidden so X button can touch the pane corner */
     <div className="absolute inset-0 z-50">
 
       {/* Blurred background fills the screen */}
       <img src={img("homepage_BLUR.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
-      {/* Panel container — inset with margins, NOT overflow-hidden */}
+      {/* Panel container — inset with margins; NOT overflow-hidden so X can sit on corner */}
       <div style={{
         position: "absolute",
         top:    "clamp(18px,3vh,28px)",
@@ -135,8 +129,7 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
         display: "flex", flexDirection: "column",
       }}>
 
-        {/* ── X close — pinned to the top-left corner of the panel container,
-            physically touching the pane edge ── */}
+        {/* ── X close — top-left corner of panel container, touching the pane ── */}
         <button
           onClick={() => { stopTone(); onClose(); }}
           aria-label="Close"
@@ -149,21 +142,26 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
             color: "rgba(255,255,255,0.85)",
           }}>✕</button>
 
-        {/* Panel card — overflow-hidden + rounded corners */}
+        {/* Panel card */}
         <div className="relative flex-1 flex flex-col overflow-hidden rounded-2xl">
 
-          {/* Panel background image */}
+          {/* Panel background image — bgpane1 is the sizing reference for all padding */}
           <img src={img("diag_bgpane1.png")} alt=""
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ objectFit: "fill" }} draggable={false} />
 
-          {/* Header image — 65 % of panel width, centered, 12 px top margin */}
+          {/*
+            Header image — all spacing is relative to diag_bgpane1:
+            - marginTop: 27px (15 px extra below pane top edge as requested)
+            - width: 80% (split the difference between 65% and original 100%)
+            - centered horizontally within the pane
+          */}
           <div className="relative z-10 flex-shrink-0 flex justify-center"
-            style={{ marginTop: 12 }}>
+            style={{ marginTop: 27 }}>
             <img
               src={img(anyExpanded ? "diag_headertext_p2.png" : "diag_headertext_p1.png")}
               alt=""
-              style={{ width: "65%", height: "auto", display: "block" }}
+              style={{ width: "80%", height: "auto", display: "block" }}
               draggable={false}
             />
           </div>
@@ -173,23 +171,22 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
             style={{ scrollbarWidth: "none", padding: "10px 12px 16px" }}>
 
             {/*
-              Centering strategy: center the inner column, but add paddingRight
-              equal to the left-side decorators (chevron + gap + triangle + gap ≈ 52px)
-              so the number labels land near the panel midpoint.
+              Center the column; paddingRight offsets left-side decorators so the
+              number labels land near the panel midpoint.
+              paddingRight is reserved even when NOTCH is hidden so layout never jumps.
             */}
             <div style={{ display: "flex", justifyContent: "center" }}>
               <div style={{
                 display: "flex", flexDirection: "column",
                 gap: "clamp(6px,1.6vh,10px)",
                 width: "fit-content",
-                paddingRight: 52,   /* offsets chevron+triangle to re-center numbers */
+                paddingRight: 52,
               }}>
 
                 {COARSE_FREQS.map(freq => {
                   const isActive   = playingFreq === freq;
                   const isExpanded = expandedFreq === freq;
                   const subs       = getSubBands(freq);
-                  const label      = fmtCoarse(freq);
 
                   return (
                     <div key={freq}>
@@ -197,55 +194,54 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
                       {/* ── Coarse row ── */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
 
-                        {/* Chevron — always visible; rotates on expand */}
+                        {/* Chevron — 50% bigger (#2), always visible, rotates on expand */}
                         <button
                           onClick={() => handleChevron(freq)}
                           style={{
                             flexShrink: 0,
-                            width: 28, height: 28,
+                            width: 32, height: 32,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "clamp(18px,4.5cqw,24px)",
+                            fontSize: "clamp(27px,6.75cqw,36px)",
                             lineHeight: 1,
-                            color: isExpanded ? "#ffcc00" : "rgba(255,255,255,0.45)",
+                            color: isExpanded ? "#ffcc00" : "rgba(255,255,255,0.5)",
                             transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                             transition: "transform 0.25s ease, color 0.2s ease",
                             ...KALLISTO, fontWeight: 700,
                           }}>›</button>
 
-                        {/* Play area — triangle + label, whole thing is one tap target */}
+                        {/* Play area — triangle + label as single tap target (#4) */}
                         <button
                           onClick={() => handleTriangle(freq)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            cursor: "pointer",
-                          }}>
+                          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                           <TriPlay active={isActive} size={18} />
                           <span style={{
                             ...KALLISTO,
                             fontSize: "clamp(14px,3.5cqw,18px)",
                             fontWeight: isActive ? 700 : 400,
                             color: isActive ? "#00ff55" : "rgba(255,255,255,0.62)",
-                            letterSpacing: "0.01em",
-                          }}>{label}</span>
+                          }}>{fmtCoarse(freq)}</span>
                         </button>
 
                       </div>
 
-                      {/* ── Sub-bands — accordion with max-height transition ── */}
+                      {/* ── Sub-bands — accordion with animated max-height ── */}
                       <div style={{
                         maxHeight: isExpanded ? `${subs.length * 38}px` : "0px",
                         overflow: "hidden",
                         transition: "max-height 0.28s ease",
                       }}>
-                        <div style={{ paddingTop: 4, paddingBottom: 2,
-                          display: "flex", flexDirection: "column", gap: "clamp(4px,1vh,7px)" }}>
+                        <div style={{
+                          paddingTop: 4, paddingBottom: 2,
+                          display: "flex", flexDirection: "column",
+                          gap: "clamp(4px,1vh,7px)",
+                        }}>
                           {subs.map(sf => {
                             const sfActive = playingFreq === sf;
                             return (
-                              <div key={sf}
-                                style={{ display: "flex", alignItems: "center", gap: 8,
-                                  paddingLeft: 34 /* one tab indent */ }}>
-
+                              <div key={sf} style={{
+                                display: "flex", alignItems: "center",
+                                paddingLeft: 34,  /* tab indent (#4) */
+                              }}>
                                 {/* Full row is tap target */}
                                 <button
                                   onClick={() => handleTriangle(sf)}
@@ -259,22 +255,24 @@ export function DiagnosticsPanel({ onClose, onNotch }: Props) {
                                   }}>{fmtSub(sf)}</span>
                                 </button>
 
-                                {sfActive && (
-                                  <button
-                                    onClick={() => setNotchCandidate(sf)}
-                                    style={{
-                                      display: "flex", alignItems: "center", gap: 3,
-                                      flexShrink: 0,
-                                      ...KALLISTO, fontWeight: 700,
-                                      fontSize: "clamp(9px,2.2cqw,12px)",
-                                      color: "#ffcc00",
-                                    }}>
-                                    NOTCH
-                                    <svg width="7" height="7" viewBox="0 0 20 20">
-                                      <polygon points="3,2 18,10 3,18" fill="#ffcc00" />
-                                    </svg>
-                                  </button>
-                                )}
+                                {/* NOTCH — always rendered for stable width (#3);
+                                    visibility:hidden reserves space without layout jump */}
+                                <button
+                                  onClick={() => sfActive && setNotchCandidate(sf)}
+                                  style={{
+                                    marginLeft: 15,  /* extra separation (#4) */
+                                    visibility: sfActive ? "visible" : "hidden",
+                                    display: "flex", alignItems: "center", gap: 3,
+                                    flexShrink: 0,
+                                    ...KALLISTO, fontWeight: 700,
+                                    fontSize: "clamp(9px,2.2cqw,12px)",
+                                    color: "#ffcc00",
+                                  }}>
+                                  NOTCH
+                                  <svg width="7" height="7" viewBox="0 0 20 20">
+                                    <polygon points="3,2 18,10 3,18" fill="#ffcc00" />
+                                  </svg>
+                                </button>
                               </div>
                             );
                           })}
