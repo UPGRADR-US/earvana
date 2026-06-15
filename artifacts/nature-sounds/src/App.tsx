@@ -1227,7 +1227,7 @@ function Home() {
             {/* Icon row — Speaker pinned left, Sprocket pinned right,
                 Play+EQ absolutely centred as a pair. */}
             <div className="relative flex items-center"
-              style={{ paddingLeft: "clamp(12px,3cqw,22px)", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
+              style={{ paddingLeft: "15px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
@@ -1242,7 +1242,7 @@ function Home() {
               <button
                 onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); setDiagOpen(d => !d); }, 160); }}
                 className="flex-shrink-0"
-                style={{ marginLeft: "clamp(4px,1.2cqw,8px)", width: "clamp(42px,10.5cqw,58px)" }}
+                style={{ marginLeft: "calc(clamp(4px,1.2cqw,8px) + 20px)", width: "clamp(74px,18.5cqw,100px)" }}
                 data-testid="btn-diagnostics"
                 aria-label="Tinnitus diagnostics"
               >
