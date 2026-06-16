@@ -5,6 +5,8 @@ const img  = (name: string) => `${BASE}${name}`;
 
 const KALLISTO: React.CSSProperties = { fontFamily: "'Kallisto', sans-serif" };
 
+const WIPE_MS = 340;
+
 // ─── Frequency bands ──────────────────────────────────────────────────────────
 
 const BANDS = [
@@ -88,14 +90,16 @@ function TriFilled({ color = "#00ff55", size = 16 }: { color?: string; size?: nu
     </svg>
   );
 }
+
+// Chevron — 50% larger than original 15px → 22px
 function Chevron({ expanded }: { expanded: boolean }) {
   return expanded
     ? (
-      <svg width={15} height={15} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+      <svg width={22} height={22} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
         <polygon points="2,4 18,4 10,17" fill="#b8d730" />
       </svg>
     ) : (
-      <svg width={15} height={15} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+      <svg width={22} height={22} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
         <polygon points="3,2 18,10 3,18" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" />
       </svg>
     );
@@ -118,6 +122,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   const [notchCandidate, setNotchCandidate]  = useState<number | null>(null);
   const [toneLevel,      setToneLevel]       = useState(3);
   const [confirmPress,   setConfirmPress]    = useState(false);
+
+  // onClick-state for wipe-trigger buttons
+  const [startPressed, setStartPressed] = useState(false);
+  const [backPressed,  setBackPressed]  = useState(false);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const oscRef = useRef<OscillatorNode | null>(null);
@@ -148,7 +156,6 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
   const stopTone = useCallback(() => { killOsc(); setPlayingFreq(null); }, [killOsc]);
 
-  // Live gain update when slider moves while tone plays
   useEffect(() => { if (gRef.current) gRef.current.gain.value = ledGain(toneLevel); }, [toneLevel]);
   useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
 
@@ -171,28 +178,55 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   };
 
   const handleClose = () => { stopTone(); onClose(); };
-  const handleBack  = () => { stopTone(); setPage(1); setExpandedBand(null); };
+
+  const handleStartTest = () => { setPage(2); };
+
+  const handleBack = () => {
+    stopTone();
+    setPage(1);
+    setExpandedBand(null);
+  };
+
+  // ── Carousel translateX values ────────────────────────────────────────────
+  // P1: 0% when active, -100% when p2 is active (slides left)
+  // P2: 100% when inactive (waits right), 0% when active (slides in)
+  const p1X = page === 1 ? "0%"    : "-100%";
+  const p2X = page === 2 ? "0%"    : "100%";
+  const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="absolute inset-0 z-50">
 
+      {/* Injected keyframes — rendered once into DOM */}
+      <style>{`
+        @keyframes diagScaleIn {
+          0%   { transform: scale(0);    opacity: 0; }
+          72%  { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1);    opacity: 1; }
+        }
+      `}</style>
+
       {/* Full-screen blurred background */}
       <img src={img("homepage_BLUR.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
-      {/* Panel container — inset with generous margins */}
+      {/* ── Panel container ─────────────────────────────────────────────────
+          overflow:hidden clips the off-screen carousel page.
+          animation: scale-up on mount with exponential-out spring curve.     */}
       <div style={{
         position: "absolute",
         top:    "clamp(50px,8vh,72px)",
         left:   "clamp(24px,5.5cqw,36px)",
         right:  "clamp(24px,5.5cqw,36px)",
         bottom: "clamp(50px,7vh,72px)",
-        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.70)",
+        animation: "diagScaleIn 0.44s cubic-bezier(0.16,1,0.3,1) both",
       }}>
 
-        {/* X — sits on top-left corner of panel container */}
+        {/* X — always visible above carousel */}
         <button onClick={handleClose} aria-label="Close" style={{
           position: "absolute", top: 0, left: 0, zIndex: 20,
           width: 48, height: 48,
@@ -201,172 +235,195 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
           color: "rgba(255,255,255,0.85)",
         }}>✕</button>
 
-        {/* ════════════════ PAGE 1 — Intro ════════════════════════════════ */}
-        {page === 1 && (
-          // drop-shadow follows the PNG's own transparent corners/edges
-          <div style={{ flex: 1, position: "relative", filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.75))" }}>
+        {/* ══════════════════════════════════════════════════════════════════
+            PAGE 1 — Intro (slides out left on → P2)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div style={{
+          position: "absolute", inset: 0,
+          transform: `translateX(${p1X})`,
+          transition: wipeTx,
+          willChange: "transform",
+        }}>
+          <img src={img("diag_pane1+txt.png")} alt=""
+            style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
+            draggable={false} />
 
-            {/* Pane image — has rounded corners, text, and glass effect baked in.
-                objectFit:fill stretches to card dimensions without CSS corner clipping. */}
-            <img src={img("diag_pane1+txt.png")} alt=""
-              style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false} />
-
-            {/* START TEST — overlaid in code near bottom of transparent interior */}
-            <button
-              onClick={() => setPage(2)}
-              style={{
-                position: "absolute", bottom: "6%", left: "50%",
-                transform: "translateX(-50%)",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                zIndex: 10,
-                ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em", color: "#7dc93a",
-              }}>
-              <span style={{ fontSize: "clamp(12px,3cqw,15px)" }}>START TEST</span>
-              <span style={{ fontSize: "clamp(14px,3.5cqw,18px)", lineHeight: 1 }}>»</span>
-            </button>
-          </div>
-        )}
-
-        {/* ════════════════ PAGE 2 — Frequency list ═══════════════════════ */}
-        {page === 2 && (
-          <div style={{ flex: 1, position: "relative", filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.75))" }}>
-
-            {/* Pane image — header + dividers baked in, interior transparent */}
-            <img src={img("diag_pane2+txt.png")} alt=""
-              style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false} />
-
-            {/* ── Scrollable frequency list — between the two burned-in dividers
-                  Top divider ≈ 24% from top of card
-                  Bottom divider ≈ 88% from top → bottom zone = 12%            ── */}
-            <div style={{
-              position: "absolute",
-              top: "24%", bottom: "12%",
-              left: 0, right: 36,
-              overflowY: "auto",
-              scrollbarWidth: "none",
-              padding: "4px 8px 4px 14px",
+          {/* START TEST — overlaid in code */}
+          <button
+            onPointerDown={() => setStartPressed(true)}
+            onPointerUp={() => setStartPressed(false)}
+            onPointerLeave={() => setStartPressed(false)}
+            onClick={handleStartTest}
+            style={{
+              position: "absolute", bottom: "6%", left: "50%",
+              transform: "translateX(-50%)",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              zIndex: 10,
+              ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
+              // onClick glow state: brighter lime + radiating text-shadow
+              color: startPressed ? "#e8ff80" : "#7dc93a",
+              textShadow: startPressed
+                ? "0 0 8px #b8ff40, 0 0 20px #90e020, 0 0 40px #60c000"
+                : "none",
+              transition: "color 0.08s, text-shadow 0.08s",
             }}>
-              {BANDS.map(band => {
-                const subs       = getSubBands(band);
-                const isExpanded = expandedBand === band.label;
+            <span style={{ fontSize: "clamp(12px,3cqw,15px)" }}>START TEST</span>
+            {/* Chevron — 50% bigger than the previous 15px */}
+            <svg width={22} height={22} viewBox="0 0 20 20"
+              style={{ marginTop: 1 }}>
+              <polygon points="2,4 18,4 10,17"
+                fill={startPressed ? "#e8ff80" : "#7dc93a"}
+                style={{ filter: startPressed ? "drop-shadow(0 0 4px #a0e030)" : "none" }} />
+            </svg>
+          </button>
+        </div>
 
-                return (
-                  <div key={band.label}>
+        {/* ══════════════════════════════════════════════════════════════════
+            PAGE 2 — Frequency list (enters from right on P1 → )
+        ══════════════════════════════════════════════════════════════════ */}
+        <div style={{
+          position: "absolute", inset: 0,
+          transform: `translateX(${p2X})`,
+          transition: wipeTx,
+          willChange: "transform",
+        }}>
+          <img src={img("diag_pane2+txt.png")} alt=""
+            style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
+            draggable={false} />
 
-                    {/* Parent row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
-                      <button onClick={() => handleChevron(band.label)} style={{
-                        flexShrink: 0, width: 26, height: 26,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        <Chevron expanded={isExpanded} />
-                      </button>
+          {/* Scrollable frequency list — between burned-in dividers */}
+          <div style={{
+            position: "absolute",
+            top: "24%", bottom: "12%",
+            left: 0, right: 36,
+            overflowY: "auto",
+            scrollbarWidth: "none",
+            padding: "4px 8px 4px 14px",
+          }}>
+            {BANDS.map(band => {
+              const subs       = getSubBands(band);
+              const isExpanded = expandedBand === band.label;
 
-                      <button onClick={() => handleTriangle(band.base)}
-                        style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                        {playingFreq === band.base
-                          ? <TriFilled color="#00ff55" size={16} />
-                          : <TriOutline size={16} />}
-                        <span style={{
-                          ...KALLISTO,
-                          fontSize: "clamp(13px,3.2cqw,16px)",
-                          fontWeight: playingFreq === band.base ? 700 : 300,
-                          color: playingFreq === band.base ? "#00ff55" : "rgba(255,255,255,0.75)",
-                        }}>{band.label}</span>
-                      </button>
-                    </div>
+              return (
+                <div key={band.label}>
 
-                    {/* Sub-bands accordion */}
-                    <div style={{
-                      maxHeight: isExpanded ? `${subs.length * 34}px` : "0px",
-                      overflow: "hidden",
-                      transition: "max-height 0.28s ease",
+                  {/* Parent row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
+                    <button onClick={() => handleChevron(band.label)} style={{
+                      flexShrink: 0, width: 30, height: 30,
+                      display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 4 }}>
-                        {subs.map(sf => {
-                          const sfPlaying = playingFreq === sf;
-                          const sfNotched = currentNotch === sf;
-                          return (
-                            <div key={sf} style={{
-                              display: "flex", alignItems: "center",
-                              borderRadius: sfNotched ? 5 : 0,
-                              background: sfNotched ? "rgba(184,154,42,0.18)" : "transparent",
-                              padding: "2px 4px 2px 38px",
-                            }}>
-                              {/* (notched) label — space reserved so no layout jump */}
-                              <span style={{
-                                ...KALLISTO, fontSize: "clamp(7.5px,1.85cqw,10px)",
-                                fontWeight: 300, color: "#b89a2a",
-                                marginRight: sfNotched ? 4 : 0,
-                                visibility: sfNotched ? "visible" : "hidden",
-                                width: sfNotched ? "auto" : 0,
-                                overflow: "hidden", flexShrink: 0,
-                              }}>( notched )</span>
+                      <Chevron expanded={isExpanded} />
+                    </button>
 
-                              {/* Play */}
-                              <button onClick={() => handleTriangle(sf)}
-                                style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {sfPlaying ? <TriFilled color="#00ff55" size={13} /> : <TriOutline size={13} />}
-                                <span style={{
-                                  ...KALLISTO,
-                                  fontSize: "clamp(11px,2.7cqw,14px)",
-                                  fontWeight: sfPlaying ? 700 : 300,
-                                  color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
-                                }}>{fmtSub(sf)}</span>
-                              </button>
-
-                              {/* NOTCH / RESET */}
-                              <div style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0 }}>
-                                {sfNotched ? (
-                                  <button onClick={() => onNotch(null)} style={{
-                                    display: "flex", alignItems: "center", gap: 3,
-                                    ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(8px,2cqw,11px)", color: "#b89a2a",
-                                  }}>reset <TriFilled color="#b89a2a" size={10} /></button>
-                                ) : (
-                                  <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
-                                    display: "flex", alignItems: "center", gap: 3,
-                                    visibility: sfPlaying ? "visible" : "hidden",
-                                    ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(8px,2cqw,11px)", color: "#ffcc00",
-                                  }}>NOTCH <TriFilled color="#ffcc00" size={10} /></button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
+                    <button onClick={() => handleTriangle(band.base)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                      {playingFreq === band.base
+                        ? <TriFilled color="#00ff55" size={16} />
+                        : <TriOutline size={16} />}
+                      <span style={{
+                        ...KALLISTO,
+                        fontSize: "clamp(13px,3.2cqw,16px)",
+                        fontWeight: playingFreq === band.base ? 700 : 300,
+                        color: playingFreq === band.base ? "#00ff55" : "rgba(255,255,255,0.75)",
+                      }}>{band.label}</span>
+                    </button>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* LED tone volume — right column, between dividers */}
-            <div style={{
-              position: "absolute",
-              top: "24%", bottom: "12%",
-              right: 4, width: 32,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "8px 0",
-            }}>
-              <LedSlider level={toneLevel} onChange={setToneLevel} />
-            </div>
+                  {/* Sub-bands accordion */}
+                  <div style={{
+                    maxHeight: isExpanded ? `${subs.length * 34}px` : "0px",
+                    overflow: "hidden",
+                    transition: "max-height 0.28s ease",
+                  }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 4 }}>
+                      {subs.map(sf => {
+                        const sfPlaying = playingFreq === sf;
+                        const sfNotched = currentNotch === sf;
+                        return (
+                          <div key={sf} style={{
+                            display: "flex", alignItems: "center",
+                            borderRadius: sfNotched ? 5 : 0,
+                            background: sfNotched ? "rgba(184,154,42,0.18)" : "transparent",
+                            padding: "2px 4px 2px 38px",
+                          }}>
+                            <span style={{
+                              ...KALLISTO, fontSize: "clamp(7.5px,1.85cqw,10px)",
+                              fontWeight: 300, color: "#b89a2a",
+                              marginRight: sfNotched ? 4 : 0,
+                              visibility: sfNotched ? "visible" : "hidden",
+                              width: sfNotched ? "auto" : 0,
+                              overflow: "hidden", flexShrink: 0,
+                            }}>( notched )</span>
 
-            {/* Back button — below bottom divider */}
-            <button onClick={handleBack} style={{
+                            <button onClick={() => handleTriangle(sf)}
+                              style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {sfPlaying ? <TriFilled color="#00ff55" size={13} /> : <TriOutline size={13} />}
+                              <span style={{
+                                ...KALLISTO,
+                                fontSize: "clamp(11px,2.7cqw,14px)",
+                                fontWeight: sfPlaying ? 700 : 300,
+                                color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
+                              }}>{fmtSub(sf)}</span>
+                            </button>
+
+                            <div style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0 }}>
+                              {sfNotched ? (
+                                <button onClick={() => onNotch(null)} style={{
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  ...KALLISTO, fontWeight: 700,
+                                  fontSize: "clamp(8px,2cqw,11px)", color: "#b89a2a",
+                                }}>reset <TriFilled color="#b89a2a" size={10} /></button>
+                              ) : (
+                                <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  visibility: sfPlaying ? "visible" : "hidden",
+                                  ...KALLISTO, fontWeight: 700,
+                                  fontSize: "clamp(8px,2cqw,11px)", color: "#ffcc00",
+                                }}>NOTCH <TriFilled color="#ffcc00" size={10} /></button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
+
+          {/* LED tone volume — right column */}
+          <div style={{
+            position: "absolute",
+            top: "24%", bottom: "12%",
+            right: 4, width: 32,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "8px 0",
+          }}>
+            <LedSlider level={toneLevel} onChange={setToneLevel} />
+          </div>
+
+          {/* Back button — below bottom divider */}
+          <button
+            onPointerDown={() => setBackPressed(true)}
+            onPointerUp={() => setBackPressed(false)}
+            onPointerLeave={() => setBackPressed(false)}
+            onClick={handleBack}
+            style={{
               position: "absolute", bottom: "3%", left: 14, zIndex: 10,
               ...KALLISTO, fontWeight: 700,
               fontSize: "clamp(11px,2.7cqw,13px)",
-              color: "#b89a2a", letterSpacing: "0.04em",
+              letterSpacing: "0.04em",
+              color: backPressed ? "#ffe880" : "#b89a2a",
+              textShadow: backPressed
+                ? "0 0 8px #ffd040, 0 0 20px #c09010, 0 0 40px #806000"
+                : "none",
+              transition: "color 0.08s, text-shadow 0.08s",
             }}>«« back</button>
 
-          </div>
-        )}
-
+        </div>
       </div>
 
       {/* ── NOTCH confirmation dialog ── */}
