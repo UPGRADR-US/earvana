@@ -325,7 +325,12 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                       </button>
                       <button onClick={() => handleTriangle(band.base)}
                         style={{ display: "flex", alignItems: "center" }}>
-                        {bPlaying
+                        {isExpanded
+                          // expanded → down-pointing green triangle
+                          ? <div style={{ transform: "rotate(90deg)", display: "flex" }}>
+                              <TriFilled color="#00ff55" size={14} />
+                            </div>
+                          : bPlaying
                           ? <TriFilled color="#00ff55" size={14} />
                           : <TriOutline size={14} />}
                       </button>
@@ -338,18 +343,19 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                       <span style={{
                         ...KALLISTO,
                         fontSize: "clamp(13px,3.2cqw,16px)",
-                        fontWeight: bPlaying ? 700 : 300,
-                        color: bPlaying ? "#00ff55" : "rgba(255,255,255,0.75)",
+                        fontWeight: (bPlaying || isExpanded) ? 700 : 300,
+                        color: (bPlaying || isExpanded) ? "#00ff55" : "rgba(255,255,255,0.75)",
                       }}>{band.label}</span>
                     </button>
 
                   </div>
 
-                  {/* ── Sub-bands accordion ── */}
+                  {/* ── Sub-bands accordion — indented right ── */}
                   <div style={{
                     maxHeight: isExpanded ? `${subs.length * 34}px` : "0px",
                     overflow: "hidden",
                     transition: "max-height 0.28s ease",
+                    paddingLeft: "16%",
                   }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 4 }}>
                       {subs.map(sf => {
@@ -391,7 +397,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
                               </button>
-                              <div style={{ marginLeft: "auto", paddingLeft: 6, flexShrink: 0 }}>
+                              <div style={{ marginLeft: 10, flexShrink: 0 }}>
                                 {sfNotched ? (
                                   <button onClick={() => onNotch(null)} style={{
                                     display: "flex", alignItems: "center", gap: 3,
@@ -424,7 +430,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
           <div style={{
             position: "absolute",
             top: "24%", bottom: "12%",
-            right: 4,
+            right: 16,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <DiagVolMeter volume={toneVolume} onChange={setToneVolume} />
