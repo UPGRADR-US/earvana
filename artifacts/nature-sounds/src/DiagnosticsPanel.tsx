@@ -298,10 +298,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
               zIndex: 10,
               ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
               // onClick glow state: brighter lime + radiating text-shadow
-              color: startPressed ? "#e8ff80" : "#7dc93a",
+              color: startPressed ? "#ccffcc" : "#00ee44",
               textShadow: startPressed
-                ? "0 0 8px #b8ff40, 0 0 20px #90e020, 0 0 40px #60c000"
-                : "none",
+                ? "0 0 8px #00ff66, 0 0 20px #00dd44, 0 0 40px #00aa33"
+                : "0 0 6px rgba(0,220,60,0.45)",
               transition: "color 0.08s, text-shadow 0.08s",
             }}>
             <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
@@ -309,8 +309,8 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             <svg width={22} height={22} viewBox="0 0 20 20"
               style={{ marginTop: 1, transform: "rotate(-90deg)" }}>
               <polygon points="2,4 18,4 10,17"
-                fill={startPressed ? "#e8ff80" : "#7dc93a"}
-                style={{ filter: startPressed ? "drop-shadow(0 0 4px #a0e030)" : "none" }} />
+                fill={startPressed ? "#ccffcc" : "#00ee44"}
+                style={{ filter: startPressed ? "drop-shadow(0 0 5px #00ff55)" : "drop-shadow(0 0 3px rgba(0,220,60,0.5))" }} />
             </svg>
           </button>
         </div>
