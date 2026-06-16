@@ -34,42 +34,32 @@ function fmtSub(hz: number): string {
   return `${Number.isInteger(k) ? k : k.toFixed(1)} khz`;
 }
 
-// ─── LED volume slider ─────────────────────────────────────────────────────────
+// ─── Diagnostic tone volume — mirrors home-page VolumeMeter ──────────────────
 
-const LED_DOTS      = 12;
 const TONE_MAX_GAIN = 0.38;
 
-function ledGain(level: number) { return (level / LED_DOTS) * TONE_MAX_GAIN; }
+// volume is 0-1; gain = volume * TONE_MAX_GAIN
+function volToGain(v: number) { return v * TONE_MAX_GAIN; }
 
-function LedSlider({ level, onChange }: { level: number; onChange: (l: number) => void }) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const hitTest = useCallback((clientY: number) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const { top, height } = el.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientY - top) / height));
-    onChange(Math.max(1, Math.round((1 - pct) * LED_DOTS)));
+function DiagVolMeter({ volume, onChange }: { volume: number; onChange: (v: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const hit = useCallback((clientY: number) => {
+    if (!ref.current) return;
+    const { top, height } = ref.current.getBoundingClientRect();
+    onChange(Math.max(0.05, Math.min(1, 1 - (clientY - top) / height)));
   }, [onChange]);
   return (
-    <div ref={trackRef}
-      onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); hitTest(e.clientY); }}
-      onPointerMove={e => { if (e.buttons === 1) hitTest(e.clientY); }}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "space-between", gap: 3,
-        cursor: "pointer", touchAction: "none", userSelect: "none",
-        height: "100%",
-      }}>
-      {Array.from({ length: LED_DOTS }, (_, i) => {
-        const lit = (LED_DOTS - 1 - i) < level;
-        return (
-          <div key={i} style={{
-            width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
-            background: lit ? "#00ff55" : "rgba(255,255,255,0.14)",
-            boxShadow: lit ? "0 0 5px #00ff55" : "none",
-            transition: "background 0.1s, box-shadow 0.1s",
-          }} />
-        );
-      })}
+    <div ref={ref}
+      style={{ position: "relative", height: "clamp(130px,22svh,200px)",
+               cursor: "pointer", touchAction: "none", userSelect: "none", flexShrink: 0 }}
+      onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); hit(e.clientY); }}
+      onPointerMove={e => { if (e.buttons === 1) hit(e.clientY); }}>
+      <img src={img("VolSldrBase.png")} alt=""
+        style={{ display: "block", height: "100%", width: "auto" }} draggable={false} />
+      <img src={img("VolSldr_LEDS.png")} alt=""
+        style={{ position: "absolute", top: 0, left: 0, height: "100%", width: "auto",
+                 clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
+        draggable={false} />
     </div>
   );
 }
@@ -91,18 +81,18 @@ function TriFilled({ color = "#00ff55", size = 16 }: { color?: string; size?: nu
   );
 }
 
-// Chevron — thin stroked polyline, no fill
+// Chevron — thin stroked polyline, no fill; narrower than tall (flattened aspect)
 function Chevron({ expanded }: { expanded: boolean }) {
   return (
-    <svg width={18} height={18} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+    <svg width={11} height={7} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
       {expanded
         // ∨ down-pointing
         ? <polyline points="3,6 10,14 17,6"
-            fill="none" stroke="#b8d730" strokeWidth="2.4"
+            fill="none" stroke="#b8d730" strokeWidth="2.8"
             strokeLinecap="round" strokeLinejoin="round" />
-        // › right-pointing
+        // › right-pointing (rotated for collapsed state)
         : <polyline points="6,3 14,10 6,17"
-            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.4"
+            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.8"
             strokeLinecap="round" strokeLinejoin="round" />
       }
     </svg>
@@ -124,7 +114,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
   const [expandedBand,   setExpandedBand]    = useState<string | null>(null);
   const [notchCandidate, setNotchCandidate]  = useState<number | null>(null);
-  const [toneLevel,      setToneLevel]       = useState(3);
+  const [toneVolume,     setToneVolume]      = useState(0.25);   // 0-1
   const [confirmPress,   setConfirmPress]    = useState(false);
 
   // onClick-state for wipe-trigger buttons
@@ -160,15 +150,15 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
   const stopTone = useCallback(() => { killOsc(); setPlayingFreq(null); }, [killOsc]);
 
-  useEffect(() => { if (gRef.current) gRef.current.gain.value = ledGain(toneLevel); }, [toneLevel]);
+  useEffect(() => { if (gRef.current) gRef.current.gain.value = volToGain(toneVolume); }, [toneVolume]);
   useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleTriangle = useCallback((freq: number) => {
     if (playingFreq === freq) stopTone();
-    else playTone(freq, ledGain(toneLevel));
-  }, [playingFreq, playTone, stopTone, toneLevel]);
+    else playTone(freq, volToGain(toneVolume));
+  }, [playingFreq, playTone, stopTone, toneVolume]);
 
   const handleChevron = useCallback((label: string) => {
     stopTone();
@@ -321,12 +311,12 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
               return (
                 <div key={band.label}>
 
-                  {/* ── Parent row — two flex-halves, first letter at centre ── */}
+                  {/* ── Parent row — split so ~3rd letter lands at centre ── */}
                   <div style={{ display: "flex", alignItems: "center", padding: "5px 0" }}>
 
-                    {/* LEFT half — icons right-justified to the centre line */}
-                    <div style={{ flex: 1, display: "flex", alignItems: "center",
-                                  justifyContent: "flex-end", gap: 5 }}>
+                    {/* LEFT 44% — icons right-justified to the split line */}
+                    <div style={{ flexBasis: "44%", flexShrink: 0, display: "flex",
+                                  alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
                       <button onClick={() => handleChevron(band.label)} style={{
                         width: 26, height: 26,
                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -341,10 +331,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                       </button>
                     </div>
 
-                    {/* RIGHT half — label left-aligned from centre */}
+                    {/* RIGHT 56% — label left-aligned from split line */}
                     <button onClick={() => handleTriangle(band.base)}
                       style={{ flex: 1, display: "flex", alignItems: "center",
-                               paddingLeft: 7 }}>
+                               paddingLeft: 6 }}>
                       <span style={{
                         ...KALLISTO,
                         fontSize: "clamp(13px,3.2cqw,16px)",
@@ -373,9 +363,9 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             padding: "2px 0",
                           }}>
 
-                            {/* LEFT half — play triangle right-justified to centre */}
-                            <div style={{ flex: 1, display: "flex", alignItems: "center",
-                                          justifyContent: "flex-end", gap: 4 }}>
+                            {/* LEFT 44% — play triangle right-justified to split */}
+                            <div style={{ flexBasis: "44%", flexShrink: 0, display: "flex",
+                                          alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                               {sfNotched && (
                                 <span style={{
                                   ...KALLISTO, fontSize: "clamp(7px,1.7cqw,9px)",
@@ -390,9 +380,9 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                               </button>
                             </div>
 
-                            {/* RIGHT half — frequency text + notch at far right */}
+                            {/* RIGHT 56% — frequency text + notch at far right */}
                             <div style={{ flex: 1, display: "flex", alignItems: "center",
-                                          paddingLeft: 7 }}>
+                                          paddingLeft: 6 }}>
                               <button onClick={() => handleTriangle(sf)}>
                                 <span style={{
                                   ...KALLISTO,
@@ -430,15 +420,14 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             })}
           </div>
 
-          {/* LED tone volume — right column */}
+          {/* Tone volume — right column, same asset + reveal as home-page meter */}
           <div style={{
             position: "absolute",
             top: "24%", bottom: "12%",
-            right: 4, width: 32,
+            right: 4,
             display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "8px 0",
           }}>
-            <LedSlider level={toneLevel} onChange={setToneLevel} />
+            <DiagVolMeter volume={toneVolume} onChange={setToneVolume} />
           </div>
 
           {/* Back button — below bottom divider */}
