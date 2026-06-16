@@ -409,14 +409,17 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             padding: "6px 0",
                           }}>
 
-                            {/* LEFT 44% — play triangle right-justified to split */}
+                            {/* LEFT 44% — NOTCH button (when playing) + play triangle */}
                             <div style={{ flexBasis: "44%", flexShrink: 0, display: "flex",
-                                          alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
-                              {sfNotched && (
-                                <span style={{
-                                  ...KALLISTO, fontSize: "clamp(10px,2.6vw,12px)",
-                                  fontWeight: 300, color: "#b89a2a",
-                                }}>( notched )</span>
+                                          alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                              {!sfNotched && (
+                                <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  lineHeight: 1,
+                                  visibility: sfPlaying ? "visible" : "hidden",
+                                  ...KALLISTO, fontWeight: 700,
+                                  fontSize: "clamp(10.5px,2.8vw,13px)", color: "#ffcc00",
+                                }}>NOTCH <TriFilled color="#ffcc00" size={11} /></button>
                               )}
                               <button onClick={() => handleTriangle(sf)}
                                 style={{ display: "flex", alignItems: "center" }}>
@@ -426,7 +429,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                               </button>
                             </div>
 
-                            {/* RIGHT 56% — frequency text + notch at far right */}
+                            {/* RIGHT 56% — frequency text + reset at far right when notched */}
                             <div style={{ flex: 1, display: "flex", alignItems: "center",
                                           paddingLeft: 6 }}>
                               <button onClick={() => handleTriangle(sf)}
@@ -439,25 +442,17 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
                               </button>
-                              <div style={{ marginLeft: "auto", flexShrink: 0, paddingLeft: 6,
-                                            display: "flex", alignItems: "center" }}>
-                                {sfNotched ? (
+                              {sfNotched && (
+                                <div style={{ marginLeft: "auto", flexShrink: 0, paddingLeft: 6,
+                                              display: "flex", alignItems: "center" }}>
                                   <button onClick={() => onNotch(null)} style={{
                                     display: "flex", alignItems: "center", gap: 3,
                                     lineHeight: 1,
                                     ...KALLISTO, fontWeight: 700,
                                     fontSize: "clamp(10.5px,2.8vw,13px)", color: "#b89a2a",
                                   }}>reset <TriFilled color="#b89a2a" size={11} /></button>
-                                ) : (
-                                  <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
-                                    display: "flex", alignItems: "center", gap: 3,
-                                    lineHeight: 1,
-                                    visibility: sfPlaying ? "visible" : "hidden",
-                                    ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(10.5px,2.8vw,13px)", color: "#ffcc00",
-                                  }}><span style={{ display:"inline-flex", transform:"rotate(180deg)" }}><TriFilled color="#ffcc00" size={11} /></span> NOTCH</button>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
 
                           </div>
