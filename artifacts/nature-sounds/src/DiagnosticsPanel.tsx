@@ -217,7 +217,8 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="absolute inset-0 z-50">
+    <div className="absolute inset-0 z-50"
+      onClick={handleClose}>
 
       {/* Injected keyframes — rendered once into DOM */}
       <style>{`
@@ -240,8 +241,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
       {/* ── Shadow wrapper ───────────────────────────────────────────────────
           filter:drop-shadow traces the inner's clipped painted shape
           (a rounded rectangle), so the shadow hugs the PNG's corners.
-          animation:scaleIn lives here so the shadow scales with the card. */}
-      <div style={{
+          animation:scaleIn lives here so the shadow scales with the card.
+          stopPropagation prevents taps inside the card from bubbling up
+          to the outer click-outside dismiss handler. */}
+      <div onClick={e => e.stopPropagation()} style={{
         position: "absolute",
         top:    "clamp(50px,8vh,72px)",
         left:   "clamp(24px,5.5cqw,36px)",

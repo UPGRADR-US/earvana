@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v55";
+const CACHE = "tinnitus-relief-v56";
 
 const PRECACHE = [
   "/manifest.json",
