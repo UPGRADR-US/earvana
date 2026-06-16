@@ -42,18 +42,32 @@ const TONE_MAX_GAIN = 0.38;
 function volToGain(v: number) { return v * TONE_MAX_GAIN; }
 
 function DiagVolMeter({ volume, onChange }: { volume: number; onChange: (v: number) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref      = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const [pressed, setPressed] = useState(false);
+
   const hit = useCallback((clientY: number) => {
     if (!ref.current) return;
     const { top, height } = ref.current.getBoundingClientRect();
     onChange(Math.max(0.05, Math.min(1, 1 - (clientY - top) / height)));
   }, [onChange]);
+
+  const onPD = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    setPressed(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    hit(e.clientY);
+  }, [hit]);
+  const onPM = useCallback((e: React.PointerEvent) => { if (dragging.current) hit(e.clientY); }, [hit]);
+  const onPU = useCallback(() => { dragging.current = false; setPressed(false); }, []);
+
   return (
     <div ref={ref}
       style={{ position: "relative", height: "clamp(130px,22svh,200px)",
-               cursor: "pointer", touchAction: "none", userSelect: "none", flexShrink: 0 }}
-      onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); hit(e.clientY); }}
-      onPointerMove={e => { if (e.buttons === 1) hit(e.clientY); }}>
+               cursor: "pointer", touchAction: "none", userSelect: "none", flexShrink: 0,
+               opacity: pressed ? 1 : 0.5,
+               transition: "opacity 0.15s ease" }}
+      onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU}>
       <img src={img("VolSldrBase.png")} alt=""
         style={{ display: "block", height: "100%", width: "auto" }} draggable={false} />
       <img src={img("VolSldr_LEDS.png")} alt=""
@@ -81,18 +95,20 @@ function TriFilled({ color = "#00ff55", size = 16 }: { color?: string; size?: nu
   );
 }
 
-// Chevron — thin stroked polyline, no fill; narrower than tall (flattened aspect)
-function Chevron({ expanded }: { expanded: boolean }) {
+// Chevron — thin stroked polyline; blinking=true when parent clicked but not yet expanded
+function Chevron({ expanded, blinking = false }: { expanded: boolean; blinking?: boolean }) {
   return (
-    <svg width={11} height={7} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+    <svg width={14} height={9} viewBox="0 0 20 20"
+      style={{ flexShrink: 0, display: "block",
+               animation: blinking ? "chevronBlink 0.55s ease-in-out infinite" : "none" }}>
       {expanded
-        // ∨ down-pointing
+        // ∨ down-pointing, solid yellow
         ? <polyline points="3,6 10,14 17,6"
-            fill="none" stroke="#b8d730" strokeWidth="2.8"
+            fill="none" stroke="#ffcc00" strokeWidth="2.8"
             strokeLinecap="round" strokeLinejoin="round" />
-        // › right-pointing (rotated for collapsed state)
+        // › right-pointing; yellow when blinking, dim white otherwise
         : <polyline points="6,3 14,10 6,17"
-            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.8"
+            fill="none" stroke={blinking ? "#ffcc00" : "rgba(255,255,255,0.55)"} strokeWidth="2.8"
             strokeLinecap="round" strokeLinejoin="round" />
       }
     </svg>
@@ -113,6 +129,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   const [page,           setPage]           = useState<1 | 2>(1);
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
   const [expandedBand,   setExpandedBand]    = useState<string | null>(null);
+  const [focusedBand,    setFocusedBand]     = useState<string | null>(null);
   const [notchCandidate, setNotchCandidate]  = useState<number | null>(null);
   const [toneVolume,     setToneVolume]      = useState(0.25);   // 0-1
   const [confirmPress,   setConfirmPress]    = useState(false);
@@ -160,9 +177,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
     else playTone(freq, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Parent-row play: also auto-collapses any other open accordion
+  // Parent-row play: collapses other accordions + marks this band focused (chevron blinks)
   const handleParentPlay = useCallback((freq: number, bandLabel: string) => {
     setExpandedBand(prev => (prev !== null && prev !== bandLabel) ? null : prev);
+    setFocusedBand(bandLabel);
     if (playingFreq === freq) stopTone();
     else playTone(freq, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
@@ -186,6 +204,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
     stopTone();
     setPage(1);
     setExpandedBand(null);
+    setFocusedBand(null);
   };
 
   // ── Carousel translateX values ────────────────────────────────────────────
@@ -207,6 +226,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
           60%  { opacity: 1; }
           85%  { transform: scale(1.03); }
           100% { transform: scale(1);   opacity: 1; }
+        }
+        @keyframes chevronBlink {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.1; }
         }
       `}</style>
 
@@ -328,7 +351,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                         width: 26, height: 26,
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <Chevron expanded={isExpanded} />
+                        <Chevron expanded={isExpanded} blinking={!isExpanded && focusedBand === band.label} />
                       </button>
                       <button onClick={() => handleParentPlay(band.base, band.label)}
                         style={{ display: "flex", alignItems: "center" }}>
@@ -370,7 +393,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                         const sfNotched = currentNotch === sf;
                         return (
                           <div key={sf} style={{
-                            display: "flex", alignItems: "center",
+                            display: "flex", alignItems: "center", lineHeight: 1,
                             borderRadius: sfNotched ? 5 : 0,
                             background: sfNotched ? "rgba(184,154,42,0.18)" : "transparent",
                             padding: "2px 0",
@@ -396,7 +419,8 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             {/* RIGHT 56% — frequency text + notch at far right */}
                             <div style={{ flex: 1, display: "flex", alignItems: "center",
                                           paddingLeft: 6 }}>
-                              <button onClick={() => handleTriangle(sf)}>
+                              <button onClick={() => handleTriangle(sf)}
+                                style={{ display: "flex", alignItems: "center", lineHeight: 1 }}>
                                 <span style={{
                                   ...KALLISTO,
                                   fontSize: "clamp(11px,2.7cqw,14px)",
@@ -414,7 +438,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                     fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#b89a2a",
                                   }}>reset <TriFilled color="#b89a2a" size={9} /></button>
                                 ) : (
-                                  <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
+                                  <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
                                     display: "flex", alignItems: "center", gap: 3,
                                     lineHeight: 1,
                                     visibility: sfPlaying ? "visible" : "hidden",
