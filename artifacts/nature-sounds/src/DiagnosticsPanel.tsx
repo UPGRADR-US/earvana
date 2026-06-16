@@ -230,10 +230,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
       {/* Panel container */}
       <div style={{
         position: "absolute",
-        top:    "clamp(18px,3vh,28px)",
-        left:   "clamp(8px,2cqw,14px)",
-        right:  "clamp(8px,2cqw,14px)",
-        bottom: "clamp(10px,2vh,20px)",
+        top:    "clamp(50px,8vh,72px)",
+        left:   "clamp(24px,5.5cqw,36px)",
+        right:  "clamp(24px,5.5cqw,36px)",
+        bottom: "clamp(50px,7vh,72px)",
         display: "flex", flexDirection: "column",
       }}>
 
