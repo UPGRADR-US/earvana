@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v58";
+const CACHE = "tinnitus-relief-v59";
 
 const PRECACHE = [
   "/manifest.json",
@@ -15,6 +15,9 @@ const PRECACHE = [
   "/SliderKnob.png",
   "/VolSldrBase.png",
   "/VolSldr_LEDS.png",
+  "/diag_pane1_txt.png",
+  "/diag_pane2_txt.png",
+  "/homepage_BLUR.png",
 ];
 
 self.addEventListener("install", (event) => {

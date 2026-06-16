@@ -280,7 +280,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
           transition: wipeTx,
           willChange: "transform",
         }}>
-          <img src={img("diag_pane1+txt.png")} alt=""
+          <img src={img("diag_pane1_txt.png")} alt=""
             style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
             draggable={false} />
 
@@ -323,7 +323,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
           transition: wipeTx,
           willChange: "transform",
         }}>
-          <img src={img("diag_pane2+txt.png")} alt=""
+          <img src={img("diag_pane2_txt.png")} alt=""
             style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
             draggable={false} />
 
@@ -375,7 +375,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                paddingLeft: 6 }}>
                       <span style={{
                         ...KALLISTO,
-                        fontSize: "clamp(15px,3.7cqw,18px)",
+                        fontSize: "clamp(16px,4.5vw,19px)",
                         fontWeight: (bPlaying || isExpanded) ? 700 : 300,
                         color: (bPlaying || isExpanded) ? "#00ff55" : "rgba(255,255,255,0.75)",
                       }}>{band.label}</span>
@@ -407,7 +407,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                           alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                               {sfNotched && (
                                 <span style={{
-                                  ...KALLISTO, fontSize: "clamp(9px,2.2cqw,11px)",
+                                  ...KALLISTO, fontSize: "clamp(10px,2.6vw,12px)",
                                   fontWeight: 300, color: "#b89a2a",
                                 }}>( notched )</span>
                               )}
@@ -426,7 +426,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                 style={{ display: "flex", alignItems: "center", lineHeight: 1 }}>
                                 <span style={{
                                   ...KALLISTO,
-                                  fontSize: "clamp(13px,3.2cqw,16px)",
+                                  fontSize: "clamp(14px,3.8vw,17px)",
                                   fontWeight: sfPlaying ? 700 : 300,
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
@@ -438,7 +438,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                     display: "flex", alignItems: "center", gap: 3,
                                     lineHeight: 1,
                                     ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(9.5px,2.35cqw,12px)", color: "#b89a2a",
+                                    fontSize: "clamp(10.5px,2.8vw,13px)", color: "#b89a2a",
                                   }}>reset <TriFilled color="#b89a2a" size={11} /></button>
                                 ) : (
                                   <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
@@ -446,7 +446,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                     lineHeight: 1,
                                     visibility: sfPlaying ? "visible" : "hidden",
                                     ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(9.5px,2.35cqw,12px)", color: "#ffcc00",
+                                    fontSize: "clamp(10.5px,2.8vw,13px)", color: "#ffcc00",
                                   }}>NOTCH <TriFilled color="#ffcc00" size={11} /></button>
                                 )}
                               </div>
