@@ -303,10 +303,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                 : "none",
               transition: "color 0.08s, text-shadow 0.08s",
             }}>
-            <span style={{ fontSize: "clamp(12px,3cqw,15px)" }}>START TEST</span>
+            <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
             {/* Chevron — 50% bigger than the previous 15px */}
             <svg width={22} height={22} viewBox="0 0 20 20"
-              style={{ marginTop: 1 }}>
+              style={{ marginTop: 1, transform: "rotate(-90deg)" }}>
               <polygon points="2,4 18,4 10,17"
                 fill={startPressed ? "#e8ff80" : "#7dc93a"}
                 style={{ filter: startPressed ? "drop-shadow(0 0 4px #a0e030)" : "none" }} />
@@ -388,7 +388,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                     maxHeight: isExpanded ? `${subs.length * 44}px` : "0px",
                     overflow: "hidden",
                     transition: "max-height 0.28s ease",
-                    paddingLeft: "16%",
+                    paddingLeft: "8%",
                   }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 4 }}>
                       {subs.map(sf => {
@@ -423,15 +423,16 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             <div style={{ flex: 1, display: "flex", alignItems: "center",
                                           paddingLeft: 6 }}>
                               <button onClick={() => handleTriangle(sf)}
-                                style={{ display: "flex", alignItems: "center", lineHeight: 1 }}>
+                                style={{ display: "flex", alignItems: "center", lineHeight: 1, flexShrink: 0 }}>
                                 <span style={{
                                   ...KALLISTO,
                                   fontSize: "clamp(14px,3.8vw,17px)",
                                   fontWeight: sfPlaying ? 700 : 300,
+                                  whiteSpace: "nowrap",
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
                               </button>
-                              <div style={{ marginLeft: 32, flexShrink: 0,
+                              <div style={{ marginLeft: "auto", flexShrink: 0, paddingLeft: 6,
                                             display: "flex", alignItems: "center" }}>
                                 {sfNotched ? (
                                   <button onClick={() => onNotch(null)} style={{
