@@ -1154,7 +1154,7 @@ function Home() {
       {diagOpen && !settingsOpen && (
         <DiagnosticsPanel
           onClose={() => setDiagOpen(false)}
-          onNotch={(freq) => engine.setNotch(freq)}
+          onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
         />
       )}
