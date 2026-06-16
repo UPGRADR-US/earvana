@@ -91,18 +91,22 @@ function TriFilled({ color = "#00ff55", size = 16 }: { color?: string; size?: nu
   );
 }
 
-// Chevron — 50% larger than original 15px → 22px
+// Chevron — thin stroked polyline, no fill
 function Chevron({ expanded }: { expanded: boolean }) {
-  return expanded
-    ? (
-      <svg width={22} height={22} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
-        <polygon points="2,4 18,4 10,17" fill="#b8d730" />
-      </svg>
-    ) : (
-      <svg width={22} height={22} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
-        <polygon points="3,2 18,10 3,18" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" />
-      </svg>
-    );
+  return (
+    <svg width={18} height={18} viewBox="0 0 20 20" style={{ flexShrink: 0, display: "block" }}>
+      {expanded
+        // ∨ down-pointing
+        ? <polyline points="3,6 10,14 17,6"
+            fill="none" stroke="#b8d730" strokeWidth="2.4"
+            strokeLinecap="round" strokeLinejoin="round" />
+        // › right-pointing
+        : <polyline points="6,3 14,10 6,17"
+            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.4"
+            strokeLinecap="round" strokeLinejoin="round" />
+      }
+    </svg>
+  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -202,9 +206,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
       {/* Injected keyframes — rendered once into DOM */}
       <style>{`
         @keyframes diagScaleIn {
-          0%   { transform: scale(0);    opacity: 0; }
-          72%  { transform: scale(1.04); opacity: 1; }
-          100% { transform: scale(1);    opacity: 1; }
+          0%   { transform: scale(0.05); opacity: 0; }
+          60%  { opacity: 1; }
+          85%  { transform: scale(1.03); }
+          100% { transform: scale(1);   opacity: 1; }
         }
       `}</style>
 
@@ -223,7 +228,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
         right:  "clamp(24px,5.5cqw,36px)",
         bottom: "clamp(50px,7vh,72px)",
         filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.75))",
-        animation: "diagScaleIn 0.44s cubic-bezier(0.16,1,0.3,1) both",
+        animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
       }}>
       {/* ── Carousel container ───────────────────────────────────────────────
           clip-path rounds the clipped area to match PNG corner radius (~22px).
@@ -311,34 +316,46 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             {BANDS.map(band => {
               const subs       = getSubBands(band);
               const isExpanded = expandedBand === band.label;
+              const bPlaying   = playingFreq === band.base;
 
               return (
                 <div key={band.label}>
 
-                  {/* Parent row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
-                    <button onClick={() => handleChevron(band.label)} style={{
-                      flexShrink: 0, width: 30, height: 30,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Chevron expanded={isExpanded} />
-                    </button>
+                  {/* ── Parent row — two flex-halves, first letter at centre ── */}
+                  <div style={{ display: "flex", alignItems: "center", padding: "5px 0" }}>
 
+                    {/* LEFT half — icons right-justified to the centre line */}
+                    <div style={{ flex: 1, display: "flex", alignItems: "center",
+                                  justifyContent: "flex-end", gap: 5 }}>
+                      <button onClick={() => handleChevron(band.label)} style={{
+                        width: 26, height: 26,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Chevron expanded={isExpanded} />
+                      </button>
+                      <button onClick={() => handleTriangle(band.base)}
+                        style={{ display: "flex", alignItems: "center" }}>
+                        {bPlaying
+                          ? <TriFilled color="#00ff55" size={14} />
+                          : <TriOutline size={14} />}
+                      </button>
+                    </div>
+
+                    {/* RIGHT half — label left-aligned from centre */}
                     <button onClick={() => handleTriangle(band.base)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                      {playingFreq === band.base
-                        ? <TriFilled color="#00ff55" size={16} />
-                        : <TriOutline size={16} />}
+                      style={{ flex: 1, display: "flex", alignItems: "center",
+                               paddingLeft: 7 }}>
                       <span style={{
                         ...KALLISTO,
                         fontSize: "clamp(13px,3.2cqw,16px)",
-                        fontWeight: playingFreq === band.base ? 700 : 300,
-                        color: playingFreq === band.base ? "#00ff55" : "rgba(255,255,255,0.75)",
+                        fontWeight: bPlaying ? 700 : 300,
+                        color: bPlaying ? "#00ff55" : "rgba(255,255,255,0.75)",
                       }}>{band.label}</span>
                     </button>
+
                   </div>
 
-                  {/* Sub-bands accordion */}
+                  {/* ── Sub-bands accordion ── */}
                   <div style={{
                     maxHeight: isExpanded ? `${subs.length * 34}px` : "0px",
                     overflow: "hidden",
@@ -353,44 +370,55 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             display: "flex", alignItems: "center",
                             borderRadius: sfNotched ? 5 : 0,
                             background: sfNotched ? "rgba(184,154,42,0.18)" : "transparent",
-                            padding: "2px 4px 2px 38px",
+                            padding: "2px 0",
                           }}>
-                            <span style={{
-                              ...KALLISTO, fontSize: "clamp(7.5px,1.85cqw,10px)",
-                              fontWeight: 300, color: "#b89a2a",
-                              marginRight: sfNotched ? 4 : 0,
-                              visibility: sfNotched ? "visible" : "hidden",
-                              width: sfNotched ? "auto" : 0,
-                              overflow: "hidden", flexShrink: 0,
-                            }}>( notched )</span>
 
-                            <button onClick={() => handleTriangle(sf)}
-                              style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              {sfPlaying ? <TriFilled color="#00ff55" size={13} /> : <TriOutline size={13} />}
-                              <span style={{
-                                ...KALLISTO,
-                                fontSize: "clamp(11px,2.7cqw,14px)",
-                                fontWeight: sfPlaying ? 700 : 300,
-                                color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
-                              }}>{fmtSub(sf)}</span>
-                            </button>
-
-                            <div style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0 }}>
-                              {sfNotched ? (
-                                <button onClick={() => onNotch(null)} style={{
-                                  display: "flex", alignItems: "center", gap: 3,
-                                  ...KALLISTO, fontWeight: 700,
-                                  fontSize: "clamp(8px,2cqw,11px)", color: "#b89a2a",
-                                }}>reset <TriFilled color="#b89a2a" size={10} /></button>
-                              ) : (
-                                <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
-                                  display: "flex", alignItems: "center", gap: 3,
-                                  visibility: sfPlaying ? "visible" : "hidden",
-                                  ...KALLISTO, fontWeight: 700,
-                                  fontSize: "clamp(8px,2cqw,11px)", color: "#ffcc00",
-                                }}>NOTCH <TriFilled color="#ffcc00" size={10} /></button>
+                            {/* LEFT half — play triangle right-justified to centre */}
+                            <div style={{ flex: 1, display: "flex", alignItems: "center",
+                                          justifyContent: "flex-end", gap: 4 }}>
+                              {sfNotched && (
+                                <span style={{
+                                  ...KALLISTO, fontSize: "clamp(7px,1.7cqw,9px)",
+                                  fontWeight: 300, color: "#b89a2a",
+                                }}>( notched )</span>
                               )}
+                              <button onClick={() => handleTriangle(sf)}
+                                style={{ display: "flex", alignItems: "center" }}>
+                                {sfPlaying
+                                  ? <TriFilled color="#00ff55" size={12} />
+                                  : <TriOutline size={12} />}
+                              </button>
                             </div>
+
+                            {/* RIGHT half — frequency text + notch at far right */}
+                            <div style={{ flex: 1, display: "flex", alignItems: "center",
+                                          paddingLeft: 7 }}>
+                              <button onClick={() => handleTriangle(sf)}>
+                                <span style={{
+                                  ...KALLISTO,
+                                  fontSize: "clamp(11px,2.7cqw,14px)",
+                                  fontWeight: sfPlaying ? 700 : 300,
+                                  color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
+                                }}>{fmtSub(sf)}</span>
+                              </button>
+                              <div style={{ marginLeft: "auto", paddingLeft: 6, flexShrink: 0 }}>
+                                {sfNotched ? (
+                                  <button onClick={() => onNotch(null)} style={{
+                                    display: "flex", alignItems: "center", gap: 3,
+                                    ...KALLISTO, fontWeight: 700,
+                                    fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#b89a2a",
+                                  }}>reset <TriFilled color="#b89a2a" size={9} /></button>
+                                ) : (
+                                  <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
+                                    display: "flex", alignItems: "center", gap: 3,
+                                    visibility: sfPlaying ? "visible" : "hidden",
+                                    ...KALLISTO, fontWeight: 700,
+                                    fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#ffcc00",
+                                  }}>NOTCH <TriFilled color="#ffcc00" size={9} /></button>
+                                )}
+                              </div>
+                            </div>
+
                           </div>
                         );
                       })}
