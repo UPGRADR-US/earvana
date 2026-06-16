@@ -98,7 +98,7 @@ function TriFilled({ color = "#00ff55", size = 16 }: { color?: string; size?: nu
 // Chevron — thin stroked polyline; blinking=true when parent clicked but not yet expanded
 function Chevron({ expanded, blinking = false }: { expanded: boolean; blinking?: boolean }) {
   return (
-    <svg width={14} height={9} viewBox="0 0 20 20"
+    <svg width={17} height={11} viewBox="0 0 20 20"
       style={{ flexShrink: 0, display: "block",
                animation: blinking ? "chevronBlink 0.55s ease-in-out infinite" : "none" }}>
       {expanded
@@ -361,11 +361,11 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                         {isExpanded
                           // expanded → down-pointing green triangle
                           ? <div style={{ transform: "rotate(90deg)", display: "flex" }}>
-                              <TriFilled color="#00ff55" size={14} />
+                              <TriFilled color="#00ff55" size={17} />
                             </div>
                           : bPlaying
-                          ? <TriFilled color="#00ff55" size={14} />
-                          : <TriOutline size={14} />}
+                          ? <TriFilled color="#00ff55" size={17} />
+                          : <TriOutline size={17} />}
                       </button>
                     </div>
 
@@ -375,7 +375,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                paddingLeft: 6 }}>
                       <span style={{
                         ...KALLISTO,
-                        fontSize: "clamp(13px,3.2cqw,16px)",
+                        fontSize: "clamp(15px,3.7cqw,18px)",
                         fontWeight: (bPlaying || isExpanded) ? 700 : 300,
                         color: (bPlaying || isExpanded) ? "#00ff55" : "rgba(255,255,255,0.75)",
                       }}>{band.label}</span>
@@ -385,12 +385,12 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
                   {/* ── Sub-bands accordion — indented right ── */}
                   <div style={{
-                    maxHeight: isExpanded ? `${subs.length * 34}px` : "0px",
+                    maxHeight: isExpanded ? `${subs.length * 44}px` : "0px",
                     overflow: "hidden",
                     transition: "max-height 0.28s ease",
                     paddingLeft: "16%",
                   }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 4 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 4 }}>
                       {subs.map(sf => {
                         const sfPlaying = playingFreq === sf;
                         const sfNotched = currentNotch === sf;
@@ -399,7 +399,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                             display: "flex", alignItems: "center", lineHeight: 1,
                             borderRadius: sfNotched ? 5 : 0,
                             background: sfNotched ? "rgba(184,154,42,0.18)" : "transparent",
-                            padding: "2px 0",
+                            padding: "6px 0",
                           }}>
 
                             {/* LEFT 44% — play triangle right-justified to split */}
@@ -407,15 +407,15 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                           alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                               {sfNotched && (
                                 <span style={{
-                                  ...KALLISTO, fontSize: "clamp(7px,1.7cqw,9px)",
+                                  ...KALLISTO, fontSize: "clamp(9px,2.2cqw,11px)",
                                   fontWeight: 300, color: "#b89a2a",
                                 }}>( notched )</span>
                               )}
                               <button onClick={() => handleTriangle(sf)}
                                 style={{ display: "flex", alignItems: "center" }}>
                                 {sfPlaying
-                                  ? <TriFilled color="#00ff55" size={12} />
-                                  : <TriOutline size={12} />}
+                                  ? <TriFilled color="#00ff55" size={15} />
+                                  : <TriOutline size={15} />}
                               </button>
                             </div>
 
@@ -426,7 +426,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                 style={{ display: "flex", alignItems: "center", lineHeight: 1 }}>
                                 <span style={{
                                   ...KALLISTO,
-                                  fontSize: "clamp(11px,2.7cqw,14px)",
+                                  fontSize: "clamp(13px,3.2cqw,16px)",
                                   fontWeight: sfPlaying ? 700 : 300,
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
@@ -438,16 +438,16 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                     display: "flex", alignItems: "center", gap: 3,
                                     lineHeight: 1,
                                     ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#b89a2a",
-                                  }}>reset <TriFilled color="#b89a2a" size={9} /></button>
+                                    fontSize: "clamp(9.5px,2.35cqw,12px)", color: "#b89a2a",
+                                  }}>reset <TriFilled color="#b89a2a" size={11} /></button>
                                 ) : (
                                   <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
                                     display: "flex", alignItems: "center", gap: 3,
                                     lineHeight: 1,
                                     visibility: sfPlaying ? "visible" : "hidden",
                                     ...KALLISTO, fontWeight: 700,
-                                    fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#ffcc00",
-                                  }}>NOTCH <TriFilled color="#ffcc00" size={9} /></button>
+                                    fontSize: "clamp(9.5px,2.35cqw,12px)", color: "#ffcc00",
+                                  }}>NOTCH <TriFilled color="#ffcc00" size={11} /></button>
                                 )}
                               </div>
                             </div>
