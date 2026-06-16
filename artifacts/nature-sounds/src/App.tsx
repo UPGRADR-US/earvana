@@ -950,6 +950,25 @@ function Home() {
   });
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
+  const diagPausedRef = useRef(false);  // true when we auto-paused on diag open
+
+  const openDiag = useCallback(() => {
+    const id = engine.lastPlayedId;
+    if (id && engine.tracks[id]?.isPlaying) {
+      engine.pause(id);
+      diagPausedRef.current = true;
+    }
+    setDiagOpen(true);
+  }, [engine]);
+
+  const closeDiag = useCallback(() => {
+    setDiagOpen(false);
+    if (diagPausedRef.current) {
+      diagPausedRef.current = false;
+      engine.resume();
+    }
+  }, [engine]);
+
   const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
   const [diagFlash,     setDiagFlash]     = useState<boolean>(false);
   const [eqMode,  setEqMode]  = useState<EqModeId>(
@@ -1153,7 +1172,7 @@ function Home() {
       {/* Diagnostics overlay — floats above the app */}
       {diagOpen && !settingsOpen && (
         <DiagnosticsPanel
-          onClose={() => setDiagOpen(false)}
+          onClose={closeDiag}
           onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
         />
@@ -1240,7 +1259,7 @@ function Home() {
 
               {/* Diagnostics button — Diag_Butt.png graphic */}
               <button
-                onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); setDiagOpen(d => !d); }, 160); }}
+                onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); diagOpen ? closeDiag() : openDiag(); }, 160); }}
                 className="flex-shrink-0"
                 style={{ marginLeft: "calc(clamp(4px,1.2cqw,8px) + 20px)", width: "clamp(74px,18.5cqw,100px)" }}
                 data-testid="btn-diagnostics"
