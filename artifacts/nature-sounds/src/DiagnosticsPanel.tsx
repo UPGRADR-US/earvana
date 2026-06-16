@@ -187,6 +187,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
   const handleChevron = useCallback((label: string) => {
     stopTone();
+    setFocusedBand(null);
     setExpandedBand(prev => prev === label ? null : label);
   }, [stopTone]);
 
