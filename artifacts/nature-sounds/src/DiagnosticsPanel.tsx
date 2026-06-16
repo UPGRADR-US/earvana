@@ -212,18 +212,26 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
       <img src={img("homepage_BLUR.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
-      {/* ── Panel container ─────────────────────────────────────────────────
-          overflow:hidden clips the off-screen carousel page.
-          animation: scale-up on mount with exponential-out spring curve.     */}
+      {/* ── Shadow wrapper ───────────────────────────────────────────────────
+          filter:drop-shadow traces the inner's clipped painted shape
+          (a rounded rectangle), so the shadow hugs the PNG's corners.
+          animation:scaleIn lives here so the shadow scales with the card. */}
       <div style={{
         position: "absolute",
         top:    "clamp(50px,8vh,72px)",
         left:   "clamp(24px,5.5cqw,36px)",
         right:  "clamp(24px,5.5cqw,36px)",
         bottom: "clamp(50px,7vh,72px)",
-        overflow: "hidden",
-        boxShadow: "0 12px 48px rgba(0,0,0,0.70)",
+        filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.75))",
         animation: "diagScaleIn 0.44s cubic-bezier(0.16,1,0.3,1) both",
+      }}>
+      {/* ── Carousel container ───────────────────────────────────────────────
+          clip-path rounds the clipped area to match PNG corner radius (~22px).
+          overflow:hidden clips the off-screen carousel page within that shape. */}
+      <div style={{
+        position: "absolute", inset: 0,
+        overflow: "hidden",
+        clipPath: "inset(0 round 22px)",
       }}>
 
         {/* X — always visible above carousel */}
@@ -424,7 +432,8 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             }}>«« back</button>
 
         </div>
-      </div>
+      </div>{/* end carousel container */}
+      </div>{/* end shadow wrapper */}
 
       {/* ── NOTCH confirmation dialog ── */}
       {notchCandidate !== null && (() => {
