@@ -160,6 +160,13 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
     else playTone(freq, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
+  // Parent-row play: also auto-collapses any other open accordion
+  const handleParentPlay = useCallback((freq: number, bandLabel: string) => {
+    setExpandedBand(prev => (prev !== null && prev !== bandLabel) ? null : prev);
+    if (playingFreq === freq) stopTone();
+    else playTone(freq, volToGain(toneVolume));
+  }, [playingFreq, playTone, stopTone, toneVolume]);
+
   const handleChevron = useCallback((label: string) => {
     stopTone();
     setExpandedBand(prev => prev === label ? null : label);
@@ -323,7 +330,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                       }}>
                         <Chevron expanded={isExpanded} />
                       </button>
-                      <button onClick={() => handleTriangle(band.base)}
+                      <button onClick={() => handleParentPlay(band.base, band.label)}
                         style={{ display: "flex", alignItems: "center" }}>
                         {isExpanded
                           // expanded → down-pointing green triangle
@@ -337,7 +344,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                     </div>
 
                     {/* RIGHT 56% — label left-aligned from split line */}
-                    <button onClick={() => handleTriangle(band.base)}
+                    <button onClick={() => handleParentPlay(band.base, band.label)}
                       style={{ flex: 1, display: "flex", alignItems: "center",
                                paddingLeft: 6 }}>
                       <span style={{
@@ -397,16 +404,19 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                   color: sfPlaying ? "#00ff55" : sfNotched ? "#c8a832" : "rgba(255,255,255,0.65)",
                                 }}>{fmtSub(sf)}</span>
                               </button>
-                              <div style={{ marginLeft: 10, flexShrink: 0 }}>
+                              <div style={{ marginLeft: 32, flexShrink: 0,
+                                            display: "flex", alignItems: "center" }}>
                                 {sfNotched ? (
                                   <button onClick={() => onNotch(null)} style={{
                                     display: "flex", alignItems: "center", gap: 3,
+                                    lineHeight: 1,
                                     ...KALLISTO, fontWeight: 700,
                                     fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#b89a2a",
                                   }}>reset <TriFilled color="#b89a2a" size={9} /></button>
                                 ) : (
                                   <button onClick={() => sfPlaying && setNotchCandidate(sf)} style={{
                                     display: "flex", alignItems: "center", gap: 3,
+                                    lineHeight: 1,
                                     visibility: sfPlaying ? "visible" : "hidden",
                                     ...KALLISTO, fontWeight: 700,
                                     fontSize: "clamp(7.5px,1.85cqw,10px)", color: "#ffcc00",
