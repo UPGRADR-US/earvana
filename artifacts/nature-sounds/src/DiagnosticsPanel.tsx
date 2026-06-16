@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
@@ -130,6 +130,12 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
   const [expandedBand,   setExpandedBand]    = useState<string | null>(null);
   const [focusedBand,    setFocusedBand]     = useState<string | null>(null);
+
+  // Which parent band label contains the currently-notched frequency (if any)
+  const notchBandLabel = useMemo(() => {
+    if (!currentNotch) return null;
+    return BANDS.find(b => getSubBands(b).includes(currentNotch))?.label ?? null;
+  }, [currentNotch]);
   const [notchCandidate, setNotchCandidate]  = useState<number | null>(null);
   const [toneVolume,     setToneVolume]      = useState(0.25);   // 0-1
   const [confirmPress,   setConfirmPress]    = useState(false);
@@ -355,7 +361,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                         width: 26, height: 26,
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <Chevron expanded={isExpanded} blinking={!isExpanded && focusedBand === band.label} />
+                        <Chevron expanded={isExpanded} blinking={!isExpanded && (focusedBand === band.label || notchBandLabel === band.label)} />
                       </button>
                       <button onClick={() => handleParentPlay(band.base, band.label)}
                         style={{ display: "flex", alignItems: "center" }}>
@@ -449,7 +455,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                                     visibility: sfPlaying ? "visible" : "hidden",
                                     ...KALLISTO, fontWeight: 700,
                                     fontSize: "clamp(10.5px,2.8vw,13px)", color: "#ffcc00",
-                                  }}>NOTCH <TriFilled color="#ffcc00" size={11} /></button>
+                                  }}><span style={{ display:"inline-flex", transform:"rotate(180deg)" }}><TriFilled color="#ffcc00" size={11} /></span> NOTCH</button>
                                 )}
                               </div>
                             </div>
