@@ -273,7 +273,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
         {/* X — always visible above carousel */}
         <button onClick={handleClose} aria-label="Close" style={{
-          position: "absolute", top: 0, left: 0, zIndex: 20,
+          position: "absolute", top: 0, left: 0, zIndex: 70,
           width: 48, height: 48,
           display: "flex", alignItems: "center", justifyContent: "center",
           ...KALLISTO, fontWeight: 500, fontSize: "1.55rem", lineHeight: 1,
@@ -485,7 +485,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             onPointerLeave={() => setBackPressed(false)}
             onClick={handleBack}
             style={{
-              position: "absolute", bottom: "3%", left: 14, zIndex: 10,
+              position: "absolute", bottom: "3%", left: 14, zIndex: 70,
               ...KALLISTO, fontWeight: 700,
               fontSize: "clamp(11px,2.7cqw,13px)",
               letterSpacing: "0.04em",
@@ -526,11 +526,11 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                 style={{ width: "100%", height: "auto", display: "block" }}
               />
 
-              {/* button row — positioned over the empty slot in the graphic
-                  (image is 1503×1620; blank zone starts at ~78.5% from top) */}
+              {/* button row — anchored from the bottom of the card so it always
+                  sits above the footer text (footer ≈ bottom 13% of image) */}
               <div style={{
                 position: "absolute",
-                top: "78.5%",
+                bottom: "13%",
                 left: "4%", right: "4%",
                 display: "flex",
                 gap: "clamp(6px,2cqw,10px)",
