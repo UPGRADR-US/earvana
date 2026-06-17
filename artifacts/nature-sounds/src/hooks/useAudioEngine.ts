@@ -366,7 +366,7 @@ export function useAudioEngine(): AudioEngineState {
       if (i >= unloaded.length) return;
       const track = unloaded[i++];
       const engine = new TrackEngine(track, ctx, mg);
-      engine.setVolume(0.5);
+      engine.setVolume(track.defaultVolume ?? 0.5);
       enginesRef.current[track.id] = engine;
       engine.load().catch(() => {}).finally(() => setTimeout(loadNext, 200));
     };
@@ -452,7 +452,9 @@ export function useAudioEngine(): AudioEngineState {
       return;
     }
 
-    enginesRef.current[trackId].setVolume(tracksState[trackId]?.volume ?? 0.5);
+    enginesRef.current[trackId].setVolume(
+      tracksState[trackId]?.volume ?? TRACKS.find(t => t.id === trackId)?.defaultVolume ?? 0.5
+    );
 
     const engine = enginesRef.current[trackId];
     lastPlayedIdRef.current = trackId;

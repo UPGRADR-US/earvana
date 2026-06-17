@@ -8,6 +8,12 @@ export type SoundTrack = {
   crossfadeDuration?: number; // seconds
   loopStart?: number;         // seconds
   loopEnd?: number;           // seconds
+
+  // Default gain (0–1 linear) applied on first load.
+  // Derived from the neutral 0.5 baseline:
+  //   +2 dB → 0.5 × 10^( 2/20) ≈ 0.561
+  //   −2 dB → 0.5 × 10^(-2/20) ≈ 0.446
+  defaultVolume?: number;
 };
 
 export type SoundCategory = {
@@ -23,10 +29,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Oceans",
     thumbnail: "sounds/TR_tn_oceans.png",
     tracks: [
-      { id: "ocean_high_tide_beach",  name: "ocean: high-tide beach",  file: "sounds/ocean-HighTideBeach.mp3",  icon: "Waves" },
-      { id: "ocean_low_tide_beach",   name: "ocean: low-tide beach",   file: "sounds/ocean-LowTideBeach.mp3",   icon: "Waves" },
-      { id: "ocean_low_tide_bay",     name: "ocean: low-tide bay",     file: "sounds/ocean-LowTideBay.mp3",     icon: "Waves" },
-      { id: "ocean_waterlaps_cove",   name: "ocean: waterlaps cove",   file: "sounds/ocean-WaterlapsCove.mp3",  icon: "Waves" },
+      { id: "ocean_high_tide_beach",  name: "ocean: high-tide beach",  file: "sounds/ocean-HighTideBeach.mp3",  icon: "Waves", defaultVolume: 0.561 },
+      { id: "ocean_low_tide_beach",   name: "ocean: low-tide beach",   file: "sounds/ocean-LowTideBeach.mp3",   icon: "Waves", defaultVolume: 0.561 },
+      { id: "ocean_low_tide_bay",     name: "ocean: low-tide bay",     file: "sounds/ocean-LowTideBay.mp3",     icon: "Waves", defaultVolume: 0.561 },
+      { id: "ocean_waterlaps_cove",   name: "ocean: waterlaps cove",   file: "sounds/ocean-WaterlapsCove.mp3",  icon: "Waves", defaultVolume: 0.561 },
     ],
   },
   {
@@ -46,10 +52,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Streams",
     thumbnail: "sounds/TR_tn_streams.png",
     tracks: [
-      { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets" },
-      { id: "stream_mountain_spring", name: "stream: mountain spring", file: "sounds/stream-MountainSpring.mp3",  icon: "Droplets" },
-      { id: "stream_gentle_brook",    name: "stream: gentle brook",    file: "sounds/stream-GentleBrook.mp3",     icon: "Droplets" },
-      { id: "stream_cascading_river", name: "stream: cascading river", file: "sounds/stream-CascadingRiver.mp3",  icon: "Droplets" },
+      { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets", defaultVolume: 0.446 },
+      { id: "stream_mountain_spring", name: "stream: mountain spring", file: "sounds/stream-MountainSpring.mp3",  icon: "Droplets", defaultVolume: 0.446 },
+      { id: "stream_gentle_brook",    name: "stream: gentle brook",    file: "sounds/stream-GentleBrook.mp3",     icon: "Droplets", defaultVolume: 0.446 },
+      { id: "stream_cascading_river", name: "stream: cascading river", file: "sounds/stream-CascadingRiver.mp3",  icon: "Droplets", defaultVolume: 0.446 },
     ],
   },
   {
