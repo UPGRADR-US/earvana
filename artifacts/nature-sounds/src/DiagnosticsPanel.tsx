@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import notchPopupImg from "@assets/NotchPopup_1781705420558.png";
+import notchPopupImg from "@assets/NotchPopup_1781713196673.png";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
@@ -526,11 +526,11 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                 style={{ width: "100%", height: "auto", display: "block" }}
               />
 
-              {/* button row — anchored from the bottom of the card so it always
-                  sits above the footer text (footer ≈ bottom 13% of image) */}
+              {/* button row — sits in the blank zone at the bottom of the card
+                  (new image 1503×1858; blank strip is the last ~10% of height) */}
               <div style={{
                 position: "absolute",
-                bottom: "13%",
+                bottom: "3%",
                 left: "4%", right: "4%",
                 display: "flex",
                 gap: "clamp(6px,2cqw,10px)",
@@ -541,18 +541,18 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                   onPointerUp={() => setCancelPress(false)}
                   onPointerLeave={() => setCancelPress(false)}
                   style={{
-                    flex: 1, height: 40, borderRadius: 8,
+                    flex: 1, height: 38, borderRadius: 7,
                     background: cancelPress
-                      ? "rgba(180,180,180,0.40)"
-                      : "rgba(90,90,90,0.50)",
-                    border: "1px solid rgba(255,255,255,0.20)",
+                      ? "rgba(100,104,108,0.95)"
+                      : "rgba(58,62,66,0.95)",
+                    border: "1px solid rgba(255,255,255,0.14)",
                     boxShadow: cancelPress
-                      ? "0 0 16px 4px rgba(210,210,210,0.55)"
+                      ? "0 0 14px 3px rgba(200,200,200,0.45)"
                       : "none",
                     transition: "background 0.1s, box-shadow 0.1s",
-                    ...KALLISTO, fontWeight: 300,
+                    ...KALLISTO, fontWeight: 400,
                     fontSize: "clamp(11px,2.7cqw,13px)",
-                    color: "rgba(255,255,255,0.78)",
+                    color: "rgba(255,255,255,0.82)",
                     cursor: "pointer",
                   }}>cancel</button>
 
@@ -562,18 +562,18 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                   onPointerUp={() => setConfirmPress(false)}
                   onPointerLeave={() => setConfirmPress(false)}
                   style={{
-                    flex: 1.6, height: 40, borderRadius: 8,
+                    flex: 1.6, height: 38, borderRadius: 7,
                     background: confirmPress
-                      ? "rgba(0,210,70,0.55)"
-                      : "rgba(20,20,20,0.82)",
-                    border: "1px solid rgba(0,255,85,0.45)",
+                      ? "rgba(0,210,70,0.50)"
+                      : "rgba(28,32,28,0.95)",
+                    border: "1px solid rgba(0,220,80,0.55)",
                     boxShadow: confirmPress
                       ? "0 0 20px 5px rgba(0,255,85,0.60)"
                       : "none",
                     transition: "background 0.1s, box-shadow 0.1s",
                     ...KALLISTO, fontWeight: 700,
                     fontSize: "clamp(11px,2.7cqw,13px)",
-                    color: "#00ff55",
+                    color: "#00e055",
                     cursor: "pointer",
                   }}>✓ notch {label}</button>
               </div>
