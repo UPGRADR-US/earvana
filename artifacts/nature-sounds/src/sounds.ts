@@ -52,10 +52,10 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Streams",
     thumbnail: "sounds/TR_tn_streams.png",
     tracks: [
-      { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets", defaultVolume: 0.446 },
-      { id: "stream_mountain_spring", name: "stream: mountain spring", file: "sounds/stream-MountainSpring.mp3",  icon: "Droplets", defaultVolume: 0.446 },
-      { id: "stream_gentle_brook",    name: "stream: gentle brook",    file: "sounds/stream-GentleBrook.mp3",     icon: "Droplets", defaultVolume: 0.446 },
-      { id: "stream_cascading_river", name: "stream: cascading river", file: "sounds/stream-CascadingRiver.mp3",  icon: "Droplets", defaultVolume: 0.446 },
+      { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets", defaultVolume: 0.397 },
+      { id: "stream_mountain_spring", name: "stream: mountain spring", file: "sounds/stream-MountainSpring.mp3",  icon: "Droplets", defaultVolume: 0.397 },
+      { id: "stream_gentle_brook",    name: "stream: gentle brook",    file: "sounds/stream-GentleBrook.mp3",     icon: "Droplets", defaultVolume: 0.397 },
+      { id: "stream_cascading_river", name: "stream: cascading river", file: "sounds/stream-CascadingRiver.mp3",  icon: "Droplets", defaultVolume: 0.397 },
     ],
   },
   {
