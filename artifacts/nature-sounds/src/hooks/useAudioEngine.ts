@@ -264,7 +264,7 @@ export function useAudioEngine(): AudioEngineState {
   const [tracksState, setTracksState] = useState<Record<string, TrackState>>(
     TRACKS.reduce((acc, t) => ({
       ...acc,
-      [t.id]: { isPlaying: false, isLoading: false, hasError: false, volume: 0.5 }
+      [t.id]: { isPlaying: false, isLoading: false, hasError: false, volume: t.defaultVolume ?? 0.5 }
     }), {})
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
