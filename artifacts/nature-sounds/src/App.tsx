@@ -775,7 +775,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
         <img src={img("settings-pane.png")} alt=""
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
 
-        <div className="absolute overflow-y-auto"
+        <div className="absolute overflow-y-auto thin-scrollbar"
           style={{ top: "calc(12% + 15px)", bottom: "15px", left: "5%", right: "5%", paddingLeft: "0", paddingRight: "0" }}>
 
           {/* AUDIO */}
