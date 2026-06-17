@@ -31,6 +31,10 @@
   from { transform: scale(0.06); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }
 }
+@keyframes tipSlideUp {
+  from { transform: translateY(18px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
 @import "tw-animate-css";
 
 @font-face {

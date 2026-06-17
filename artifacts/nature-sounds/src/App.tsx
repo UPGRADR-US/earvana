@@ -969,8 +969,9 @@ function Home() {
     }
   }, [engine]);
 
-  const [sprocketFlash, setSprocketFlash] = useState<boolean>(false);
-  const [diagFlash,     setDiagFlash]     = useState<boolean>(false);
+  const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
+  const [diagFlash,       setDiagFlash]       = useState<boolean>(false);
+  const [showOutputTip,   setShowOutputTip]   = useState<boolean>(false);
   const [eqMode,  setEqMode]  = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
   );
@@ -1139,15 +1140,7 @@ function Home() {
   }, []);
 
   const handleSpeakerClick = useCallback(() => {
-    /* On iOS Safari, webkitShowPlaybackTargetPicker() opens the native
-       AirPlay / route-picker sheet (internal speaker, Bluetooth, AirPlay). */
-    const audios = document.getElementsByTagName("audio");
-    if (audios.length > 0) {
-      const el = audios[0] as HTMLAudioElement & { webkitShowPlaybackTargetPicker?: () => void };
-      if (typeof el.webkitShowPlaybackTargetPicker === "function") {
-        el.webkitShowPlaybackTargetPicker();
-      }
-    }
+    setShowOutputTip(prev => !prev);
   }, []);
 
   return (
@@ -1176,6 +1169,66 @@ function Home() {
           onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
         />
+      )}
+
+      {/* Audio output tip — appears when speaker icon is tapped */}
+      {showOutputTip && (
+        <div onClick={() => setShowOutputTip(false)}
+          style={{ position: "absolute", inset: 0, zIndex: 60 }}>
+          <div style={{
+            position: "absolute",
+            bottom: "15%", left: "4%",
+            width: "74%",
+            background: "linear-gradient(160deg, #0f2d26 0%, #091a14 100%)",
+            border: "1px solid rgba(0,210,75,0.38)",
+            borderRadius: 14,
+            padding: "14px 16px 13px",
+            boxShadow: "0 0 28px rgba(0,180,60,0.15), 0 10px 36px rgba(0,0,0,0.75)",
+            fontFamily: "'Kallisto', sans-serif",
+            animation: "tipSlideUp 0.26s cubic-bezier(0.34,1.56,0.64,1) both",
+            pointerEvents: "none",
+          }}>
+            {/* Title */}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.45)", marginBottom: 11, textTransform: "uppercase" }}>
+              switching audio output
+            </div>
+
+            {/* Steps */}
+            {([
+              "Swipe down from the top-right corner",
+              "Long-press the Now Playing widget",
+              "Tap the headphone icon to select your output",
+            ] as const).map((step, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start",
+                                    gap: 10, marginBottom: i < 2 ? 9 : 0 }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                  background: "rgba(0,220,80,0.12)", border: "1px solid rgba(0,220,80,0.42)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 700, color: "#00e855", marginTop: 1,
+                }}>{i + 1}</div>
+                <span style={{ fontSize: 13, fontWeight: 300,
+                                color: "rgba(255,255,255,0.85)", lineHeight: 1.45 }}>{step}</span>
+              </div>
+            ))}
+
+            {/* Dismiss hint */}
+            <div style={{ marginTop: 13, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                          color: "rgba(184,154,42,0.65)", textAlign: "center" }}>
+              TAP ANYWHERE TO DISMISS
+            </div>
+
+            {/* Downward pointer aimed at the speaker icon */}
+            <div style={{
+              position: "absolute", bottom: -8, left: 20,
+              width: 0, height: 0,
+              borderLeft: "8px solid transparent",
+              borderRight: "8px solid transparent",
+              borderTop: "8px solid #091a14",
+            }} />
+          </div>
+        </div>
       )}
 
       {!settingsOpen && !diagOpen && (
