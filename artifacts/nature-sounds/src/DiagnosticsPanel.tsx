@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import notchPopupImg from "@assets/NotchPopup_1781705420558.png";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
@@ -139,6 +140,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
   const [notchCandidate, setNotchCandidate]  = useState<number | null>(null);
   const [toneVolume,     setToneVolume]      = useState(0.25);   // 0-1
   const [confirmPress,   setConfirmPress]    = useState(false);
+  const [cancelPress,    setCancelPress]     = useState(false);
 
   // onClick-state for wipe-trigger buttons
   const [startPressed, setStartPressed] = useState(false);
@@ -507,40 +509,53 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: "0 clamp(10px,2.5cqw,18px)",
           }}>
-            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }}
+            {/* dim backdrop — tap anywhere outside card to dismiss */}
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }}
               onClick={() => setNotchCandidate(null)} />
+
+            {/* card — single image, buttons absolutely overlaid at the blank slot */}
             <div style={{
               position: "relative", zIndex: 10,
-              background: "rgba(50,58,45,0.96)",
-              border: "1px solid rgba(184,154,42,0.45)",
-              borderRadius: 14,
-              boxShadow: "0 8px 36px rgba(0,0,0,0.7)",
-              padding: "22px 20px 16px",
               width: "100%", maxWidth: 340,
-              textAlign: "center", ...KALLISTO,
+              filter: "drop-shadow(0 14px 44px rgba(0,0,0,0.88))",
             }}>
-              <p style={{ fontWeight: 500, fontSize: "clamp(12px,3cqw,15px)", color: "rgba(255,255,255,0.85)", marginBottom: 14 }}>
-                "notching" any frequency is optional:
-              </p>
-              {([
-                { w: 300, txt: "recent studies show this technique may help train the brain to suppress the internal ringing." },
-                { w: 700, txt: "this is not a guaranteed fix. results vary among users." },
-                { w: 300, txt: "this frequency will be remembered and notched from your audio playback. you can reset at any time." },
-              ] as const).map(({ w, txt }, i) => (
-                <p key={i} style={{
-                  fontWeight: w, lineHeight: 1.45, marginBottom: 10,
-                  fontSize: w === 700 ? "clamp(11px,2.7cqw,14px)" : "clamp(10px,2.4cqw,12px)",
-                  color: w === 700 ? "rgba(255,255,255,0.90)" : "rgba(255,255,255,0.65)",
-                }}>{txt}</p>
-              ))}
-              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                <button onClick={() => setNotchCandidate(null)} style={{
-                  flex: 1, height: 40, borderRadius: 8,
-                  background: "rgba(90,90,90,0.65)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.7cqw,13px)",
-                  color: "rgba(255,255,255,0.70)",
-                }}>cancel</button>
+              <img
+                src={notchPopupImg}
+                alt=""
+                draggable={false}
+                style={{ width: "100%", height: "auto", display: "block" }}
+              />
+
+              {/* button row — positioned over the empty slot in the graphic
+                  (image is 1503×1620; blank zone starts at ~78.5% from top) */}
+              <div style={{
+                position: "absolute",
+                top: "78.5%",
+                left: "4%", right: "4%",
+                display: "flex",
+                gap: "clamp(6px,2cqw,10px)",
+              }}>
+                <button
+                  onClick={() => setNotchCandidate(null)}
+                  onPointerDown={() => setCancelPress(true)}
+                  onPointerUp={() => setCancelPress(false)}
+                  onPointerLeave={() => setCancelPress(false)}
+                  style={{
+                    flex: 1, height: 40, borderRadius: 8,
+                    background: cancelPress
+                      ? "rgba(180,180,180,0.40)"
+                      : "rgba(90,90,90,0.50)",
+                    border: "1px solid rgba(255,255,255,0.20)",
+                    boxShadow: cancelPress
+                      ? "0 0 16px 4px rgba(210,210,210,0.55)"
+                      : "none",
+                    transition: "background 0.1s, box-shadow 0.1s",
+                    ...KALLISTO, fontWeight: 300,
+                    fontSize: "clamp(11px,2.7cqw,13px)",
+                    color: "rgba(255,255,255,0.78)",
+                    cursor: "pointer",
+                  }}>cancel</button>
+
                 <button
                   onClick={handleNotchConfirm}
                   onPointerDown={() => setConfirmPress(true)}
@@ -548,11 +563,18 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
                   onPointerLeave={() => setConfirmPress(false)}
                   style={{
                     flex: 1.6, height: 40, borderRadius: 8,
-                    background: confirmPress ? "rgba(0,180,60,0.55)" : "rgba(30,30,30,0.85)",
-                    border: "1px solid rgba(0,255,85,0.35)",
-                    transition: "background 0.12s",
-                    ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.7cqw,13px)",
+                    background: confirmPress
+                      ? "rgba(0,210,70,0.55)"
+                      : "rgba(20,20,20,0.82)",
+                    border: "1px solid rgba(0,255,85,0.45)",
+                    boxShadow: confirmPress
+                      ? "0 0 20px 5px rgba(0,255,85,0.60)"
+                      : "none",
+                    transition: "background 0.1s, box-shadow 0.1s",
+                    ...KALLISTO, fontWeight: 700,
+                    fontSize: "clamp(11px,2.7cqw,13px)",
                     color: "#00ff55",
+                    cursor: "pointer",
                   }}>✓ notch {label}</button>
               </div>
             </div>
