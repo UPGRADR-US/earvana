@@ -1312,12 +1312,16 @@ function Home() {
             </div>
 
             {/* Icon row — Speaker pinned left, Sprocket pinned right,
-                Play+EQ absolutely centred as a pair. */}
-            <div className="relative flex items-center"
-              style={{ paddingLeft: "25px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + clamp(10px,2vh,16px))" }}>
+                Play+EQ absolutely centred as a pair.
+                The bar image sits on a wrapper that also covers the safe-area
+                spacer so the graphic fills all the way to the home indicator
+                without pushing the icons down. */}
+            <div className="relative">
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
+            <div className="relative flex items-center"
+              style={{ paddingLeft: "25px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
               {/* Speaker — left edge */}
               <button onClick={handleSpeakerClick}
                 className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
@@ -1363,7 +1367,11 @@ function Home() {
                 <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
-            </div>
+            </div>{/* end icon row */}
+            {/* Safe-area spacer — bar graphic above covers this so it fills
+                flush to the home indicator without displacing the icons */}
+            <div style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
+            </div>{/* end bar wrapper */}
           </div>
         </>
       )}
