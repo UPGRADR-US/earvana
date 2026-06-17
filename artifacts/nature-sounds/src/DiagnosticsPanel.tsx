@@ -341,7 +341,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
             left: 0, right: 36,
             overflowY: "auto",
             scrollbarWidth: "none",
-            padding: "4px 8px 4px 14px",
+            padding: "4px 8px 4px 4px",
           }}>
             {BANDS.map(band => {
               const subs       = getSubBands(band);
@@ -411,7 +411,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch }: Props) {
 
                             {/* LEFT 44% — NOTCH button (when playing) + play triangle */}
                             <div style={{ flexBasis: "44%", flexShrink: 0, display: "flex",
-                                          alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                                          alignItems: "center", justifyContent: "flex-end", gap: 20 }}>
                               {!sfNotched && (
                                 <button onClick={() => { if (sfPlaying) { stopTone(); setNotchCandidate(sf); } }} style={{
                                   display: "flex", alignItems: "center", gap: 3,
