@@ -13,6 +13,13 @@ const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
+// True when the browser supports Audio Output Devices API (Chrome / Android).
+// iOS Safari always returns false — we show the manual tip card instead.
+const CAN_SELECT_OUTPUT =
+  typeof navigator !== "undefined" &&
+  "mediaDevices" in navigator &&
+  "selectAudioOutput" in (navigator.mediaDevices ?? {});
+
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
 function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
@@ -1139,7 +1146,15 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSpeakerClick = useCallback(() => {
+  const handleSpeakerClick = useCallback(async () => {
+    // Android Chrome: use the real Audio Output Devices API picker.
+    if (CAN_SELECT_OUTPUT) {
+      try {
+        await (navigator.mediaDevices as any).selectAudioOutput();
+      } catch { /* user cancelled or permission denied — swallow silently */ }
+      return;
+    }
+    // iOS Safari and everything else: toggle the manual tip card.
     setShowOutputTip(prev => !prev);
   }, []);
 

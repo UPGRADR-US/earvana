@@ -340,6 +340,21 @@ export function useAudioEngine(): AudioEngineState {
     } catch { /* no Blob/Audio support */ }
   }, []);
 
+  // ── Audio output re-routing: re-latch AudioContext when device changes ──
+  // Fires when the user switches output (e.g. Control Center → phone speaker).
+  // A suspend→resume cycle forces WebKit to reroute without stopping playback.
+  useEffect(() => {
+    const md = navigator.mediaDevices;
+    if (!md || typeof md.addEventListener !== "function") return;
+    const handler = () => {
+      const ctx = contextRef.current;
+      if (!ctx || ctx.state !== "running") return;
+      ctx.suspend().then(() => ctx.resume()).catch(() => {});
+    };
+    md.addEventListener("devicechange", handler);
+    return () => md.removeEventListener("devicechange", handler);
+  }, []);
+
   // ── Background preloader ────────────────────────────────────────────────
   const preloadInBackground = useCallback(() => {
     const ctx = contextRef.current;
