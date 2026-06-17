@@ -40,7 +40,7 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Rains",
     thumbnail: "sounds/TR_tn_rains.png",
     tracks: [
-      { id: "rain_lite_drizzle",          name: "rain: lite drizzle",          file: "sounds/rain-LiteDrizzle.mp3",          icon: "CloudRain" },
+      { id: "rain_lite_drizzle",          name: "rain: lite drizzle",          file: "sounds/rain-LiteDrizzle.mp3",          icon: "CloudRain", defaultVolume: 0.530 },
       { id: "rain_lite_shower",           name: "rain: lite shower",           file: "sounds/rain-LiteShower.mp3",           icon: "CloudRain" },
       { id: "rain_downpour",              name: "rain: downpour",              file: "sounds/rain-Downpour.mp3",             icon: "CloudRain" },
       { id: "rain_quiet_storm",           name: "rain: quiet storm",           file: "sounds/rain-QuietStorm.mp3",           icon: "CloudLightning" },
