@@ -934,11 +934,21 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
             </div>
           </SettingsRow>
 
-          {/* Build info — bottom of settings */}
-          <div style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.22)",
-                        letterSpacing: "0.07em", padding: "18px 0 10px" }}>
-            build&nbsp;23&nbsp;·&nbsp;{new Date(__BUILD_TIME__).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-          </div>
+          {/* ABOUT */}
+          <SettingsRow label="about" isOpen={openSection === "about"} onToggle={() => toggleSection("about")}>
+            <div style={{ paddingLeft: "14px", paddingTop: "4px", paddingBottom: "8px" }}>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "15px", letterSpacing: "0.04em", marginBottom: "6px" }}>
+                earvana: tinnitus relief
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "3px" }}>
+                v1.0&nbsp;&nbsp;(build 23)
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "13px", letterSpacing: "0.05em" }}>
+                © 2026&nbsp;&nbsp;jay oliver
+              </div>
+            </div>
+          </SettingsRow>
+          <div style={{ height: "10px" }} />
 
         </div>
       </div>
