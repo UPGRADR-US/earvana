@@ -13,13 +13,6 @@ const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
-// True when the browser supports Audio Output Devices API (Chrome / Android).
-// iOS Safari always returns false — we show the manual tip card instead.
-const CAN_SELECT_OUTPUT =
-  typeof navigator !== "undefined" &&
-  "mediaDevices" in navigator &&
-  "selectAudioOutput" in (navigator.mediaDevices ?? {});
-
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
 function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
@@ -990,7 +983,7 @@ function Home() {
 
   const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
   const [diagFlash,       setDiagFlash]       = useState<boolean>(false);
-  const [showOutputTip,   setShowOutputTip]   = useState<boolean>(false);
+
   const [eqMode,  setEqMode]  = useState<EqModeId>(
     () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
   );
@@ -1158,17 +1151,6 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSpeakerClick = useCallback(async () => {
-    // Android Chrome: use the real Audio Output Devices API picker.
-    if (CAN_SELECT_OUTPUT) {
-      try {
-        await (navigator.mediaDevices as any).selectAudioOutput();
-      } catch { /* user cancelled or permission denied — swallow silently */ }
-      return;
-    }
-    // iOS Safari and everything else: toggle the manual tip card.
-    setShowOutputTip(prev => !prev);
-  }, []);
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
@@ -1198,65 +1180,6 @@ function Home() {
         />
       )}
 
-      {/* Audio output tip — appears when speaker icon is tapped */}
-      {showOutputTip && (
-        <div onClick={() => setShowOutputTip(false)}
-          style={{ position: "absolute", inset: 0, zIndex: 60 }}>
-          <div style={{
-            position: "absolute",
-            bottom: "15%", left: "4%",
-            width: "74%",
-            background: "linear-gradient(160deg, #0f2d26 0%, #091a14 100%)",
-            border: "1px solid rgba(0,210,75,0.38)",
-            borderRadius: 14,
-            padding: "14px 16px 13px",
-            boxShadow: "0 0 28px rgba(0,180,60,0.15), 0 10px 36px rgba(0,0,0,0.75)",
-            fontFamily: "'Kallisto', sans-serif",
-            animation: "tipSlideUp 0.26s cubic-bezier(0.34,1.56,0.64,1) both",
-            pointerEvents: "none",
-          }}>
-            {/* Title */}
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.45)", marginBottom: 11, textTransform: "uppercase" }}>
-              switching audio output
-            </div>
-
-            {/* Steps */}
-            {([
-              "Swipe down from the top-right corner",
-              "Long-press the Now Playing widget",
-              "Tap the headphone icon to select your output",
-            ] as const).map((step, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start",
-                                    gap: 10, marginBottom: i < 2 ? 9 : 0 }}>
-                <div style={{
-                  width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-                  background: "rgba(0,220,80,0.12)", border: "1px solid rgba(0,220,80,0.42)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 700, color: "#00e855", marginTop: 1,
-                }}>{i + 1}</div>
-                <span style={{ fontSize: 13, fontWeight: 300,
-                                color: "rgba(255,255,255,0.85)", lineHeight: 1.45 }}>{step}</span>
-              </div>
-            ))}
-
-            {/* Dismiss hint */}
-            <div style={{ marginTop: 13, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                          color: "rgba(184,154,42,0.65)", textAlign: "center" }}>
-              TAP ANYWHERE TO DISMISS
-            </div>
-
-            {/* Downward pointer aimed at the speaker icon */}
-            <div style={{
-              position: "absolute", bottom: -8, left: 20,
-              width: 0, height: 0,
-              borderLeft: "8px solid transparent",
-              borderRight: "8px solid transparent",
-              borderTop: "8px solid #091a14",
-            }} />
-          </div>
-        </div>
-      )}
 
       {!settingsOpen && !diagOpen && (
         <>
@@ -1324,7 +1247,7 @@ function Home() {
               </div>
             </div>
 
-            {/* Icon row — Speaker pinned left, Sprocket pinned right,
+            {/* Icon row — Diagnostics pinned left, Sprocket pinned right,
                 Play+EQ absolutely centred as a pair.
                 The bar image sits on a wrapper that also covers the safe-area
                 spacer so the graphic fills all the way to the home indicator
@@ -1334,19 +1257,13 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "25px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
-              {/* Speaker — left edge */}
-              <button onClick={handleSpeakerClick}
-                className="flex-shrink-0 transition-opacity duration-150 active:opacity-50"
-                style={{ width: "clamp(22px,5.5cqw,30px)" }} data-testid="btn-speaker">
-                <img src={img("SpkrIcon.png")} alt="Audio output" className="w-full h-auto" draggable={false} />
-              </button>
+              style={{ paddingLeft: "14px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
 
               {/* Diagnostics button — Diag_Butt.png graphic */}
               <button
                 onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); diagOpen ? closeDiag() : openDiag(); }, 160); }}
                 className="flex-shrink-0"
-                style={{ marginLeft: "calc(clamp(4px,1.2cqw,8px) + 20px)", width: "clamp(74px,18.5cqw,100px)" }}
+                style={{ width: "clamp(74px,18.5cqw,100px)" }}
                 data-testid="btn-diagnostics"
                 aria-label="Tinnitus diagnostics"
               >
@@ -1360,7 +1277,7 @@ function Home() {
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
               <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
-                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(25px)" }}>
+                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(8px)" }}>
                 <PlayButton
                   isPlaying={btnPlaying}
                   isStandby={!btnPlaying && !!selectedTrackId}
@@ -1372,11 +1289,11 @@ function Home() {
                   {btnPlaying && <EqBars />}
                 </div>
               </div>
-              {/* Sprocket — right edge */}
+              {/* Sprocket — right edge, nudged left for balance */}
               <div className="flex-1" />
               <button onClick={handleSprocketClick}
                 className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
-                style={{ width: "clamp(64px,16cqw,84px)" }} data-testid="btn-settings">
+                style={{ width: "clamp(64px,16cqw,84px)", marginRight: "clamp(6px,1.5cqw,12px)" }} data-testid="btn-settings">
                 <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
