@@ -1257,7 +1257,7 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "14px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
+              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
 
               {/* Diagnostics button — Diag_Butt.png graphic */}
               <button
@@ -1293,7 +1293,7 @@ function Home() {
               <div className="flex-1" />
               <button onClick={handleSprocketClick}
                 className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
-                style={{ width: "clamp(64px,16cqw,84px)", marginRight: "clamp(6px,1.5cqw,12px)" }} data-testid="btn-settings">
+                style={{ width: "clamp(64px,16cqw,84px)", marginRight: "clamp(14px,3cqw,22px)" }} data-testid="btn-settings">
                 <img src={sprocketFlash ? img("Settings_Sprocket(OnCLK).png") : img("Settings_Sprocket.png")}
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
