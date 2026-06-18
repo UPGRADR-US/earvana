@@ -907,7 +907,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                     </span>
                   </button>
                   {openSub === `faq-${i}` && (
-                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55 }}>
+                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
                       {item.a}
                     </div>
                   )}
