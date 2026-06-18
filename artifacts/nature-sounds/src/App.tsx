@@ -470,7 +470,7 @@ function TrackList({
   onSelectTrack: (id: string) => void;
 }) {
   return (
-    <div className="w-full flex-1 min-h-0 overflow-y-auto thin-scrollbar"
+    <div className="w-full overflow-y-auto thin-scrollbar"
       style={{
         scrollBehavior: "smooth",
         WebkitOverflowScrolling: "touch",
@@ -1214,9 +1214,9 @@ function Home() {
           {/* Track list — flex-1 min-h-0 constrains height so TrackList can scroll.
               The gradient overlay at the bottom creates the "peek" effect: the container
               edge naturally clips a partial track, and the fade makes it look intentional. */}
-          <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col">
-            <div className="flex-1 min-h-0 flex flex-col"
-              style={{ paddingTop: "clamp(6px,1vh,12px)" }}>
+          <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col justify-center">
+            <div className="w-full flex flex-col overflow-hidden"
+              style={{ maxHeight: "100%", paddingTop: "clamp(6px,1vh,12px)" }}>
               {selectedId && (() => {
                 const cat = CATEGORIES.find((c) => c.id === selectedId);
                 return cat ? (
