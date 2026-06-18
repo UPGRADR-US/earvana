@@ -1000,7 +1000,9 @@ function Home() {
   });
   // selectedTrackId — the track the user has tapped (yellow blink), independent
   // of whether audio is actually playing. Goes green once PLAY is pressed.
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
+    () => CATEGORIES[0]?.tracks[0]?.id ?? null
+  );
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
   const LOOP_STEP = DURATION_STEPS.length - 1;
