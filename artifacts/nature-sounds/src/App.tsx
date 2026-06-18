@@ -376,12 +376,12 @@ function CylinderCarousel({
     snapCommitted(pxDelta * DRAG_SENS);
   };
 
-  const thumbSize = "clamp(78px, 21cqw, 104px)";
+  const thumbSize = "clamp(68px, min(19cqw, 12svh), 92px)";
 
   return (
     <div className="relative w-full touch-none"
       style={{
-        height: "clamp(100px, min(34cqw, 26svh), 192px)",
+        height: "clamp(88px, min(28cqw, 18svh), 160px)",
         perspective: "820px",
         perspectiveOrigin: "50% 50%",
         containerType: "inline-size",
@@ -479,10 +479,6 @@ function TrackList({
       style={{
         scrollBehavior: "smooth",
         WebkitOverflowScrolling: "touch",
-        /* Fade last ~36px so a clipped partial track looks intentional ("peek"),
-           not an abrupt cut. Mask follows scroll — always fades the visible bottom edge. */
-        WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 36px), transparent 100%)",
-        maskImage:        "linear-gradient(to bottom, black calc(100% - 36px), transparent 100%)",
       }}>
       {category.tracks.map((track: SoundTrack, i: number) => {
         const state      = engine.tracks[track.id];
@@ -1271,7 +1267,7 @@ function Home() {
 
           {/* Carousel */}
           <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "0" }}>
+            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-10px" }}>
               <CylinderCarousel
                 centerIdx={centerIdx}
                 selectedId={selectedId}
