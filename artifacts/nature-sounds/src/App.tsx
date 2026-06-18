@@ -643,28 +643,28 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   { q: "my ringing is a constant high-pitch squeal. which earvana soundscapes will work best?",
     a: "the short answer: all of them can be effective.\n\nif your tinnitus is in the high-frequency range (the most common), the ocean, rain, streams and winds are a great fit because they naturally carry sound energy at those frequencies.  also the sound of crickets carry specific high frequencies that can be effective.\n\nthe best advice is to go through all the categories and soundscapes and note which ones serve you the best." },
   { q: "what is the diagnostic tool?",
-    a: "for your convenience, the on-board frequency-matching engine is a simple and quick way to help pinpoint your specific tinnitus frequency.\n\nthis is not meant to replace a proper diagnosis by a qualified medical professional, but it is provided for your exploration and understanding.\n\nthe diagnostic tool section can be invoked from the bottom control bar.\n\nclicking 'start test' will load the test tone page, where you can preview all possible tinnitus frequencies.  once you're in the ballpark, click the caret chevron to expand, and narrow the audition until you get close to matching the pitch of your internal ringing.\n\nNOTE: experiment with different tone durations and volumes.  playing shorter bursts can often help to identify the correct pitch frequency.\n\nwhen the correct frequency is played, you may experience a short term/momentary relief of your ringing.  this is a common occurrence, and can be an excellent way to determine which frequency best matches your internal pitch ringing.  letting the player continue for a minute or more may extend the relief period." },
+    a: "for your convenience, the on-board frequency-matching engine is a simple and quick way to help pinpoint your specific tinnitus frequency.\n\nthis is not meant to replace a proper diagnosis by a qualified medical professional, but it is provided for your exploration and understanding.\n\nthe diagnostic tool section can be invoked from the bottom control bar.\n\nclicking 'start test' will load the test tone page, where you can preview all possible tinnitus frequencies.  once you've identified the general 'range', then you can click the yellow blinking arrow to expand the list to narrow down your search.  continue auditioning until you find the one you feel is closest to matching the pitch of your internal ringing.\n\nNOTE: experiment with different tone durations and volumes.  playing shorter bursts can often help to identify the correct pitch frequency.\n\nalso NOTE:  when the correct frequency is played, you may experience a short term/momentary relief of your ringing.  this is a common occurrence, and can be an excellent way to identify your specific frequency.  letting the player continue for a minute or more may extend the relief period." },
   { q: "what is frequency-notching?",
     a: "in some cases, long-term or permanent relief can be achieved with notching therapy.  this is when the patient/user listens to audio content where their specific tinnitus frequency band has been notched out.\n\nover time, the brain fills in the missing frequency and the internal ringing can be suppressed.  the recommended duration is: 1-2 hours daily for 2-3 weeks.\n\nin the diagnostic pages, once you pinpoint your tinnitus frequency, you can choose to notch out that frequency.  settings will be remembered, and you can reset at any time by simply going back to the test page and clicking 'reset' next to that frequency.\n\nfurther research is needed and this is not intended to replace professional medical consultation or treatment." },
   { q: "how do I set the timer?",
     a: "Tap the duration bar at the bottom of the screen to select 1–10 hours, or tap the ∞ icon at the far right for continuous playback. A countdown timer appears above the bar while a track is playing." },
   { q: "what are the recommended speakers for earvana audio?",
-    a: "the earvana soundscapes sound great on any playback system, but specifically, earbuds/airpods/headphones will provide the most effective experience for tinnitus sufferers.\n\nwhen playing through external speakers, the most immersive realism happens when your stereo speakers can be physically separated; the wider the better.\n\nBEST: in-ear/over-ear (even better with noise cancellation).\n\nGREAT: higher quality full-range external speakers, separated by 3+ feet.\n\nGOOD: laptop speakers\n\nDECENT: any device where the speakers are close together (i.e., boombox or built-in phone/tablet speakers)." },
+    a: "the earvana soundscapes sound great on any playback system, but specifically, earbuds/airpods/headphones will provide the most effective experience for tinnitus sufferers.\n\nwhen playing through external speakers, the most immersive realism happens when your stereo speakers can be physically separated; the wider the better.\n\nBEST: in-ear/over-ear (even better with noise cancellation).\n\nGREAT: higher quality full-range external speakers, separated by 3+ feet.\n\nGOOD: laptop speakers\n\nDECENT: any device where the speakers are closer together (i.e., boombox or portable player or smart speaker or built-in phone/tablet speakers)." },
   { q: "will this work over bluetooth wireless?",
     a: "yes.  the earvana soundscapes work in both wired and wireless mode.\n\nconnect your airpods or wireless buds/phones before pressing play.  audio routes automatically through your device's active output.  depending on your device, clicking the speaker icon on the lower left of your screen can give you output options." },
   { q: "earvana is playing but I don't hear any audio.",
-    a: "there are different ways to set/change audio output, but it varies depending on whether iOS or Android or what manufacturer.  often your device will be defaulting to a different bluetooth speaker nearby.  stop the earvana playback and manage your output routing through your device's settings pages.  then restart the earvana playback." },
-  { q: "Can I play this through my TV system?",
-    a: "Yes. On iPhone/iPad use AirPlay in Control Center to stream to an Apple TV or compatible soundbar. On Android use Chromecast or Bluetooth to your TV's audio system." },
+    a: "all devices are different, making it a challenge to get audio to the right place.\n\n1) stop the earvana playback, and then start again.\n\n2) make sure the earvana volume slider is up (showing green LEDs).\n\n3) make sure your device's volume is up (i.e., on the side of your device).\n\n4) it's likely that your device's audio output is going to a nearby bluetooth speaker or device.  to change this, stop the earvana playback and manage your output routing through your device's settings pages.  then restart the earvana playback.\n\n5) quit the earvana app and relaunch." },
+  { q: "can I play this through my TV system?",
+    a: "yes.  the method depends on your device's settings as well as your TV setup.\n\nin general, the following may help:\n\n1) on iOS (iPhone/iPad):  use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n\n2) on Android:  use Chromecast or bluetooth to your TV's audio system." },
   { q: "How can I cancel my subscription?",
     a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find Tinnitus Relief by Earvana and tap Cancel. Access continues through the end of your current billing period." },
   { q: "Will there be new tracks added in the future?",
     a: "Yes — new sound categories and tracks are in production and delivered automatically to all subscribers at no additional charge." },
 ];
 
-const PRIVACY_POLICY = `Effective: May 2025
+const PRIVACY_POLICY = `Effective: May 2026
 
-Earvana LLC ("we") is committed to protecting your privacy.
+Silverman Music Inc. ("we") is committed to protecting your privacy.
 
 DATA WE COLLECT
 Tinnitus Relief by Earvana does not collect, transmit, or store any personal information. No account or login is required. All preferences are stored locally on your device only and are never sent to our servers.
@@ -679,17 +679,17 @@ CHILDREN'S PRIVACY
 This app does not knowingly collect data from children under 13.
 
 CONTACT
-privacy@earvana.com`;
+info@earvana.org`;
 
-const TERMS_OF_SERVICE = `Effective: May 2025
+const TERMS_OF_SERVICE = `Effective: May 2026
 
 By using Tinnitus Relief by Earvana ("the App") you agree to these Terms.
 
 LICENSE
-Earvana LLC grants you a personal, non-transferable, non-exclusive license to use the App for personal, non-commercial purposes only.
+Silverman Music Inc. grants you a personal, non-transferable, non-exclusive license to use the App for personal, non-commercial purposes only.
 
 RESTRICTIONS
-You may not: (a) record or redistribute any audio content; (b) reverse-engineer or decompile the App; (c) use the App for commercial purposes without written consent from Earvana LLC.
+You may not: (a) record or redistribute any audio content; (b) reverse-engineer or decompile the App; (c) use the App for commercial purposes without written consent from Silverman Music Inc.
 
 MEDICAL DISCLAIMER
 This App is a sound-masking and relaxation aid only. It is not a medical device and makes no claims to diagnose, treat, cure, or prevent any medical condition including tinnitus. Always consult a licensed audiologist or physician for tinnitus-related medical advice.
@@ -698,12 +698,12 @@ SUBSCRIPTIONS
 Subscriptions auto-renew unless cancelled at least 24 hours before the renewal date.
 
 DISCLAIMER OF WARRANTIES
-The App is provided "as is" without warranty of any kind. Earvana LLC is not liable for any direct, indirect, or incidental damages arising from use of the App.
+The App is provided "as is" without warranty of any kind. Silverman Music Inc. is not liable for any direct, indirect, or incidental damages arising from use of the App.
 
 GOVERNING LAW
 These Terms are governed by the laws of the State of California, USA.
 
-© 2025 Earvana LLC. All rights reserved.`;
+© 2026 Silverman Music Inc. All rights reserved.`;
 
 function SettingsRow({ label, isOpen, onToggle, children }: {
   label: string; isOpen: boolean; onToggle: () => void; children?: React.ReactNode;
@@ -718,10 +718,10 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
           borderRadius: isOpen ? "8px 8px 0 0" : "8px",
           border: "none", cursor: "pointer",
         }}>
-        <span style={{ color: "#00c8ff", fontFamily: "monospace", fontSize: "14px", width: "12px", flexShrink: 0, lineHeight: 1 }}>
+        <span style={{ color: "#00c8ff", fontFamily: "monospace", fontSize: "15px", width: "12px", flexShrink: 0, lineHeight: 1 }}>
           {isOpen ? "∨" : ">"}
         </span>
-        <span style={{ color: "#00c8ff", fontSize: "15px", letterSpacing: "0.06em" }}>
+        <span style={{ color: "#00c8ff", fontSize: "16px", letterSpacing: "0.06em" }}>
           {label}
         </span>
       </button>
@@ -770,7 +770,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
         style={{
           position: "absolute", top: "4.5%", left: "5%", zIndex: 10,
           background: "none", border: "none", cursor: "pointer", padding: "10px", lineHeight: 1,
-          color: xFlash ? "#00ffcc" : "rgba(255,255,255,0.82)", fontSize: "24px",
+          color: xFlash ? "#00ffcc" : "rgba(255,255,255,0.82)", fontSize: "25px",
           textShadow: xFlash ? "0 0 16px #00ffcc, 0 0 36px #00ffaa, 0 0 60px #00ff88" : "0 2px 8px rgba(0,0,0,0.9)",
           transition: "color 0.12s, text-shadow 0.12s",
         }}>✕</button>
@@ -787,7 +787,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           <SettingsRow label="audio" isOpen={openSection === "audio"} onToggle={() => toggleSection("audio")}>
             {/* EQ/SOUND — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
-              <div style={{ marginBottom: "8px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>
+              <div style={{ marginBottom: "8px", fontSize: "12px", fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)" }}>
                 EQ / SOUND:
               </div>
               {/* Presets */}
@@ -800,10 +800,10 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                     }}
                     className="block w-full text-left"
                     style={{ padding: "4px 0", background: "none", border: "none", cursor: "pointer" }}>
-                    <span style={{ color: eqMode === m.id ? "#00ff55" : "rgba(255,255,255,0.78)", fontSize: "13px", fontWeight: eqMode === m.id ? 700 : 400 }}>
+                    <span style={{ color: eqMode === m.id ? "#00ff55" : "rgba(255,255,255,0.78)", fontSize: "14px", fontWeight: eqMode === m.id ? 700 : 400 }}>
                       {">"}&nbsp;{m.label}
                     </span>
-                    {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "11px", marginLeft: "6px" }}>({m.sub})</span>}
+                    {m.sub && <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "12px", marginLeft: "6px" }}>({m.sub})</span>}
                   </button>
                 ))}
               </div>
@@ -811,11 +811,11 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
               {eqMode === "custom" && (
                 <div style={{ marginTop: "14px", paddingLeft: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>custom 5-band</span>
+                    <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>custom 5-band</span>
                     <button
                       onClick={() => onEqBandsChange([0, 0, 0, 0, 0])}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 0",
-                        fontSize: "11px", color: "rgba(0,200,255,0.75)", letterSpacing: "0.05em" }}>
+                        fontSize: "12px", color: "rgba(0,200,255,0.75)", letterSpacing: "0.05em" }}>
                       reset
                     </button>
                   </div>
@@ -832,7 +832,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                       />
                     ))}
                   </div>
-                  <div style={{ marginTop: "10px", fontSize: "10px", color: "rgba(255,255,255,0.28)", textAlign: "center" }}>
+                  <div style={{ marginTop: "10px", fontSize: "11px", color: "rgba(255,255,255,0.28)", textAlign: "center" }}>
                     drag each band · ±12 dB
                   </div>
                 </div>
@@ -853,7 +853,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                 <button key={i} onClick={item.action} className="block w-full text-left"
                   style={{ padding: "9px 0", background: "none", border: "none", cursor: "pointer",
                     borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
-                    color: "rgba(255,255,255,0.78)", fontSize: "13px" }}>
+                    color: "rgba(255,255,255,0.78)", fontSize: "14px" }}>
                   <span style={{ color: "#00c8ff", marginRight: "8px" }}>{">"}</span>{item.label}
                 </button>
               ))}
@@ -865,17 +865,17 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
             {/* Content — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
               {reviewSent
-                ? <div style={{ color: "#00ff55", fontSize: "14px", padding: "4px 0" }}>Thank you for your feedback! ✓</div>
+                ? <div style={{ color: "#00ff55", fontSize: "15px", padding: "4px 0" }}>Thank you for your feedback! ✓</div>
                 : <>
                     <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} rows={4}
                       placeholder="Share your experience with Tinnitus Relief by Earvana…"
                       style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)",
-                        borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "13px",
+                        borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "14px",
                         padding: "8px", resize: "none", boxSizing: "border-box" }} />
                     <button onClick={handleReviewSubmit}
                       style={{ marginTop: "8px", padding: "7px 20px", background: "rgba(0,180,90,0.18)",
                         border: "1px solid rgba(0,255,100,0.35)", borderRadius: "6px",
-                        color: "#00ee88", fontSize: "13px", cursor: "pointer", letterSpacing: "0.04em" }}>
+                        color: "#00ee88", fontSize: "14px", cursor: "pointer", letterSpacing: "0.04em" }}>
                       Submit
                     </button>
                   </>
@@ -892,15 +892,15 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                   <button onClick={() => toggleSub(`faq-${i}`)} className="w-full text-left flex items-start"
                     style={{ gap: "8px", padding: "8px 0", background: "none", border: "none", cursor: "pointer",
                       borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                    <span style={{ color: "#00c8ff", fontSize: "11px", lineHeight: "18px", flexShrink: 0 }}>
+                    <span style={{ color: "#00c8ff", fontSize: "12px", lineHeight: "18px", flexShrink: 0 }}>
                       {openSub === `faq-${i}` ? "∨" : ">"}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", lineHeight: 1.45, textAlign: "left" }}>
+                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "13px", lineHeight: 1.45, textAlign: "left" }}>
                       {item.q}
                     </span>
                   </button>
                   {openSub === `faq-${i}` && (
-                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "13px", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
                       {item.a}
                     </div>
                   )}
@@ -921,11 +921,11 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                   <button onClick={() => toggleSub(`legal-${doc.key}`)} className="w-full text-left flex items-center"
                     style={{ gap: "8px", padding: "9px 0", background: "none", border: "none", cursor: "pointer",
                       borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                    <span style={{ color: "#00c8ff", fontSize: "11px" }}>{openSub === `legal-${doc.key}` ? "∨" : ">"}</span>
-                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "12px", letterSpacing: "0.06em" }}>{doc.label}</span>
+                    <span style={{ color: "#00c8ff", fontSize: "12px" }}>{openSub === `legal-${doc.key}` ? "∨" : ">"}</span>
+                    <span style={{ color: "rgba(255,255,255,0.78)", fontSize: "13px", letterSpacing: "0.06em" }}>{doc.label}</span>
                   </button>
                   {openSub === `legal-${doc.key}` && (
-                    <div style={{ padding: "8px 4px 10px 14px", color: "rgba(255,255,255,0.45)", fontSize: "11px", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
+                    <div style={{ padding: "8px 4px 10px 14px", color: "rgba(255,255,255,0.45)", fontSize: "12px", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>
                       {doc.text}
                     </div>
                   )}
@@ -935,7 +935,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           </SettingsRow>
 
           {/* Build info — bottom of settings */}
-          <div style={{ textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.22)",
+          <div style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.22)",
                         letterSpacing: "0.07em", padding: "18px 0 10px" }}>
             build&nbsp;23&nbsp;·&nbsp;{new Date(__BUILD_TIME__).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </div>
