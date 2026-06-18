@@ -316,10 +316,12 @@ function CylinderCarousel({
   const snapCommitted = (dragDelta: number) => {
     const startSlot = Math.round(dragStartRot.current / ANGLE_STEP);
     const nearest   = Math.round(rotRef.current / ANGLE_STEP);
+    // Only commit a directional advance when the user dragged ≥ 20px (= 5.0 deg at DRAG_SENS 0.25).
+    // Below that threshold it reads as an accidental wobble during a tap — snap back to current slot.
     const committed =
-      dragDelta >  0.75 ? Math.max(nearest, startSlot + 1) :
-      dragDelta < -0.75 ? Math.min(nearest, startSlot - 1) :
-                          nearest;
+      dragDelta >  5.0 ? Math.max(nearest, startSlot + 1) :
+      dragDelta < -5.0 ? Math.min(nearest, startSlot - 1) :
+                         nearest;
     const target    = committed * ANGLE_STEP;
     const newCenter = ((committed % N) + N) % N;
     rotRef.current  = target;
@@ -361,7 +363,7 @@ function CylinderCarousel({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current || dragStartX.current === null) return;
     const px = e.clientX - dragStartX.current;
-    if (Math.abs(px) > 4) didDrag.current = true;
+    if (Math.abs(px) > 8) didDrag.current = true;
     const r        = dragStartRot.current - px * DRAG_SENS;
     rotRef.current = r;
     // Direct DOM write — no React re-render, buttery smooth at 60/120fps.
