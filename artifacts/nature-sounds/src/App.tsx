@@ -884,7 +884,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           </SettingsRow>
 
           {/* FAQ */}
-          <SettingsRow label="faq" isOpen={openSection === "faq"} onToggle={() => toggleSection("faq")}>
+          <SettingsRow label="FAQ" isOpen={openSection === "faq"} onToggle={() => toggleSection("faq")}>
             {/* Questions — 1 tab indent; answers — 2 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
               {FAQ_ITEMS.map((item, i) => (
