@@ -1063,6 +1063,17 @@ function Home() {
     };
   }, [durationStep, LOOP_STEP]);
 
+  /* Allow pinch-zoom on settings/diagnostics pages; lock it out on home screen. */
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (!meta) return;
+    if (settingsOpen || diagOpen) {
+      meta.content = "width=device-width, initial-scale=1.0, viewport-fit=cover";
+    } else {
+      meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover";
+    }
+  }, [settingsOpen, diagOpen]);
+
   /* React to timeRemaining changes: arm fade-out at ≤5 min, auto-stop at 0. */
   useEffect(() => {
     if (durationStep >= LOOP_STEP) return;
