@@ -37,7 +37,7 @@ function fmtSub(hz: number): string {
 
 // ─── Diagnostic tone volume — mirrors home-page VolumeMeter ──────────────────
 
-const TONE_MAX_GAIN = 0.302;
+const TONE_MAX_GAIN = 0.170;
 
 // volume is 0-1; gain = volume * TONE_MAX_GAIN
 function volToGain(v: number) { return v * TONE_MAX_GAIN; }
