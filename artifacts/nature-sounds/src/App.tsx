@@ -475,7 +475,7 @@ function TrackList({
   onSelectTrack: (id: string) => void;
 }) {
   return (
-    <div className="w-full max-h-full overflow-y-auto">
+    <div className="w-full flex-1 min-h-0 overflow-y-auto thin-scrollbar">
       {category.tracks.map((track: SoundTrack, i: number) => {
         const state      = engine.tracks[track.id];
         const isPlaying  = state?.isPlaying ?? false;
@@ -1274,11 +1274,12 @@ function Home() {
             </div>
           </div>
 
-          {/* Track list — margin:auto on the inner wrapper centers content between carousel and
-              timer panel on all screen sizes. justify-content:center is avoided here because
-              iOS Safari / Capacitor mishandles it on overflow:hidden flex-column containers. */}
+          {/* Track list — flex-1 min-h-0 constrains height so TrackList can scroll.
+              The gradient overlay at the bottom creates the "peek" effect: the container
+              edge naturally clips a partial track, and the fade makes it look intentional. */}
           <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col">
-            <div style={{ margin: "auto 0", paddingTop: "clamp(6px,1vh,12px)", paddingBottom: "clamp(6px,1vh,12px)" }}>
+            <div className="flex-1 min-h-0 flex flex-col"
+              style={{ paddingTop: "clamp(6px,1vh,12px)" }}>
               {selectedId && (() => {
                 const cat = CATEGORIES.find((c) => c.id === selectedId);
                 return cat ? (
@@ -1291,6 +1292,12 @@ function Home() {
                 ) : null;
               })()}
             </div>
+            {/* Peek gradient — fades the bottom edge so a clipped track reads as
+                "more below" rather than a hard cutoff. pointer-events-none so
+                it never blocks taps on tracks near the bottom. */}
+            <div className="absolute bottom-0 left-0 right-0 pointer-events-none"
+              style={{ height: "52px", zIndex: 5,
+                background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.72))" }} />
           </div>
 
           {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
