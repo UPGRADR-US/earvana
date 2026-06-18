@@ -101,7 +101,7 @@ export const CATEGORIES: SoundCategory[] = [
     name: "Winds",
     thumbnail: "sounds/TR_tn_winds.png",
     tracks: [
-      { id: "wind_light_breeze",     name: "wind: light breeze",     file: "sounds/wind-LightBreeze.mp3",     icon: "Wind" },
+      { id: "wind_light_breeze",     name: "wind: light breeze",     file: "sounds/wind-LightBreeze.mp3",     icon: "Wind", defaultVolume: 0.630 },
       { id: "wind_gusty_winds",      name: "wind: gusty winds",      file: "sounds/wind-GustyWinds.mp3",      icon: "Wind" },
       { id: "wind_whistling_chinook",name: "wind: whistling chinook", file: "sounds/wind-WhistlingChinook.mp3", icon: "Wind" },
     ],
