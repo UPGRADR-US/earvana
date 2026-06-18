@@ -13,6 +13,8 @@ const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
+const BUILD_NUMBER = 23;
+
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
 function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
@@ -940,11 +942,14 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
               <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "15px", letterSpacing: "0.04em", marginBottom: "6px" }}>
                 earvana: tinnitus relief
               </div>
-              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "3px" }}>
-                v1.0&nbsp;&nbsp;(build 23)
+              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "10px" }}>
+                v1.0&nbsp;&nbsp;(build {BUILD_NUMBER})
               </div>
-              <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "13px", letterSpacing: "0.05em" }}>
-                © 2026&nbsp;&nbsp;jay oliver
+              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", letterSpacing: "0.04em", marginBottom: "3px" }}>
+                composed and produced by:&nbsp;&nbsp;jay oliver
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "12px", letterSpacing: "0.05em" }}>
+                © 2026&nbsp;&nbsp;silverman music inc.
               </div>
             </div>
           </SettingsRow>
