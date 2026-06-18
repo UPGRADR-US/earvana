@@ -381,7 +381,7 @@ function CylinderCarousel({
   return (
     <div className="relative w-full touch-none"
       style={{
-        height: "clamp(134px, 34cqw, 192px)",
+        height: "clamp(100px, min(34cqw, 26svh), 192px)",
         perspective: "820px",
         perspectiveOrigin: "50% 50%",
         containerType: "inline-size",
@@ -475,7 +475,15 @@ function TrackList({
   onSelectTrack: (id: string) => void;
 }) {
   return (
-    <div className="w-full flex-1 min-h-0 overflow-y-auto thin-scrollbar">
+    <div className="w-full flex-1 min-h-0 overflow-y-auto thin-scrollbar"
+      style={{
+        scrollBehavior: "smooth",
+        WebkitOverflowScrolling: "touch",
+        /* Fade last ~36px so a clipped partial track looks intentional ("peek"),
+           not an abrupt cut. Mask follows scroll — always fades the visible bottom edge. */
+        WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 36px), transparent 100%)",
+        maskImage:        "linear-gradient(to bottom, black calc(100% - 36px), transparent 100%)",
+      }}>
       {category.tracks.map((track: SoundTrack, i: number) => {
         const state      = engine.tracks[track.id];
         const isPlaying  = state?.isPlaying ?? false;
@@ -1292,12 +1300,6 @@ function Home() {
                 ) : null;
               })()}
             </div>
-            {/* Peek gradient — fades the bottom edge so a clipped track reads as
-                "more below" rather than a hard cutoff. pointer-events-none so
-                it never blocks taps on tracks near the bottom. */}
-            <div className="absolute bottom-0 left-0 right-0 pointer-events-none"
-              style={{ height: "52px", zIndex: 5,
-                background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.72))" }} />
           </div>
 
           {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
@@ -1306,7 +1308,7 @@ function Home() {
           <div className="z-10 flex-shrink-0">
 
             {/* Duration slider — paddingBottom creates the gap between "duration" label and CPanl_bar_btm */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(30px,5vh,50px)", paddingBottom: "clamp(14px,2.5vh,22px)" }}>
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(4px,2.5vh,30px)", paddingBottom: "clamp(4px,1.5vh,16px)" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
