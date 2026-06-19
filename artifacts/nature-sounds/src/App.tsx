@@ -1205,6 +1205,8 @@ function Home() {
           onClose={closeDiag}
           onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
+          onBoost={(freq) => engine.setBoost(freq ?? null)}
+          currentBoost={engine.boostedFreq}
         />
       )}
 

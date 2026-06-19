@@ -42,6 +42,8 @@ export type AudioEngineState = {
   cancelFade: () => void;
   notchedFreq: number | null;
   setNotch: (freq: number | null) => void;
+  boostedFreq: number | null;
+  setBoost: (freq: number | null) => void;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -274,11 +276,18 @@ export function useAudioEngine(): AudioEngineState {
   );
   const notchedFreqRef = useRef<number | null>(savedNotch ? Number(savedNotch) : null);
 
+  const savedBoost = localStorage.getItem("tr_boost_freq");
+  const [boostedFreq, setBoostedFreqState] = useState<number | null>(
+    savedBoost ? Number(savedBoost) : null
+  );
+  const boostedFreqRef = useRef<number | null>(savedBoost ? Number(savedBoost) : null);
+
   const contextRef      = useRef<AudioContext | null>(null);
   const masterGainRef   = useRef<GainNode | null>(null);
   const fadeGainRef     = useRef<GainNode | null>(null);
   const eqFiltersRef    = useRef<BiquadFilterNode[]>([]);
   const notchFilterRef  = useRef<BiquadFilterNode | null>(null);
+  const boostFilterRef  = useRef<BiquadFilterNode | null>(null);
   const pendingEqRef    = useRef<number[]>([0, 0, 0, 0, 0]);
   const enginesRef      = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
@@ -402,11 +411,20 @@ export function useAudioEngine(): AudioEngineState {
       notch.Q.value = notchedFreqRef.current ? 30 : 1000;
       notchFilterRef.current = notch;
 
-      // Chain: masterGain → eq[0..4] → notch → fadeGain → destination
+      // Boost filter — peaking EQ for additive therapy; gain=0 when inactive (transparent).
+      const boost = contextRef.current.createBiquadFilter();
+      boost.type = "peaking";
+      boost.frequency.value = boostedFreqRef.current ?? 22050;
+      boost.Q.value = boostedFreqRef.current ? 30 : 1000;
+      boost.gain.value = boostedFreqRef.current ? 12 : 0;
+      boostFilterRef.current = boost;
+
+      // Chain: masterGain → eq[0..4] → notch → boost → fadeGain → destination
       let prev: AudioNode = masterGainRef.current;
       for (const f of filters) { prev.connect(f); prev = f; }
       prev.connect(notch);
-      notch.connect(fadeGainRef.current);
+      notch.connect(boost);
+      boost.connect(fadeGainRef.current);
       fadeGainRef.current.connect(contextRef.current.destination);
       setTimeout(preloadInBackground, 0);
     }
@@ -574,6 +592,27 @@ export function useAudioEngine(): AudioEngineState {
     }
   }, []);
 
+  const setBoost = useCallback((freq: number | null) => {
+    boostedFreqRef.current = freq;
+    setBoostedFreqState(freq);
+    if (freq !== null) {
+      localStorage.setItem("tr_boost_freq", String(freq));
+    } else {
+      localStorage.removeItem("tr_boost_freq");
+    }
+    const b = boostFilterRef.current;
+    if (!b) return;
+    if (freq !== null) {
+      b.frequency.value = freq;
+      b.Q.value = 30;    // narrow peak, bandwidth = freq/30
+      b.gain.value = 12; // +12 dB additive therapy boost
+    } else {
+      b.gain.value = 0;  // 0 dB gain = transparent (peaking filter is bypassed)
+      b.Q.value = 1000;
+      b.frequency.value = 22050;
+    }
+  }, []);
+
   // ── Effects ─────────────────────────────────────────────────────────────
 
   useEffect(() => { playRef.current   = play;   }, [play]);
@@ -636,5 +675,7 @@ export function useAudioEngine(): AudioEngineState {
     cancelFade,
     notchedFreq,
     setNotch,
+    boostedFreq,
+    setBoost,
   };
 }
