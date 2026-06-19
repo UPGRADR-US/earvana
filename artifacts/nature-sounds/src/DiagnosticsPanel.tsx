@@ -1,20 +1,20 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import diagP1Img     from "@assets/diagNEW_p1_1781898279568.png";
-import diagP2Img     from "@assets/diagNEW_base_p2_1781898314245.png";
-import diagCardImg   from "@assets/diagNEW_base_p3-4_1781898318899.png";
+import diagP1Img   from "@assets/diagNEW_p1_1781898279568.png";
+import diagP2Img   from "@assets/diagNEW_base_p2_1781898314245.png";
+import diagCardImg from "@assets/diagNEW_base_p3-4_1781898318899.png";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
 
 const KALLISTO: React.CSSProperties = { fontFamily: "'Kallisto', sans-serif" };
-const WIPE_MS = 340;
+const WIPE_MS    = 340;
 const TONE_MAX_GAIN = 0.120;
 
 // ─── Frequency bands ──────────────────────────────────────────────────────────
 
 const BANDS = [
-  { label: "upper-bass",    base: 500,  step:  50, count:  5 },
-  { label: "lower-mid",     base: 750,  step:  50, count:  5 },
+  { label: "upper-bass",    base:  500, step:  50, count:  5 },
+  { label: "lower-mid",     base:  750, step:  50, count:  5 },
   { label: "midrange",      base: 1000, step: 100, count: 10 },
   { label: "upper-mid",     base: 2000, step: 100, count: 10 },
   { label: "bright-mid",    base: 3000, step: 100, count: 10 },
@@ -77,15 +77,28 @@ function DiagVolMeter({ volume, onChange }: { volume: number; onChange: (v: numb
 
 // ─── Speaker icon ─────────────────────────────────────────────────────────────
 
-function SpeakerIcon({ active, size = 18 }: { active: boolean; size?: number }) {
-  const c = active ? "#00ff55" : "rgba(255,255,255,0.38)";
+function SpeakerIcon({ active, size = 16 }: { active: boolean; size?: number }) {
+  const c = active ? "#00ff55" : "rgba(200,200,200,0.50)";
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, display: "block" }}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      style={{ flexShrink: 0, display: "block" }}>
       <path d="M3 9v6h4l5 5V4L7 9H3z" fill={c} />
       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" fill={c} />
       {active && (
         <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill={c} />
       )}
+    </svg>
+  );
+}
+
+// ─── Chevron svg ──────────────────────────────────────────────────────────────
+
+function Chevron({ color = "#ffcc00" }: { color?: string }) {
+  return (
+    <svg width={8} height={10} viewBox="0 0 10 14" style={{ flexShrink: 0 }}>
+      <polyline points="2,2 8,7 2,12"
+        fill="none" stroke={color} strokeWidth="2.4"
+        strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -102,7 +115,9 @@ interface Props {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, currentBoost }: Props) {
+export function DiagnosticsPanel({
+  onClose, onNotch, currentNotch, onBoost, currentBoost,
+}: Props) {
   const [page,             setPage]             = useState<1 | 2>(1);
   const [playingFreq,      setPlayingFreq]       = useState<number | null>(null);
   const [expandedBand,     setExpandedBand]      = useState<string | null>(null);
@@ -112,7 +127,6 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
   const [startPressed,     setStartPressed]      = useState(false);
   const [backPressed,      setBackPressed]       = useState(false);
 
-  // Which band contains the active (notched or boosted) frequency
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
     if (!active) return null;
@@ -153,22 +167,24 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  const handleSpeaker = useCallback((freq: number) => {
-    if (playingFreq === freq) stopTone();
-    else playTone(freq, volToGain(toneVolume));
+  // Clicking a band label or its speaker: play root pitch, turn green, show EXPAND
+  const handleBandPlay = useCallback((band: Band) => {
+    if (playingFreq === band.base) stopTone();
+    else playTone(band.base, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  const handleParentSpeaker = useCallback((freq: number, bandLabel: string) => {
-    setExpandedBand(prev => (prev !== null && prev !== bandLabel) ? null : prev);
-    if (playingFreq === freq) stopTone();
-    else playTone(freq, volToGain(toneVolume));
-  }, [playingFreq, playTone, stopTone, toneVolume]);
-
-  const handleToggleBand = useCallback((label: string) => {
-    stopTone();
+  // Clicking EXPAND: expand the band (tone keeps playing)
+  const handleBandExpand = useCallback((label: string) => {
     setExpandedBand(prev => prev === label ? null : label);
-  }, [stopTone]);
+  }, []);
 
+  // Clicking a sub-freq label or its speaker: play, turn green, show PROCESS
+  const handleSubPlay = useCallback((sf: number) => {
+    if (playingFreq === sf) stopTone();
+    else playTone(sf, volToGain(toneVolume));
+  }, [playingFreq, playTone, stopTone, toneVolume]);
+
+  // Clicking PROCESS: stop tone and open modal
   const handleProcessClick = (freq: number) => { stopTone(); setProcessCandidate(freq); };
 
   const handleNotch = () => {
@@ -186,14 +202,161 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
   };
 
   const handleDoneClose = () => { setDoneAction(null); onClose(); };
-
   const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); };
-
   const handleClose = () => { stopTone(); onClose(); };
 
   const p1X    = page === 1 ? "0%" : "-100%";
   const p2X    = page === 2 ? "0%" : "100%";
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
+
+  // ─── Row component for a band parent ────────────────────────────────────────
+
+  const anyExpanded = expandedBand !== null;
+
+  function BandRow({ band }: { band: Band }) {
+    const isExpanded  = expandedBand === band.label;
+    const isPlaying   = playingFreq === band.base;
+    const hasActive   = activeBandLabel === band.label;
+
+    // left-gutter content: EXPAND when playing+collapsed; ▷ when another band is expanded
+    const showExpand   = isPlaying && !isExpanded;
+    const showChevron  = !isPlaying && anyExpanded && !isExpanded;
+
+    return (
+      <div>
+        {/* ── Parent row ── */}
+        <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
+
+          {/* Left half — right-aligned gutter */}
+          <div style={{
+            width: "50%", display: "flex", justifyContent: "flex-end",
+            alignItems: "center", gap: 5, paddingRight: 8,
+            flexShrink: 0,
+          }}>
+            {showExpand && (
+              <button
+                onClick={() => handleBandExpand(band.label)}
+                style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7.5px,1.9vw,9.5px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
+                <Chevron color="#ffcc00" />
+              </button>
+            )}
+            {showChevron && (
+              <button
+                onClick={() => handleBandExpand(band.label)}
+                style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0, opacity: 0.55 }}>
+                <svg width={7} height={9} viewBox="0 0 10 14">
+                  <polyline points="2,2 8,7 2,12"
+                    fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.2"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Right half — label + speaker tightly together */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {/* band label — clicking plays tone */}
+            <button
+              onClick={() => handleBandPlay(band)}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              <span style={{
+                ...KALLISTO,
+                fontSize: "clamp(13.5px,3.5vw,16px)",
+                fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
+                color: isPlaying ? "#00ff55"
+                     : isExpanded ? "#00cc44"
+                     : hasActive  ? "#c8a832"
+                     : "rgba(255,255,255,0.72)",
+              }}>{band.label}</span>
+            </button>
+
+            {/* speaker icon — also plays tone; hidden when band is the expanded header */}
+            {!isExpanded && (
+              <button
+                onClick={() => handleBandPlay(band)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                         background: "none", border: "none", cursor: "pointer", padding: 0,
+                         width: 22, height: 22 }}>
+                <SpeakerIcon active={isPlaying} size={15} />
+              </button>
+            )}
+          </div>
+
+        </div>{/* end parent row */}
+
+        {/* ── Sub-band accordion ── */}
+        <div style={{
+          maxHeight: isExpanded ? `${getSubBands(band).length * 40}px` : "0px",
+          overflow: "hidden",
+          transition: "max-height 0.28s ease",
+        }}>
+          {getSubBands(band).map(sf => {
+            const sfPlaying = playingFreq === sf;
+            const sfNotched = currentNotch === sf;
+            const sfBoosted = currentBoost === sf;
+            const sfActive  = sfNotched || sfBoosted;
+
+            return (
+              <div key={sf} style={{
+                display: "flex", alignItems: "center", minHeight: 32,
+                borderRadius: sfActive ? 5 : 0,
+                background: sfActive ? "rgba(184,154,42,0.11)" : "transparent",
+              }}>
+
+                {/* Left half — right-aligned gutter */}
+                <div style={{
+                  width: "50%", display: "flex", justifyContent: "flex-end",
+                  alignItems: "center", gap: 4, paddingRight: 8,
+                  flexShrink: 0,
+                }}>
+                  {sfPlaying && !sfActive && (
+                    <button
+                      onClick={() => handleProcessClick(sf)}
+                      style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+                      <Chevron color="#ffcc00" />
+                    </button>
+                  )}
+                  {sfActive && (
+                    <button
+                      onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
+                      style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.7vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
+                      <Chevron color="#b89a2a" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Right half — freq label + speaker tightly together */}
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <button
+                    onClick={() => handleSubPlay(sf)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                    <span style={{
+                      ...KALLISTO,
+                      fontSize: "clamp(12.5px,3.2vw,15px)",
+                      fontWeight: sfPlaying ? 700 : 300,
+                      color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
+                    }}>{fmtSub(sf)}</span>
+                  </button>
+                  <button
+                    onClick={() => handleSubPlay(sf)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                             background: "none", border: "none", cursor: "pointer", padding: 0,
+                             width: 22, height: 22 }}>
+                    <SpeakerIcon active={sfPlaying} size={14} />
+                  </button>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -224,10 +387,10 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
         animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
       }}>
 
-        {/* Carousel container — clips both pages */}
+        {/* Carousel container */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", clipPath: "inset(0 round 22px)" }}>
 
-          {/* Global ✕ — always above carousel */}
+          {/* Global ✕ */}
           <button onClick={handleClose} aria-label="Close" style={{
             position: "absolute", top: 0, left: 0, zIndex: 70,
             width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
@@ -236,14 +399,13 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
           }}>✕</button>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE 1 — burned-in art + START TEST button overlay
+              PAGE 1 — burned-in art + START TEST overlay
           ════════════════════════════════════════════════════════════════════ */}
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p1X})`, transition: wipeTx, willChange: "transform" }}>
             <img src={diagP1Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false} />
 
-            {/* START TEST — overlaid at the bottom */}
             <button
               onPointerDown={() => setStartPressed(true)}
               onPointerUp={() => setStartPressed(false)}
@@ -270,134 +432,26 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
           </div>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE 2 — base art + interactive list overlay
+              PAGE 2 — base art + interactive list
           ════════════════════════════════════════════════════════════════════ */}
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: wipeTx, willChange: "transform" }}>
             <img src={diagP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false} />
 
-            {/* Scrollable frequency list — sits in the blank area between the two gold dividers */}
+            {/* Frequency list — in the blank area between the two gold dividers */}
             <div style={{
               position: "absolute",
               top: "22%", bottom: "15%",
               left: 0, right: 36,
               overflowY: "auto",
               scrollbarWidth: "none",
-              padding: "4px 8px 4px 0",
+              padding: "4px 0",
             }}>
-              {BANDS.map(band => {
-                const subs       = getSubBands(band);
-                const isExpanded = expandedBand === band.label;
-                const bPlaying   = playingFreq === band.base;
-                const hasActive  = activeBandLabel === band.label;
-
-                return (
-                  <div key={band.label}>
-
-                    {/* ── Parent row ── */}
-                    <div style={{ display: "flex", alignItems: "center", minHeight: 36, padding: "3px 6px 3px 0" }}>
-
-                      {/* LEFT: "EXPAND >" when playing & collapsed */}
-                      <div style={{ width: "clamp(48px,13vw,62px)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 5 }}>
-                        {(bPlaying || hasActive) && !isExpanded && (
-                          <button onClick={() => handleToggleBand(band.label)}
-                            style={{ display: "flex", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                            <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7.5px,1.9vw,9.5px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
-                            <svg width={8} height={10} viewBox="0 0 10 14" style={{ flexShrink: 0 }}>
-                              <polyline points="2,2 8,7 2,12" fill="none" stroke="#ffcc00" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* MIDDLE: band label */}
-                      <button onClick={() => handleToggleBand(band.label)}
-                        style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", paddingLeft: 2 }}>
-                        <span style={{
-                          ...KALLISTO,
-                          fontSize: "clamp(14px,3.8vw,17px)",
-                          fontWeight: (bPlaying || isExpanded || hasActive) ? 700 : 300,
-                          color: (bPlaying || isExpanded) ? "#00ff55" : hasActive ? "#c8a832" : "rgba(255,255,255,0.72)",
-                        }}>{band.label}</span>
-                      </button>
-
-                      {/* RIGHT: speaker — hidden when expanded (band acts as section header) */}
-                      {!isExpanded && (
-                        <button onClick={() => handleParentSpeaker(band.base, band.label)}
-                          style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <SpeakerIcon active={bPlaying} size={16} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* ── Sub-band accordion ── */}
-                    <div style={{ maxHeight: isExpanded ? `${subs.length * 44}px` : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
-                      <div style={{ paddingLeft: "clamp(28px,7.5vw,44px)", paddingBottom: 4 }}>
-                        {subs.map(sf => {
-                          const sfPlaying = playingFreq === sf;
-                          const sfNotched = currentNotch === sf;
-                          const sfBoosted = currentBoost === sf;
-                          const sfActive  = sfNotched || sfBoosted;
-                          return (
-                            <div key={sf} style={{
-                              display: "flex", alignItems: "center", minHeight: 34,
-                              padding: "3px 6px 3px 0",
-                              borderRadius: sfActive ? 5 : 0,
-                              background: sfActive ? "rgba(184,154,42,0.11)" : "transparent",
-                            }}>
-
-                              {/* LEFT: SELECT / reset label */}
-                              <div style={{ width: "clamp(44px,11.5vw,56px)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 5 }}>
-                                {sfPlaying && !sfActive && (
-                                  <button onClick={() => handleProcessClick(sf)}
-                                    style={{ display: "flex", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                                    <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>SELECT</span>
-                                    <svg width={7} height={9} viewBox="0 0 10 14" style={{ flexShrink: 0 }}>
-                                      <polyline points="2,2 8,7 2,12" fill="none" stroke="#ffcc00" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  </button>
-                                )}
-                                {sfActive && (
-                                  <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
-                                    style={{ display: "flex", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                                    <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.7vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
-                                    <svg width={7} height={9} viewBox="0 0 10 14" style={{ flexShrink: 0 }}>
-                                      <polyline points="2,2 8,7 2,12" fill="none" stroke="#b89a2a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* MIDDLE: frequency label */}
-                              <button onClick={() => handleSpeaker(sf)}
-                                style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer" }}>
-                                <span style={{
-                                  ...KALLISTO,
-                                  fontSize: "clamp(12.5px,3.3vw,15.5px)",
-                                  fontWeight: sfPlaying ? 700 : 300,
-                                  color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.62)",
-                                }}>{fmtSub(sf)}</span>
-                              </button>
-
-                              {/* RIGHT: speaker */}
-                              <button onClick={() => handleSpeaker(sf)}
-                                style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <SpeakerIcon active={sfPlaying} size={14} />
-                              </button>
-
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                  </div>
-                );
-              })}
+              {BANDS.map(band => <BandRow key={band.label} band={band} />)}
             </div>
 
-            {/* Volume meter — right column, within content area */}
+            {/* Volume meter — right column */}
             <div style={{
               position: "absolute",
               top: "22%", bottom: "15%",
@@ -407,7 +461,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
               <DiagVolMeter volume={toneVolume} onChange={setToneVolume} />
             </div>
 
-            {/* Back button — below bottom divider */}
+            {/* Back button */}
             <button
               onPointerDown={() => setBackPressed(true)}
               onPointerUp={() => setBackPressed(false)}
@@ -429,7 +483,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
       </div>{/* end shadow wrapper */}
 
       {/* ════════════════════════════════════════════════════════════════════════
-          PROCESS modal
+          PROCESS modal  (p3)
       ════════════════════════════════════════════════════════════════════════ */}
       {processCandidate !== null && (
         <div style={{
@@ -440,20 +494,17 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.62)" }}
             onClick={() => setProcessCandidate(null)} />
 
-          {/* Card — bg image + content absolutely overlaid */}
           <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 330 }}>
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto",
                        filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
 
-            {/* Content overlay */}
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
               padding: "clamp(14px,4svh,22px) 18px clamp(12px,3.5svh,18px)",
             }}>
 
-              {/* "Great!" header */}
               <div style={{ textAlign: "center", marginBottom: 10 }}>
                 <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(13px,3.3vw,15px)", fontWeight: 700, marginBottom: 2 }}>
                   Great!
@@ -488,7 +539,6 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
                 </div>
               </div>
 
-              {/* Three buttons */}
               <div style={{ display: "flex", gap: 7, marginTop: 8, flexShrink: 0 }}>
                 <button onClick={handleBoost} style={{
                   flex: 1, height: 36, borderRadius: 8,
@@ -518,7 +568,7 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
       )}
 
       {/* ════════════════════════════════════════════════════════════════════════
-          DONE card
+          DONE card  (p4)
       ════════════════════════════════════════════════════════════════════════ */}
       {doneAction !== null && (
         <div style={{
@@ -528,20 +578,17 @@ export function DiagnosticsPanel({ onClose, onNotch, currentNotch, onBoost, curr
         }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.68)" }} />
 
-          {/* Card — bg image + content absolutely overlaid */}
           <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 310 }}>
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto",
                        filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
 
-            {/* Content overlay */}
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               padding: "clamp(16px,4.5svh,24px) 20px clamp(14px,4svh,20px)",
             }}>
 
-              {/* ✕ — closes the whole DiagnosticsPanel */}
               <button onClick={handleDoneClose} style={{
                 position: "absolute", top: 8, left: 8,
                 width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
