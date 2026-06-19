@@ -409,7 +409,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute",
               top: "22%", bottom: "15%",
-              left: 0, right: 36,
+              left: 6, right: 36,
               overflowY: "auto",
               scrollbarWidth: "none",
               padding: "4px 0",
