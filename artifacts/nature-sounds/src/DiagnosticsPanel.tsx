@@ -168,7 +168,9 @@ export function DiagnosticsPanel({
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   // Clicking a band label or its speaker: play root pitch, turn green, show EXPAND
+  // Also auto-collapses any OTHER expanded band
   const handleBandPlay = useCallback((band: Band) => {
+    setExpandedBand(prev => (prev !== null && prev !== band.label) ? null : prev);
     if (playingFreq === band.base) stopTone();
     else playTone(band.base, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
@@ -184,8 +186,8 @@ export function DiagnosticsPanel({
     else playTone(sf, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Clicking PROCESS: stop tone and open modal
-  const handleProcessClick = (freq: number) => { stopTone(); setProcessCandidate(freq); };
+  // Clicking SELECT (sub-freq): stop tone and open modal
+  const handleSelectClick = (freq: number) => { stopTone(); setProcessCandidate(freq); };
 
   const handleNotch = () => {
     if (processCandidate === null) return;
@@ -209,88 +211,60 @@ export function DiagnosticsPanel({
   const p2X    = page === 2 ? "0%" : "100%";
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
-  // ─── Row component for a band parent ────────────────────────────────────────
+  // ─── Row component ────────────────────────────────────────────────────────────
+  // Layout per row:  [GUTTER 60px right-aligned] [label flex:1] [speaker 24px fixed]
+  // Sub-rows add 18px indent on the label side only.
+  // Speaker column stays at the same horizontal position across all rows → vertical alignment.
 
-  const anyExpanded = expandedBand !== null;
+  const GUTTER = 60;   // px — left gutter for EXPAND/SELECT labels
+  const SPK_W  = 24;   // px — speaker column width
 
   function BandRow({ band }: { band: Band }) {
-    const isExpanded  = expandedBand === band.label;
-    const isPlaying   = playingFreq === band.base;
-    const hasActive   = activeBandLabel === band.label;
-
-    // left-gutter content: EXPAND when playing+collapsed; ▷ when another band is expanded
-    const showExpand   = isPlaying && !isExpanded;
-    const showChevron  = !isPlaying && anyExpanded && !isExpanded;
+    const isExpanded = expandedBand === band.label;
+    const isPlaying  = playingFreq === band.base;
+    const hasActive  = activeBandLabel === band.label;
 
     return (
       <div>
-        {/* ── Parent row ── */}
+        {/* ── Parent row ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-          {/* Left half — right-aligned gutter */}
-          <div style={{
-            width: "50%", display: "flex", justifyContent: "flex-end",
-            alignItems: "center", gap: 5, paddingRight: 8,
-            flexShrink: 0,
-          }}>
-            {showExpand && (
-              <button
-                onClick={() => handleBandExpand(band.label)}
+          {/* Left gutter — EXPAND only when playing and NOT yet expanded; nothing otherwise */}
+          <div style={{ width: GUTTER, flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 6 }}>
+            {isPlaying && !isExpanded && (
+              <button onClick={() => handleBandExpand(band.label)}
                 style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7.5px,1.9vw,9.5px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
                 <Chevron color="#ffcc00" />
-              </button>
-            )}
-            {showChevron && (
-              <button
-                onClick={() => handleBandExpand(band.label)}
-                style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0, opacity: 0.55 }}>
-                <svg width={7} height={9} viewBox="0 0 10 14">
-                  <polyline points="2,2 8,7 2,12"
-                    fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.2"
-                    strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
               </button>
             )}
           </div>
 
-          {/* Right half — label + speaker tightly together */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            {/* band label — clicking plays tone */}
-            <button
-              onClick={() => handleBandPlay(band)}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <span style={{
-                ...KALLISTO,
-                fontSize: "clamp(13.5px,3.5vw,16px)",
-                fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
-                color: isPlaying ? "#00ff55"
-                     : isExpanded ? "#00cc44"
-                     : hasActive  ? "#c8a832"
-                     : "rgba(255,255,255,0.72)",
-              }}>{band.label}</span>
-            </button>
+          {/* Label — clicking plays/stops tone */}
+          <button onClick={() => handleBandPlay(band)}
+            style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <span style={{
+              ...KALLISTO,
+              fontSize: "clamp(13.5px,3.5vw,16px)",
+              fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
+              color: isPlaying ? "#00ff55" : isExpanded ? "#00cc44" : hasActive ? "#c8a832" : "rgba(255,255,255,0.72)",
+            }}>{band.label}</span>
+          </button>
 
-            {/* speaker icon — also plays tone; hidden when band is the expanded header */}
+          {/* Speaker — hidden when acting as expanded section header */}
+          <div style={{ width: SPK_W, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
             {!isExpanded && (
-              <button
-                onClick={() => handleBandPlay(band)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center",
-                         background: "none", border: "none", cursor: "pointer", padding: 0,
-                         width: 22, height: 22 }}>
+              <button onClick={() => handleBandPlay(band)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <SpeakerIcon active={isPlaying} size={15} />
               </button>
             )}
           </div>
 
-        </div>{/* end parent row */}
+        </div>
 
-        {/* ── Sub-band accordion ── */}
-        <div style={{
-          maxHeight: isExpanded ? `${getSubBands(band).length * 40}px` : "0px",
-          overflow: "hidden",
-          transition: "max-height 0.28s ease",
-        }}>
+        {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
+        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 36}px` : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
             const sfNotched = currentNotch === sf;
@@ -299,52 +273,44 @@ export function DiagnosticsPanel({
 
             return (
               <div key={sf} style={{
-                display: "flex", alignItems: "center", minHeight: 32,
+                display: "flex", alignItems: "center", minHeight: 33,
                 borderRadius: sfActive ? 5 : 0,
-                background: sfActive ? "rgba(184,154,42,0.11)" : "transparent",
+                background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
               }}>
 
-                {/* Left half — right-aligned gutter */}
-                <div style={{
-                  width: "50%", display: "flex", justifyContent: "flex-end",
-                  alignItems: "center", gap: 4, paddingRight: 8,
-                  flexShrink: 0,
-                }}>
+                {/* Left gutter — SELECT when playing; reset when applied */}
+                <div style={{ width: GUTTER, flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 6 }}>
                   {sfPlaying && !sfActive && (
-                    <button
-                      onClick={() => handleProcessClick(sf)}
+                    <button onClick={() => handleSelectClick(sf)}
                       style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>SELECT</span>
                       <Chevron color="#ffcc00" />
                     </button>
                   )}
                   {sfActive && (
-                    <button
-                      onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
+                    <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
                       style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.7vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.65vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
                       <Chevron color="#b89a2a" />
                     </button>
                   )}
                 </div>
 
-                {/* Right half — freq label + speaker tightly together */}
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <button
-                    onClick={() => handleSubPlay(sf)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                    <span style={{
-                      ...KALLISTO,
-                      fontSize: "clamp(12.5px,3.2vw,15px)",
-                      fontWeight: sfPlaying ? 700 : 300,
-                      color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
-                    }}>{fmtSub(sf)}</span>
-                  </button>
-                  <button
-                    onClick={() => handleSubPlay(sf)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center",
-                             background: "none", border: "none", cursor: "pointer", padding: 0,
-                             width: 22, height: 22 }}>
+                {/* Label — indented 18px to sit inside the accordion */}
+                <button onClick={() => handleSubPlay(sf)}
+                  style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, paddingLeft: 18 }}>
+                  <span style={{
+                    ...KALLISTO,
+                    fontSize: "clamp(12.5px,3.2vw,15px)",
+                    fontWeight: sfPlaying ? 700 : 300,
+                    color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
+                  }}>{fmtSub(sf)}</span>
+                </button>
+
+                {/* Speaker — same fixed column as parent rows */}
+                <div style={{ width: SPK_W, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <button onClick={() => handleSubPlay(sf)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                     <SpeakerIcon active={sfPlaying} size={14} />
                   </button>
                 </div>
