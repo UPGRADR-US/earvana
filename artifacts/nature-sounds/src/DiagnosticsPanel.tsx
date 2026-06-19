@@ -212,12 +212,13 @@ export function DiagnosticsPanel({
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
   // ─── Row component ────────────────────────────────────────────────────────────
-  // Layout per row:  [GUTTER 60px right-aligned] [label flex:1] [speaker 24px fixed]
-  // Sub-rows add 18px indent on the label side only.
-  // Speaker column stays at the same horizontal position across all rows → vertical alignment.
+  // Layout per row:
+  //   [~44% gutter, right-aligned for EXPAND/SELECT] [label flex:1] [24px speaker col]
+  // The ~44% gutter pushes labels to start near the horizontal center of the panel,
+  // matching the reference. Speaker column is fixed-width so icons align vertically.
+  // Sub-rows get 16px extra left-indent on the label (sits inside the accordion visually).
 
-  const GUTTER = 60;   // px — left gutter for EXPAND/SELECT labels
-  const SPK_W  = 24;   // px — speaker column width
+  const SPK_W = 24; // px — fixed speaker column
 
   function BandRow({ band }: { band: Band }) {
     const isExpanded = expandedBand === band.label;
@@ -229,8 +230,8 @@ export function DiagnosticsPanel({
         {/* ── Parent row ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-          {/* Left gutter — EXPAND only when playing and NOT yet expanded; nothing otherwise */}
-          <div style={{ width: GUTTER, flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 6 }}>
+          {/* Left gutter ~44% — right-aligned; shows EXPAND only when playing+not-expanded */}
+          <div style={{ width: "44%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
             {isPlaying && !isExpanded && (
               <button onClick={() => handleBandExpand(band.label)}
                 style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -240,7 +241,7 @@ export function DiagnosticsPanel({
             )}
           </div>
 
-          {/* Label — clicking plays/stops tone */}
+          {/* Label */}
           <button onClick={() => handleBandPlay(band)}
             style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <span style={{
@@ -251,7 +252,7 @@ export function DiagnosticsPanel({
             }}>{band.label}</span>
           </button>
 
-          {/* Speaker — hidden when acting as expanded section header */}
+          {/* Speaker — hidden when acting as section header for expanded accordion */}
           <div style={{ width: SPK_W, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
             {!isExpanded && (
               <button onClick={() => handleBandPlay(band)}
@@ -279,7 +280,7 @@ export function DiagnosticsPanel({
               }}>
 
                 {/* Left gutter — SELECT when playing; reset when applied */}
-                <div style={{ width: GUTTER, flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 6 }}>
+                <div style={{ width: "44%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
                   {sfPlaying && !sfActive && (
                     <button onClick={() => handleSelectClick(sf)}
                       style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -296,9 +297,9 @@ export function DiagnosticsPanel({
                   )}
                 </div>
 
-                {/* Label — indented 18px to sit inside the accordion */}
+                {/* Label — 16px indent so sub-freqs sit visually inside the accordion */}
                 <button onClick={() => handleSubPlay(sf)}
-                  style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, paddingLeft: 18 }}>
+                  style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, paddingLeft: 16 }}>
                   <span style={{
                     ...KALLISTO,
                     fontSize: "clamp(12.5px,3.2vw,15px)",
