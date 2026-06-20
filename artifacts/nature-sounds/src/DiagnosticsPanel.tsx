@@ -230,26 +230,28 @@ export function DiagnosticsPanel({
         {/* ── Parent row ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-          {/* Gutter 33% — blinking ▼ when expanded (click = collapse+stop); EXPAND when playing+collapsed */}
+          {/* Gutter 33% — EXPAND + chevron when playing; chevron rotates right→down as accordion opens */}
           <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
-            {isExpanded ? (
+            {(isPlaying || isExpanded) && (
               <button
-                onClick={() => { stopTone(); setExpandedBand(null); }}
-                style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0,
-                         animation: "blinkYellow 0.9s ease-in-out infinite" }}>
-                <svg width={22} height={14} viewBox="0 0 22 14" style={{ display: "block" }}>
-                  <polyline points="2,2 11,12 20,2"
-                    fill="none" stroke="#ffcc00" strokeWidth="3"
+                onClick={() => {
+                  if (isExpanded) { stopTone(); setExpandedBand(null); }
+                  else            { handleBandExpand(band.label); }
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
+                {/* chevron rotates in sync with the accordion (both use 0.28s ease) */}
+                <svg width={8} height={10} viewBox="0 0 10 14" style={{
+                  flexShrink: 0,
+                  transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.28s ease",
+                }}>
+                  <polyline points="2,2 8,7 2,12"
+                    fill="none" stroke="#ffcc00" strokeWidth="2.4"
                     strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-            ) : isPlaying ? (
-              <button onClick={() => handleBandExpand(band.label)}
-                style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
-                <Chevron color="#ffcc00" />
-              </button>
-            ) : null}
+            )}
           </div>
 
           {/* Label — auto width, inline with speaker */}
