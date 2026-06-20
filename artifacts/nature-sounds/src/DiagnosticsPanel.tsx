@@ -282,7 +282,7 @@ export function DiagnosticsPanel({
         {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
         {/* grid-template-rows 0fr→1fr animates to exact content height, unlike max-height */}
         <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s ease" }}>
-        <div style={{ overflow: "hidden" }}>
+        <div style={{ overflow: "hidden", minHeight: 0 }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
             const sfNotched = currentNotch === sf;
@@ -301,7 +301,7 @@ export function DiagnosticsPanel({
                   {sfPlaying && !sfActive && (
                     <button onClick={() => handleSelectClick(sf)}
                       style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>SELECT</span>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
                       <Chevron color="#ffcc00" />
                     </button>
                   )}
@@ -540,7 +540,11 @@ export function DiagnosticsPanel({
                   color: "#00ee88", cursor: "pointer", letterSpacing: "0.03em",
                 }}>∧ boost {fmtSub(processCandidate)}</button>
 
-                <button onClick={() => setProcessCandidate(null)} style={{
+                <button onClick={() => {
+                  const freq = processCandidate;
+                  setProcessCandidate(null);
+                  if (freq !== null) playTone(freq, volToGain(toneVolume));
+                }} style={{
                   flex: 0.62, height: 36, borderRadius: 8,
                   background: "rgba(55,58,62,0.90)", border: "1px solid rgba(255,255,255,0.11)",
                   ...KALLISTO, fontWeight: 400, fontSize: "clamp(9px,2.3vw,11px)",
