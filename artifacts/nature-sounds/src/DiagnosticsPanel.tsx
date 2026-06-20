@@ -195,7 +195,7 @@ const BandRow = memo(function BandRow({
       {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
       {/* grid-template-rows 0fr→1fr: animates to exact content height.
           minHeight:0 on the inner div is required for 0fr to actually collapse. */}
-      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 3s ease" }}>
+      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 1s ease" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
           const sfPlaying = playingFreq === sf;
