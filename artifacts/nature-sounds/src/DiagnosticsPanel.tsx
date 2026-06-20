@@ -230,15 +230,26 @@ export function DiagnosticsPanel({
         {/* ── Parent row ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-          {/* Gutter 33% — EXPAND only when playing and not yet expanded */}
+          {/* Gutter 33% — blinking ▼ when expanded (click = collapse+stop); EXPAND when playing+collapsed */}
           <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
-            {isPlaying && !isExpanded && (
+            {isExpanded ? (
+              <button
+                onClick={() => { stopTone(); setExpandedBand(null); }}
+                style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: 0,
+                         animation: "blinkYellow 0.9s ease-in-out infinite" }}>
+                <svg width={22} height={14} viewBox="0 0 22 14" style={{ display: "block" }}>
+                  <polyline points="2,2 11,12 20,2"
+                    fill="none" stroke="#ffcc00" strokeWidth="3"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : isPlaying ? (
               <button onClick={() => handleBandExpand(band.label)}
                 style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
                 <Chevron color="#ffcc00" />
               </button>
-            )}
+            ) : null}
           </div>
 
           {/* Label — auto width, inline with speaker */}
@@ -337,6 +348,10 @@ export function DiagnosticsPanel({
           60%  { opacity: 1; }
           85%  { transform: scale(1.03); }
           100% { transform: scale(1);   opacity: 1; }
+        }
+        @keyframes blinkYellow {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.18; }
         }
       `}</style>
 
