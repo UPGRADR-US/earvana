@@ -33,8 +33,7 @@ function getSubBands(band: Band): number[] {
 
 function fmtSub(hz: number): string {
   if (hz < 1000) return `${hz} hz`;
-  const k = hz / 1000;
-  return `${Number.isInteger(k) ? k : k.toFixed(1)} khz`;
+  return `${(hz / 1000).toFixed(1)} khz`;   // always show .0 (4.0 khz, not 4 khz)
 }
 
 function volToGain(v: number) { return v * TONE_MAX_GAIN; }
@@ -212,13 +211,14 @@ export function DiagnosticsPanel({
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
   // ─── Row component ────────────────────────────────────────────────────────────
-  // Layout per row:
-  //   [~44% gutter, right-aligned for EXPAND/SELECT] [label flex:1] [24px speaker col]
-  // The ~44% gutter pushes labels to start near the horizontal center of the panel,
-  // matching the reference. Speaker column is fixed-width so icons align vertically.
-  // Sub-rows get 16px extra left-indent on the label (sits inside the accordion visually).
+  // Layout: [33% gutter right-aligned] [label auto] [speaker inline, 6px gap]
+  // Gutter places the centerline at ~the hyphen in "upper-bass".
+  // Speaker follows the label inline — no fixed right column — so it stays close.
+  // Sub-rows indent 22px further so child freqs sit visually inside the accordion.
 
-  const SPK_W = 24; // px — fixed speaker column
+  // Shared text style: Kallisto + wider tracking for all list labels
+  const LIST_TXT: React.CSSProperties = { ...KALLISTO, letterSpacing: "0.09em" };
+  const SUB_TXT:  React.CSSProperties = { ...KALLISTO, letterSpacing: "0.11em" }; // extra for "khz"
 
   function BandRow({ band }: { band: Band }) {
     const isExpanded = expandedBand === band.label;
@@ -230,8 +230,8 @@ export function DiagnosticsPanel({
         {/* ── Parent row ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-          {/* Left gutter ~44% — right-aligned; shows EXPAND only when playing+not-expanded */}
-          <div style={{ width: "44%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
+          {/* Gutter 33% — EXPAND only when playing and not yet expanded */}
+          <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
             {isPlaying && !isExpanded && (
               <button onClick={() => handleBandExpand(band.label)}
                 style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -241,31 +241,31 @@ export function DiagnosticsPanel({
             )}
           </div>
 
-          {/* Label */}
+          {/* Label — auto width, inline with speaker */}
           <button onClick={() => handleBandPlay(band)}
-            style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
             <span style={{
-              ...KALLISTO,
+              ...LIST_TXT,
               fontSize: "clamp(13.5px,3.5vw,16px)",
               fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
               color: isPlaying ? "#00ff55" : isExpanded ? "#00cc44" : hasActive ? "#c8a832" : "rgba(255,255,255,0.72)",
             }}>{band.label}</span>
           </button>
 
-          {/* Speaker — hidden when acting as section header for expanded accordion */}
-          <div style={{ width: SPK_W, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
-            {!isExpanded && (
-              <button onClick={() => handleBandPlay(band)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <SpeakerIcon active={isPlaying} size={15} />
-              </button>
-            )}
-          </div>
+          {/* Speaker — inline, 6px right of label; hidden when expanded section header */}
+          {!isExpanded && (
+            <button onClick={() => handleBandPlay(band)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                       background: "none", border: "none", cursor: "pointer",
+                       padding: 0, marginLeft: 6, flexShrink: 0 }}>
+              <SpeakerIcon active={isPlaying} size={15} />
+            </button>
+          )}
 
         </div>
 
         {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
-        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 36}px` : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
+        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 34}px` : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
             const sfNotched = currentNotch === sf;
@@ -274,13 +274,13 @@ export function DiagnosticsPanel({
 
             return (
               <div key={sf} style={{
-                display: "flex", alignItems: "center", minHeight: 33,
+                display: "flex", alignItems: "center", minHeight: 32,
                 borderRadius: sfActive ? 5 : 0,
                 background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
               }}>
 
-                {/* Left gutter — SELECT when playing; reset when applied */}
-                <div style={{ width: "44%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
+                {/* Gutter 33% — SELECT when playing; reset when applied */}
+                <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
                   {sfPlaying && !sfActive && (
                     <button onClick={() => handleSelectClick(sf)}
                       style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -297,24 +297,25 @@ export function DiagnosticsPanel({
                   )}
                 </div>
 
-                {/* Label — 16px indent so sub-freqs sit visually inside the accordion */}
+                {/* Label — indented 22px, auto width, inline with speaker */}
                 <button onClick={() => handleSubPlay(sf)}
-                  style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0, paddingLeft: 16 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                           padding: 0, paddingLeft: 22, flexShrink: 0 }}>
                   <span style={{
-                    ...KALLISTO,
+                    ...SUB_TXT,
                     fontSize: "clamp(12.5px,3.2vw,15px)",
                     fontWeight: sfPlaying ? 700 : 300,
                     color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
                   }}>{fmtSub(sf)}</span>
                 </button>
 
-                {/* Speaker — same fixed column as parent rows */}
-                <div style={{ width: SPK_W, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                  <button onClick={() => handleSubPlay(sf)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                    <SpeakerIcon active={sfPlaying} size={14} />
-                  </button>
-                </div>
+                {/* Speaker — inline, 6px right of label */}
+                <button onClick={() => handleSubPlay(sf)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                           background: "none", border: "none", cursor: "pointer",
+                           padding: 0, marginLeft: 6, flexShrink: 0 }}>
+                  <SpeakerIcon active={sfPlaying} size={14} />
+                </button>
 
               </div>
             );
