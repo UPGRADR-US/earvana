@@ -414,9 +414,14 @@ export function DiagnosticsPanel({
               left: 6, right: 36,
               overflowY: "auto",
               scrollbarWidth: "none",
-              padding: "4px 0",
+              display: "flex",
+              flexDirection: "column",
             }}>
-              {BANDS.map(band => <BandRow key={band.label} band={band} />)}
+              {/* margin: auto top+bottom centers the list when it's shorter than the
+                  container; collapses to 0 when expanded content overflows so scroll works */}
+              <div style={{ marginTop: "auto", marginBottom: "auto", padding: "4px 0" }}>
+                {BANDS.map(band => <BandRow key={band.label} band={band} />)}
+              </div>
             </div>
 
             {/* Volume meter — right column */}
