@@ -195,7 +195,7 @@ const BandRow = memo(function BandRow({
       {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
       {/* grid-template-rows 0fr→1fr: animates to exact content height.
           minHeight:0 on the inner div is required for 0fr to actually collapse. */}
-      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 1s ease" }}>
+      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s ease" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
           const sfPlaying = playingFreq === sf;
@@ -281,6 +281,9 @@ export function DiagnosticsPanel({
   const [doneAction,       setDoneAction]        = useState<{ freq: number; type: "notch" | "boost" } | null>(null);
   const [startPressed,     setStartPressed]      = useState(false);
   const [backPressed,      setBackPressed]       = useState(false);
+  // true once the user has interacted on this p2 visit; locks justify to flex-start
+  // so the list never re-centers mid-session. Resets only on page transitions.
+  const [p2Anchored,       setP2Anchored]        = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -330,9 +333,11 @@ export function DiagnosticsPanel({
     else playTone(band.base, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Clicking EXPAND: expand the band (tone keeps playing)
+  // Clicking EXPAND: expand the band (tone keeps playing).
+  // Also locks vertical centering — list stays put for the rest of this p2 visit.
   const handleBandExpand = useCallback((label: string) => {
     setExpandedBand(prev => prev === label ? null : label);
+    setP2Anchored(true);
   }, []);
 
   // Clicking a sub-freq label or its speaker: play, turn green, show PROCESS
@@ -359,7 +364,10 @@ export function DiagnosticsPanel({
   };
 
   const handleDoneClose = () => { setDoneAction(null); onClose(); };
-  const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); };
+  // p2 «back» → p1: reset anchor so p2 re-centers next time it's entered
+  const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); };
+  // Done card «back» → p2 (not p1): also re-centers p2 on return
+  const handleBackFromDone = () => { setDoneAction(null); stopTone(); setPage(2); setP2Anchored(false); };
   const handleClose = () => { stopTone(); onClose(); };
 
   const p1X    = page === 1 ? "0%" : "-100%";
@@ -460,7 +468,7 @@ export function DiagnosticsPanel({
               scrollbarWidth: "none",
               display: "flex",
               flexDirection: "column",
-              justifyContent: expandedBand ? "flex-start" : "center",
+              justifyContent: p2Anchored ? "flex-start" : "center",
             }}>
               <div style={{ padding: "4px 0" }}>
                 {BANDS.map(band => (
@@ -656,7 +664,7 @@ export function DiagnosticsPanel({
                   onPointerDown={() => setBackPressed(true)}
                   onPointerUp={() => setBackPressed(false)}
                   onPointerLeave={() => setBackPressed(false)}
-                  onClick={handleBack}
+                  onClick={handleBackFromDone}
                   style={{
                     marginTop: 16, background: "none", border: "none", cursor: "pointer",
                     ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.7vw,13px)",
