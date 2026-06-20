@@ -115,6 +115,7 @@ const SUB_TXT:  React.CSSProperties = { ...KALLISTO, letterSpacing: "0.11em" };
 interface BandRowProps {
   band: Band;
   expandedBand: string | null;
+  blinkingBand: string | null;
   playingFreq: number | null;
   activeBandLabel: string | null;
   currentNotch: number | null;
@@ -130,14 +131,15 @@ interface BandRowProps {
 }
 
 const BandRow = memo(function BandRow({
-  band, expandedBand, playingFreq, activeBandLabel,
+  band, expandedBand, blinkingBand, playingFreq, activeBandLabel,
   currentNotch, currentBoost,
   onStopTone, onSetExpandedBand, onBandExpand, onBandPlay, onSubPlay, onSelectClick,
   onNotch, onBoost,
 }: BandRowProps) {
-  const isExpanded = expandedBand === band.label;
-  const isPlaying  = playingFreq === band.base;
-  const hasActive  = activeBandLabel === band.label;
+  const isExpanded  = expandedBand === band.label;
+  const isBlinking  = blinkingBand === band.label;
+  const isPlaying   = playingFreq === band.base;
+  const hasActive   = activeBandLabel === band.label;
 
   return (
     <div>
@@ -146,7 +148,7 @@ const BandRow = memo(function BandRow({
 
         {/* Gutter 33% — EXPAND + chevron when playing; chevron rotates right→down */}
         <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 14 }}>
-          {(isPlaying || isExpanded) && (
+          {(isPlaying || isExpanded || isBlinking) && (
             <button
               onClick={() => {
                 if (isExpanded) { onStopTone(); onSetExpandedBand(null); }
@@ -159,7 +161,8 @@ const BandRow = memo(function BandRow({
               <svg width={8} height={10} viewBox="0 0 10 14" style={{
                 flexShrink: 0,
                 transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 0.75s cubic-bezier(0.5,0,1,1)",
+                transition: "transform 0.375s cubic-bezier(0.5,0,1,1)",
+                animation: isBlinking ? "blinkYellow 0.85s ease-in-out infinite" : "none",
               }}>
                 <polyline points="2,2 8,7 2,12"
                   fill="none" stroke="#ffcc00" strokeWidth="2.4"
@@ -195,7 +198,7 @@ const BandRow = memo(function BandRow({
       {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
       {/* grid-template-rows 0fr→1fr: animates to exact content height.
           minHeight:0 on the inner div is required for 0fr to actually collapse. */}
-      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s cubic-bezier(0.5,0,1,1)" }}>
+      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.375s cubic-bezier(0.5,0,1,1)" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
           const sfPlaying = playingFreq === sf;
@@ -210,23 +213,8 @@ const BandRow = memo(function BandRow({
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
 
-              {/* Gutter 33% — PROCESS when playing; reset when applied */}
-              <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
-                {sfPlaying && !sfActive && (
-                  <button onClick={() => onSelectClick(sf)}
-                    style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                    <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
-                    <Chevron color="#ffcc00" />
-                  </button>
-                )}
-                {sfActive && (
-                  <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
-                    style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                    <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.65vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
-                    <Chevron color="#b89a2a" />
-                  </button>
-                )}
-              </div>
+              {/* Gutter 33% — empty, keeps sub-label aligned with parent label */}
+              <div style={{ width: "33%", flexShrink: 0 }} />
 
               {/* Label — indented 22px, auto width, inline with speaker */}
               <button onClick={() => onSubPlay(sf)}
@@ -247,6 +235,22 @@ const BandRow = memo(function BandRow({
                          padding: 0, marginLeft: 6, flexShrink: 0 }}>
                 <SpeakerIcon active={sfPlaying} size={14} />
               </button>
+
+              {/* PROCESS / reset — right of speaker */}
+              {sfPlaying && !sfActive && (
+                <button onClick={() => onSelectClick(sf)}
+                  style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+                  <Chevron color="#ffcc00" />
+                </button>
+              )}
+              {sfActive && (
+                <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
+                  style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.65vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
+                  <Chevron color="#b89a2a" />
+                </button>
+              )}
 
             </div>
           );
@@ -284,6 +288,8 @@ export function DiagnosticsPanel({
   // true once the user has interacted on this p2 visit; locks justify to flex-start
   // so the list never re-centers mid-session. Resets only on page transitions.
   const [p2Anchored,       setP2Anchored]        = useState(false);
+  // which band's chevron should blink; persists after collapse until another parent row is clicked
+  const [blinkingBand,     setBlinkingBand]      = useState<string | null>(null);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -325,18 +331,20 @@ export function DiagnosticsPanel({
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  // Clicking a band label or its speaker: play root pitch, turn green, show EXPAND
-  // Also auto-collapses any OTHER expanded band
+  // Clicking a band label or its speaker: play root pitch, turn green, show EXPAND.
+  // Also clears the blinking chevron (another parent was clicked).
   const handleBandPlay = useCallback((band: Band) => {
     setExpandedBand(prev => (prev !== null && prev !== band.label) ? null : prev);
+    setBlinkingBand(null);
     if (playingFreq === band.base) stopTone();
     else playTone(band.base, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Clicking EXPAND: expand the band (tone keeps playing).
-  // Also locks vertical centering — list stays put for the rest of this p2 visit.
+  // Clicking EXPAND: expand/collapse the band (tone keeps playing).
+  // Sets the blinking chevron to this band, locks vertical centering.
   const handleBandExpand = useCallback((label: string) => {
     setExpandedBand(prev => prev === label ? null : label);
+    setBlinkingBand(label);
     setP2Anchored(true);
   }, []);
 
@@ -364,10 +372,10 @@ export function DiagnosticsPanel({
   };
 
   const handleDoneClose = () => { setDoneAction(null); onClose(); };
-  // p2 «back» → p1: reset anchor so p2 re-centers next time it's entered
-  const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); };
+  // p2 «back» → p1: reset anchor + blink so p2 re-centers next time it's entered
+  const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
   // Done card «back» → p2 (not p1): also re-centers p2 on return
-  const handleBackFromDone = () => { setDoneAction(null); stopTone(); setPage(2); setP2Anchored(false); };
+  const handleBackFromDone = () => { setDoneAction(null); stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
 
   const p1X    = page === 1 ? "0%" : "-100%";
@@ -476,6 +484,7 @@ export function DiagnosticsPanel({
                   key={band.label}
                   band={band}
                   expandedBand={expandedBand}
+                  blinkingBand={blinkingBand}
                   playingFreq={playingFreq}
                   activeBandLabel={activeBandLabel}
                   currentNotch={currentNotch}
