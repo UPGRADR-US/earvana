@@ -280,7 +280,9 @@ export function DiagnosticsPanel({
         </div>
 
         {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
-        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 34}px` : "0px", overflow: "hidden", transition: "max-height 0.75s ease" }}>
+        {/* grid-template-rows 0fr→1fr animates to exact content height, unlike max-height */}
+        <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s ease" }}>
+        <div style={{ overflow: "hidden" }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
             const sfNotched = currentNotch === sf;
@@ -335,7 +337,8 @@ export function DiagnosticsPanel({
               </div>
             );
           })}
-        </div>
+        </div>{/* end inner clip */}
+        </div>{/* end outer grid */}
 
       </div>
     );
@@ -436,9 +439,7 @@ export function DiagnosticsPanel({
               display: "flex",
               flexDirection: "column",
             }}>
-              {/* margin: auto top+bottom centers the list when it's shorter than the
-                  container; collapses to 0 when expanded content overflows so scroll works */}
-              <div style={{ marginTop: "auto", marginBottom: "auto", padding: "4px 0" }}>
+              <div style={{ padding: "4px 0" }}>
                 {BANDS.map(band => <BandRow key={band.label} band={band} />)}
               </div>
             </div>
