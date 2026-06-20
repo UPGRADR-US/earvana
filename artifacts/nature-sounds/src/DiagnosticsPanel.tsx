@@ -231,7 +231,7 @@ export function DiagnosticsPanel({
         <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
           {/* Gutter 33% — EXPAND + chevron when playing; chevron rotates right→down as accordion opens */}
-          <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 7 }}>
+          <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 14 }}>
             {(isPlaying || isExpanded) && (
               <button
                 onClick={() => {
@@ -281,7 +281,7 @@ export function DiagnosticsPanel({
 
         {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
         {/* grid-template-rows 0fr→1fr animates to exact content height, unlike max-height */}
-        <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s ease" }}>
+        <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 1.5s ease" }}>
         <div style={{ overflow: "hidden", minHeight: 0 }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
@@ -438,6 +438,7 @@ export function DiagnosticsPanel({
               scrollbarWidth: "none",
               display: "flex",
               flexDirection: "column",
+              justifyContent: expandedBand ? "flex-start" : "center",
             }}>
               <div style={{ padding: "4px 0" }}>
                 {BANDS.map(band => <BandRow key={band.label} band={band} />)}
