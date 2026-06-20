@@ -433,7 +433,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute",
               top: "22%", bottom: "15%",
-              left: 6, right: 36,
+              left: 16, right: 36,
               overflowY: "auto",
               scrollbarWidth: "none",
               display: "flex",
@@ -481,7 +481,7 @@ export function DiagnosticsPanel({
       ════════════════════════════════════════════════════════════════════════ */}
       {processCandidate !== null && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 60,
+          position: "absolute", inset: 0, zIndex: 80,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
         }}>
@@ -570,7 +570,7 @@ export function DiagnosticsPanel({
       ════════════════════════════════════════════════════════════════════════ */}
       {doneAction !== null && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 65,
+          position: "absolute", inset: 0, zIndex: 85,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
         }}>
