@@ -154,12 +154,12 @@ const BandRow = memo(function BandRow({
               }}
               style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
               {!isExpanded && (
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 6 }}>EXPAND</span>
               )}
               <svg width={8} height={10} viewBox="0 0 10 14" style={{
                 flexShrink: 0,
                 transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 0.75s ease",
+                transition: "transform 0.75s cubic-bezier(0.5,0,1,1)",
               }}>
                 <polyline points="2,2 8,7 2,12"
                   fill="none" stroke="#ffcc00" strokeWidth="2.4"
@@ -195,7 +195,7 @@ const BandRow = memo(function BandRow({
       {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
       {/* grid-template-rows 0fr→1fr: animates to exact content height.
           minHeight:0 on the inner div is required for 0fr to actually collapse. */}
-      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s ease" }}>
+      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.75s cubic-bezier(0.5,0,1,1)" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
           const sfPlaying = playingFreq === sf;
