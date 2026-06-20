@@ -239,12 +239,14 @@ export function DiagnosticsPanel({
                   else            { handleBandExpand(band.label); }
                 }}
                 style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
-                {/* chevron rotates in sync with the accordion (both use 0.28s ease) */}
+                {!isExpanded && (
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>EXPAND</span>
+                )}
+                {/* chevron rotates in sync with the accordion (both use 0.75s ease) */}
                 <svg width={8} height={10} viewBox="0 0 10 14" style={{
                   flexShrink: 0,
                   transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.28s ease",
+                  transition: "transform 0.75s ease",
                 }}>
                   <polyline points="2,2 8,7 2,12"
                     fill="none" stroke="#ffcc00" strokeWidth="2.4"
@@ -278,7 +280,7 @@ export function DiagnosticsPanel({
         </div>
 
         {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
-        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 34}px` : "0px", overflow: "hidden", transition: "max-height 0.28s ease" }}>
+        <div style={{ maxHeight: isExpanded ? `${getSubBands(band).length * 34}px` : "0px", overflow: "hidden", transition: "max-height 0.75s ease" }}>
           {getSubBands(band).map(sf => {
             const sfPlaying = playingFreq === sf;
             const sfNotched = currentNotch === sf;
