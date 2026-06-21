@@ -290,6 +290,8 @@ export function DiagnosticsPanel({
   const [p2Anchored,       setP2Anchored]        = useState(false);
   // which band's chevron should blink; persists after collapse until another parent row is clicked
   const [blinkingBand,     setBlinkingBand]      = useState<string | null>(null);
+  // true while the PROCESS popup is animating out (scale-to-zero)
+  const [processDismissing, setProcessDismissing] = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -355,7 +357,13 @@ export function DiagnosticsPanel({
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
   // Clicking SELECT (sub-freq): stop tone and open modal
-  const handleSelectClick = (freq: number) => { stopTone(); setProcessCandidate(freq); };
+  const handleSelectClick = (freq: number) => { stopTone(); setProcessDismissing(false); setProcessCandidate(freq); };
+
+  // Close PROCESS popup with scale-out animation, then clear state
+  const handleProcessClose = () => {
+    setProcessDismissing(true);
+    setTimeout(() => { setProcessCandidate(null); setProcessDismissing(false); }, 200);
+  };
 
   const handleNotch = () => {
     if (processCandidate === null) return;
@@ -397,6 +405,14 @@ export function DiagnosticsPanel({
         @keyframes blinkYellow {
           0%, 100% { opacity: 1; }
           50%      { opacity: 0.18; }
+        }
+        @keyframes processScaleIn {
+          0%   { transform: scale(0.05); opacity: 0; }
+          100% { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes processScaleOut {
+          0%   { transform: scale(1);    opacity: 1; }
+          100% { transform: scale(0.05); opacity: 0; }
         }
       `}</style>
 
@@ -462,7 +478,7 @@ export function DiagnosticsPanel({
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 2 — base art + interactive list
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: wipeTx, willChange: "transform" }}>
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: `${wipeTx}, filter 0.22s ease`, willChange: "transform", filter: processCandidate !== null ? "blur(8px)" : "none" }}>
             <img src={diagP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false} />
@@ -542,10 +558,28 @@ export function DiagnosticsPanel({
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
         }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.62)" }}
-            onClick={() => setProcessCandidate(null)} />
 
-          <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 330 }}>
+          {/* Invisible backdrop — tap outside card to dismiss */}
+          <div style={{ position: "absolute", inset: 0 }} onClick={handleProcessClose} />
+
+          {/* Popup card — scales in/out */}
+          <div style={{
+            position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
+            animation: processDismissing
+              ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
+              : "processScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}>
+
+            {/* ✕ close button — top-left corner of card */}
+            <button onClick={handleProcessClose} style={{
+              position: "absolute", top: -13, left: -13, zIndex: 11,
+              width: 28, height: 28, borderRadius: "50%",
+              background: "rgba(22,24,28,0.96)", border: "1px solid rgba(255,255,255,0.22)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 13, fontWeight: 700,
+            }}>✕</button>
+
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto",
                        filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
@@ -553,7 +587,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
-              padding: "clamp(14px,4svh,22px) 18px clamp(12px,3.5svh,18px)",
+              padding: "clamp(14px,4svh,22px) 18px clamp(22px,5.5svh,30px)",
             }}>
 
               <div style={{ textAlign: "center", marginBottom: 10 }}>
@@ -575,7 +609,7 @@ export function DiagnosticsPanel({
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.60)", fontSize: "clamp(10px,2.5vw,12px)", textAlign: "center" }}>
                   From here you can choose:
                 </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.88)", fontSize: "clamp(11px,2.8vw,13px)", fontWeight: 700, lineHeight: 1.65, paddingLeft: 10 }}>
+                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.88)", fontSize: "clamp(11px,2.8vw,13px)", fontWeight: 700, lineHeight: 1.65, textAlign: "center" }}>
                   1) Subtractive (notch) therapy.<br />
                   2) Additive (peaking) therapy.
                 </div>
@@ -590,24 +624,13 @@ export function DiagnosticsPanel({
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 7, marginTop: 8, flexShrink: 0 }}>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexShrink: 0 }}>
                 <button onClick={handleBoost} style={{
                   flex: 1, height: 36, borderRadius: 8,
                   background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
                   ...KALLISTO, fontWeight: 700, fontSize: "clamp(9px,2.3vw,11px)",
                   color: "#00ee88", cursor: "pointer", letterSpacing: "0.03em",
                 }}>∧ boost {fmtSub(processCandidate)}</button>
-
-                <button onClick={() => {
-                  const freq = processCandidate;
-                  setProcessCandidate(null);
-                  if (freq !== null) playTone(freq, volToGain(toneVolume));
-                }} style={{
-                  flex: 0.62, height: 36, borderRadius: 8,
-                  background: "rgba(55,58,62,0.90)", border: "1px solid rgba(255,255,255,0.11)",
-                  ...KALLISTO, fontWeight: 400, fontSize: "clamp(9px,2.3vw,11px)",
-                  color: "rgba(255,255,255,0.75)", cursor: "pointer",
-                }}>cancel</button>
 
                 <button onClick={handleNotch} style={{
                   flex: 1, height: 36, borderRadius: 8,
