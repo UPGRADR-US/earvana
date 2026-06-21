@@ -292,6 +292,8 @@ export function DiagnosticsPanel({
   const [blinkingBand,     setBlinkingBand]      = useState<string | null>(null);
   // true while the PROCESS popup is animating out (scale-to-zero)
   const [processDismissing, setProcessDismissing] = useState(false);
+  // true while the DONE card is animating out
+  const [doneDismissing,    setDoneDismissing]    = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -379,11 +381,20 @@ export function DiagnosticsPanel({
     setProcessCandidate(null);
   };
 
-  const handleDoneClose = () => { setDoneAction(null); onClose(); };
+  // Animated Done card dismiss helpers
+  const handleDoneClose = () => {
+    setDoneDismissing(true);
+    setTimeout(() => { setDoneAction(null); setDoneDismissing(false); onClose(); }, 200);
+  };
+  const handleBackFromDone = () => {
+    setDoneDismissing(true);
+    setTimeout(() => {
+      setDoneAction(null); setDoneDismissing(false);
+      stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null);
+    }, 200);
+  };
   // p2 «back» → p1: reset anchor + blink so p2 re-centers next time it's entered
   const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
-  // Done card «back» → p2 (not p1): also re-centers p2 on return
-  const handleBackFromDone = () => { setDoneAction(null); stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
 
   const p1X    = page === 1 ? "0%" : "-100%";
@@ -481,7 +492,7 @@ export function DiagnosticsPanel({
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 2 — base art + interactive list
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, willChange: "transform", filter: processCandidate !== null ? "blur(8px)" : "none", transition: `${wipeTx}, filter 0.5s ease` }}>
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, willChange: "transform", filter: (processCandidate !== null || doneAction !== null) ? "blur(8px)" : "none", transition: `${wipeTx}, filter 0.5s ease` }}>
             <img src={diagP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false} />
@@ -565,9 +576,10 @@ export function DiagnosticsPanel({
           {/* Invisible backdrop — tap outside card to dismiss */}
           <div style={{ position: "absolute", inset: 0 }} onClick={handleProcessClose} />
 
-          {/* Popup card — scales in/out */}
+          {/* Popup card — scales in/out; paddingBottom extends content area below image */}
           <div style={{
             position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
+            paddingBottom: 28,
             animation: processDismissing
               ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
               : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
@@ -590,7 +602,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
-              padding: "clamp(14px,4svh,22px) 18px clamp(22px,5.5svh,30px)",
+              padding: "clamp(14px,4svh,22px) 18px clamp(28px,7svh,36px)",
             }}>
 
               <div style={{ textAlign: "center", marginBottom: 10 }}>
@@ -629,16 +641,16 @@ export function DiagnosticsPanel({
 
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexShrink: 0 }}>
                 <button onClick={handleBoost} style={{
-                  flex: 1, height: 36, borderRadius: 8,
+                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
                   background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
-                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(9px,2.3vw,11px)",
+                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
                   color: "#00ee88", cursor: "pointer", letterSpacing: "0.03em",
                 }}>∧ boost {fmtSub(processCandidate)}</button>
 
                 <button onClick={handleNotch} style={{
-                  flex: 1, height: 36, borderRadius: 8,
+                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
                   background: "rgba(0,110,210,0.18)", border: "1px solid rgba(0,150,255,0.45)",
-                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(9px,2.3vw,11px)",
+                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
                   color: "#00ccff", cursor: "pointer", letterSpacing: "0.03em",
                 }}>∨ notch {fmtSub(processCandidate)}</button>
               </div>
@@ -657,9 +669,18 @@ export function DiagnosticsPanel({
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
         }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.68)" }} />
 
-          <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 310 }}>
+          {/* Invisible backdrop — tap outside to dismiss */}
+          <div style={{ position: "absolute", inset: 0 }} onClick={handleDoneClose} />
+
+          {/* Card — scales in/out; paddingBottom adds breathing room below image */}
+          <div style={{
+            position: "relative", zIndex: 10, width: "100%", maxWidth: 310,
+            paddingBottom: 28,
+            animation: doneDismissing
+              ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
+              : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}>
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto",
                        filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
@@ -667,7 +688,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: "clamp(16px,4.5svh,24px) 20px clamp(14px,4svh,20px)",
+              padding: "clamp(16px,4.5svh,24px) 20px clamp(28px,7svh,36px)",
             }}>
 
               <button onClick={handleDoneClose} style={{
