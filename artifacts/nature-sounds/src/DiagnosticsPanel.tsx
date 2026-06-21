@@ -451,8 +451,8 @@ export function DiagnosticsPanel({
             width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
             ...KALLISTO, fontWeight: 500, fontSize: "1.55rem", lineHeight: 1,
             color: "rgba(255,255,255,0.80)",
-            opacity: processCandidate !== null ? 0 : 1,
-            pointerEvents: processCandidate !== null ? "none" : "auto",
+            opacity: (processCandidate !== null || doneAction !== null) ? 0 : 1,
+            pointerEvents: (processCandidate !== null || doneAction !== null) ? "none" : "auto",
             transition: "opacity 0.2s ease",
           }}>✕</button>
 
@@ -595,8 +595,16 @@ export function DiagnosticsPanel({
               ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
-            <img src={diagCardImg} alt="" draggable={false}
-              style={{ display: "block", width: "100%", height: "auto" }} />
+            {/* Art wrapper — bg-image stretches to cover natural height + 20px extra */}
+            <div style={{
+              backgroundImage: `url(${diagCardImg})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}>
+              <img src={diagCardImg} alt="" draggable={false}
+                style={{ display: "block", width: "100%", height: "auto", visibility: "hidden" }} />
+              <div style={{ height: 20 }} />
+            </div>
 
             <div style={{
               position: "absolute", inset: 0,
@@ -691,8 +699,16 @@ export function DiagnosticsPanel({
               ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
-            <img src={diagCardImg} alt="" draggable={false}
-              style={{ display: "block", width: "100%", height: "auto" }} />
+            {/* Art wrapper — bg-image stretches to cover natural height + 20px extra */}
+            <div style={{
+              backgroundImage: `url(${diagCardImg})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}>
+              <img src={diagCardImg} alt="" draggable={false}
+                style={{ display: "block", width: "100%", height: "auto", visibility: "hidden" }} />
+              <div style={{ height: 20 }} />
+            </div>
 
             <div style={{
               position: "absolute", inset: 0,
