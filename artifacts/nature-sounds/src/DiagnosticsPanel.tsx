@@ -434,12 +434,15 @@ export function DiagnosticsPanel({
         {/* Carousel container */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", clipPath: "inset(0 round 22px)" }}>
 
-          {/* Global ✕ */}
+          {/* Global ✕ — hidden while PROCESS popup is open */}
           <button onClick={handleClose} aria-label="Close" style={{
             position: "absolute", top: 0, left: 0, zIndex: 70,
             width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
             ...KALLISTO, fontWeight: 500, fontSize: "1.55rem", lineHeight: 1,
             color: "rgba(255,255,255,0.80)",
+            opacity: processCandidate !== null ? 0 : 1,
+            pointerEvents: processCandidate !== null ? "none" : "auto",
+            transition: "opacity 0.2s ease",
           }}>✕</button>
 
           {/* ════════════════════════════════════════════════════════════════════
@@ -478,7 +481,7 @@ export function DiagnosticsPanel({
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 2 — base art + interactive list
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: `${wipeTx}, filter 0.22s ease`, willChange: "transform", filter: processCandidate !== null ? "blur(8px)" : "none" }}>
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, willChange: "transform", filter: processCandidate !== null ? "blur(8px)" : "none", transition: `${wipeTx}, filter 0.5s ease` }}>
             <img src={diagP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false} />
@@ -567,7 +570,7 @@ export function DiagnosticsPanel({
             position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
             animation: processDismissing
               ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
-              : "processScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
+              : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
 
             {/* ✕ close button — top-left corner of card */}
