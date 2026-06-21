@@ -598,9 +598,6 @@ export function DiagnosticsPanel({
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto" }} />
 
-            {/* Dark footer — extends card background below image with padding room */}
-            <div style={{ height: 26, background: "rgba(7,10,18,0.98)", borderRadius: "0 0 10px 10px" }} />
-
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
@@ -696,9 +693,6 @@ export function DiagnosticsPanel({
 
             <img src={diagCardImg} alt="" draggable={false}
               style={{ display: "block", width: "100%", height: "auto" }} />
-
-            {/* Dark footer — extends card background below image */}
-            <div style={{ height: 26, background: "rgba(7,10,18,0.98)", borderRadius: "0 0 10px 10px" }} />
 
             <div style={{
               position: "absolute", inset: 0,
