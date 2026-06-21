@@ -641,7 +641,7 @@ export function DiagnosticsPanel({
                 </div>
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.88)", fontSize: "clamp(11px,2.8vw,13px)", fontWeight: 700, lineHeight: 1.65, textAlign: "center" }}>
                   1) Subtractive (notch) therapy.<br />
-                  2) Additive (peaking) therapy.
+                  2) Additive (boost) therapy.
                 </div>
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.48)", fontSize: "clamp(9.5px,2.4vw,11.5px)", lineHeight: 1.5, textAlign: "center" }}>
                   Both have shown positive results<br />in reducing, or in some cases curing tinnitus.
@@ -655,19 +655,19 @@ export function DiagnosticsPanel({
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 8, flexShrink: 0 }}>
-                <button onClick={handleBoost} style={{
-                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
-                  background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
-                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
-                  color: "#00ee88", cursor: "pointer", letterSpacing: "0.03em",
-                }}><span style={{ fontSize: "1.55em", lineHeight: 1 }}>▲</span> boost {fmtSub(processCandidate)}</button>
-
                 <button onClick={handleNotch} style={{
                   flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
                   background: "rgba(0,110,210,0.18)", border: "1px solid rgba(0,150,255,0.45)",
                   ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
-                  color: "#00ccff", cursor: "pointer", letterSpacing: "0.03em",
-                }}><span style={{ fontSize: "1.55em", lineHeight: 1 }}>▼</span> notch {fmtSub(processCandidate)}</button>
+                  color: "#ffffff", cursor: "pointer", letterSpacing: "0.03em",
+                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#00ccff" }}>▼</span> notch {fmtSub(processCandidate)}</button>
+
+                <button onClick={handleBoost} style={{
+                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
+                  background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
+                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
+                  color: "#ffffff", cursor: "pointer", letterSpacing: "0.03em",
+                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#00ee88" }}>▲</span> boost {fmtSub(processCandidate)}</button>
               </div>
 
             </div>
