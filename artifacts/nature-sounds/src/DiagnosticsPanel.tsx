@@ -537,7 +537,7 @@ export function DiagnosticsPanel({
           PROCESS modal  (p3)
       ════════════════════════════════════════════════════════════════════════ */}
       {processCandidate !== null && (
-        <div style={{
+        <div onClick={e => e.stopPropagation()} style={{
           position: "absolute", inset: 0, zIndex: 80,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
@@ -626,7 +626,7 @@ export function DiagnosticsPanel({
           DONE card  (p4)
       ════════════════════════════════════════════════════════════════════════ */}
       {doneAction !== null && (
-        <div style={{
+        <div onClick={e => e.stopPropagation()} style={{
           position: "absolute", inset: 0, zIndex: 85,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 clamp(12px,3cqw,20px)",
