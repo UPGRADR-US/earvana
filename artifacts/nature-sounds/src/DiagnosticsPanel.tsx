@@ -576,28 +576,30 @@ export function DiagnosticsPanel({
           {/* Invisible backdrop — tap outside card to dismiss */}
           <div style={{ position: "absolute", inset: 0 }} onClick={handleProcessClose} />
 
-          {/* Popup card — scales in/out; paddingBottom extends content area below image */}
+          {/* Popup card — scales in/out; drop-shadow on wrapper covers image + footer */}
           <div style={{
             position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
-            paddingBottom: 28,
+            filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))",
             animation: processDismissing
               ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
               : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
 
-            {/* ✕ close button — top-left corner of card */}
+            {/* ✕ close button — top-left corner, 2 sizes up */}
             <button onClick={handleProcessClose} style={{
-              position: "absolute", top: -13, left: -13, zIndex: 11,
-              width: 28, height: 28, borderRadius: "50%",
+              position: "absolute", top: -17, left: -17, zIndex: 11,
+              width: 34, height: 34, borderRadius: "50%",
               background: "rgba(22,24,28,0.96)", border: "1px solid rgba(255,255,255,0.22)",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", padding: 0,
-              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 13, fontWeight: 700,
+              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
             <img src={diagCardImg} alt="" draggable={false}
-              style={{ display: "block", width: "100%", height: "auto",
-                       filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
+              style={{ display: "block", width: "100%", height: "auto" }} />
+
+            {/* Dark footer — extends card background below image with padding room */}
+            <div style={{ height: 26, background: "rgba(7,10,18,0.98)", borderRadius: "0 0 10px 10px" }} />
 
             <div style={{
               position: "absolute", inset: 0,
@@ -645,14 +647,14 @@ export function DiagnosticsPanel({
                   background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
                   ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
                   color: "#00ee88", cursor: "pointer", letterSpacing: "0.03em",
-                }}>∧ boost {fmtSub(processCandidate)}</button>
+                }}><span style={{ fontSize: "1.55em", lineHeight: 1 }}>▲</span> boost {fmtSub(processCandidate)}</button>
 
                 <button onClick={handleNotch} style={{
                   flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
                   background: "rgba(0,110,210,0.18)", border: "1px solid rgba(0,150,255,0.45)",
                   ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
                   color: "#00ccff", cursor: "pointer", letterSpacing: "0.03em",
-                }}>∨ notch {fmtSub(processCandidate)}</button>
+                }}><span style={{ fontSize: "1.55em", lineHeight: 1 }}>▼</span> notch {fmtSub(processCandidate)}</button>
               </div>
 
             </div>
@@ -673,30 +675,36 @@ export function DiagnosticsPanel({
           {/* Invisible backdrop — tap outside to dismiss */}
           <div style={{ position: "absolute", inset: 0 }} onClick={handleDoneClose} />
 
-          {/* Card — scales in/out; paddingBottom adds breathing room below image */}
+          {/* Card — scales in/out; drop-shadow on wrapper covers image + footer */}
           <div style={{
             position: "relative", zIndex: 10, width: "100%", maxWidth: 310,
-            paddingBottom: 28,
+            filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))",
             animation: doneDismissing
               ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
               : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
+
+            {/* ✕ close button — same style as PROCESS popup, 2 sizes up */}
+            <button onClick={handleDoneClose} style={{
+              position: "absolute", top: -17, left: -17, zIndex: 11,
+              width: 34, height: 34, borderRadius: "50%",
+              background: "rgba(22,24,28,0.96)", border: "1px solid rgba(255,255,255,0.22)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
+            }}>✕</button>
+
             <img src={diagCardImg} alt="" draggable={false}
-              style={{ display: "block", width: "100%", height: "auto",
-                       filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))" }} />
+              style={{ display: "block", width: "100%", height: "auto" }} />
+
+            {/* Dark footer — extends card background below image */}
+            <div style={{ height: 26, background: "rgba(7,10,18,0.98)", borderRadius: "0 0 10px 10px" }} />
 
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               padding: "clamp(16px,4.5svh,24px) 20px clamp(28px,7svh,36px)",
             }}>
-
-              <button onClick={handleDoneClose} style={{
-                position: "absolute", top: 8, left: 8,
-                width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-                background: "none", border: "none", cursor: "pointer",
-                ...KALLISTO, fontSize: "1.25rem", color: "rgba(255,255,255,0.62)",
-              }}>✕</button>
 
               <div style={{ textAlign: "center" }}>
                 <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(20px,5vw,24px)", fontWeight: 700, marginBottom: 12 }}>
@@ -716,19 +724,6 @@ export function DiagnosticsPanel({
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.55)", fontSize: "clamp(10px,2.5vw,12px)", lineHeight: 1.55, marginTop: 12 }}>
                   You can reset at any time<br />by coming back to the<br />diagnostic section.
                 </div>
-                <button
-                  onPointerDown={() => setBackPressed(true)}
-                  onPointerUp={() => setBackPressed(false)}
-                  onPointerLeave={() => setBackPressed(false)}
-                  onClick={handleBackFromDone}
-                  style={{
-                    marginTop: 16, background: "none", border: "none", cursor: "pointer",
-                    ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.7vw,13px)",
-                    color: backPressed ? "#ffe880" : "#b89a2a",
-                    letterSpacing: "0.04em",
-                    textShadow: backPressed ? "0 0 8px #ffd040" : "none",
-                    transition: "color 0.08s, text-shadow 0.08s",
-                  }}>«« back</button>
               </div>
 
             </div>
