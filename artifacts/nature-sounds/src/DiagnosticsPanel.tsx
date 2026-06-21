@@ -247,7 +247,7 @@ const BandRow = memo(function BandRow({
               {sfActive && (
                 <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(6.5px,1.65vw,8.5px)", color: "#b89a2a", letterSpacing: "0.04em" }}>reset</span>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#b89a2a", letterSpacing: "0.04em", animation: "blinkYellow 0.9s ease-in-out infinite" }}>RESET</span>
                   <Chevron color="#b89a2a" />
                 </button>
               )}
@@ -300,6 +300,14 @@ export function DiagnosticsPanel({
     if (!active) return null;
     return BANDS.find(b => getSubBands(b).includes(active))?.label ?? null;
   }, [currentNotch, currentBoost]);
+
+  // When p2 is shown with an active notch/boost, auto-expand + blink that band
+  useEffect(() => {
+    if (page === 2 && activeBandLabel) {
+      setExpandedBand(activeBandLabel);
+      setBlinkingBand(activeBandLabel);
+    }
+  }, [page, activeBandLabel]);
 
   // ── Tone engine ─────────────────────────────────────────────────────────────
 
