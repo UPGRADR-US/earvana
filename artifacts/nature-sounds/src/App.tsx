@@ -1313,9 +1313,8 @@ function Home() {
                   fontSize: "clamp(8px,2cqw,11px)",
                   color: "#ffcc00",
                   letterSpacing: "0.1em",
-                  marginLeft: 10,
+                  marginLeft: 4,
                   flexShrink: 0,
-                  animation: "blinkYellow 0.9s ease-in-out infinite",
                 }}>
                   {engine.notchedFreq ? "NOTCH" : "BOOST"}
                 </div>
