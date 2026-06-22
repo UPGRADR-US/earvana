@@ -186,7 +186,7 @@ html, body {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30;
     font-family: 'Kallisto', sans-serif;
-    background: #000;
+    background: #070e0c;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -196,7 +196,7 @@ html, body {
   #root {
     width: 100%;
     max-width: 430px;
-    min-height: 100dvh;
+    height: 100dvh;
     position: relative;
     overflow: hidden;
   }

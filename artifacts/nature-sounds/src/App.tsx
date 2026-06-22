@@ -431,13 +431,11 @@ function CylinderCarousel({
                 else animateTo(i);
               }}>
 
-              {/* Front face — backfaceVisibility:hidden prevents iOS from
-                  re-painting hidden faces and cuts GPU overdraw in half. */}
+              {/* Front face — backfaceVisibility intentionally NOT hidden so the
+                  image shows (faintly) as tiles swing around to the back. */}
               <div className="absolute inset-0 rounded-xl overflow-hidden"
                 style={{
                   opacity: faceOpacity,
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
                   border: isCentered || isSelected
                     ? "2px solid rgba(0,255,100,0.8)"
                     : "2px solid rgba(255,255,255,0.20)",
@@ -453,6 +451,16 @@ function CylinderCarousel({
                     style={{ width:8, height:8, background:"#00ff55", boxShadow:"0 0 6px #00ff55" }} />
                 )}
               </div>
+
+              {/* Slab edges — give tiles physical thickness */}
+              <div style={{ position:"absolute", top:0, right:-SLAB_DEPTH, width:SLAB_DEPTH, height:"100%",
+                background:EDGE_RIGHT, transform:"rotateY(90deg)", transformOrigin:"left center" }} />
+              <div style={{ position:"absolute", top:0, left:-SLAB_DEPTH, width:SLAB_DEPTH, height:"100%",
+                background:EDGE_LEFT, transform:"rotateY(-90deg)", transformOrigin:"right center" }} />
+              <div style={{ position:"absolute", top:-SLAB_DEPTH, left:0, width:"100%", height:SLAB_DEPTH,
+                background:EDGE_TOP, transform:"rotateX(-90deg)", transformOrigin:"center bottom" }} />
+              <div style={{ position:"absolute", bottom:-SLAB_DEPTH, left:0, width:"100%", height:SLAB_DEPTH,
+                background:EDGE_BOTTOM, transform:"rotateX(90deg)", transformOrigin:"center top" }} />
             </div>
           );
         })}
@@ -1182,7 +1190,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100%", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
       <img src={img("TR-bg.png")} alt=""

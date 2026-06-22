@@ -588,6 +588,7 @@ export function DiagnosticsPanel({
           <div style={{
             position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
             filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))",
+            willChange: "transform, opacity",
             animation: processDismissing
               ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
               : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
