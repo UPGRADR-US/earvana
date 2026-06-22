@@ -452,15 +452,6 @@ function CylinderCarousel({
                 )}
               </div>
 
-              {/* Slab edges — give tiles physical thickness */}
-              <div style={{ position:"absolute", top:0, right:-SLAB_DEPTH, width:SLAB_DEPTH, height:"100%",
-                background:EDGE_RIGHT, transform:"rotateY(90deg)", transformOrigin:"left center" }} />
-              <div style={{ position:"absolute", top:0, left:-SLAB_DEPTH, width:SLAB_DEPTH, height:"100%",
-                background:EDGE_LEFT, transform:"rotateY(-90deg)", transformOrigin:"right center" }} />
-              <div style={{ position:"absolute", top:-SLAB_DEPTH, left:0, width:"100%", height:SLAB_DEPTH,
-                background:EDGE_TOP, transform:"rotateX(-90deg)", transformOrigin:"center bottom" }} />
-              <div style={{ position:"absolute", bottom:-SLAB_DEPTH, left:0, width:"100%", height:SLAB_DEPTH,
-                background:EDGE_BOTTOM, transform:"rotateX(90deg)", transformOrigin:"center top" }} />
             </div>
           );
         })}
