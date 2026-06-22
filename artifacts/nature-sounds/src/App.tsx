@@ -275,13 +275,15 @@ const EDGE_TOP    = "#1a3a52";
 const EDGE_BOTTOM = "#09141e";
 
 function CylinderCarousel({
-  centerIdx, selectedId, onSelect, onCenterChange, engine,
+  centerIdx, selectedId, onSelect, onCenterChange, engine, activeCategoryId, isPlaying,
 }: {
   centerIdx: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCenterChange: (idx: number) => void;
   engine: ReturnType<typeof useAudioEngine>;
+  activeCategoryId: string | null;
+  isPlaying: boolean;
 }) {
   // rotation is React state — used ONLY for tile visibility/opacity calcs.
   // style.transform and style.transition on the cylinder are managed 100%
@@ -408,9 +410,12 @@ function CylinderCarousel({
 
           if (absVis > 172) return null;
 
-          const isCentered  = absVis < ANGLE_STEP / 2;
-          const isSelected  = cat.id === selectedId;
-          const hasPlaying  = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
+          const isCentered      = absVis < ANGLE_STEP / 2;
+          const isSelected      = cat.id === selectedId;
+          const hasPlaying      = cat.tracks.some((t) => engine.tracks[t.id]?.isPlaying);
+          // Show yellow stroke when this tile's category is the one with the active track,
+          // but the user is currently viewing a different category.
+          const isActiveFarCat  = cat.id === activeCategoryId && !isCentered && !!activeCategoryId;
           const faceOpacity = tileOpacity(visAngle);
           const frontShadow = isCentered
             ? "0 14px 32px rgba(0,0,0,0.85), 0 3px 10px rgba(0,0,0,0.6)"
@@ -449,6 +454,15 @@ function CylinderCarousel({
                 {hasPlaying && (
                   <div className="absolute top-[6px] right-[6px] rounded-full"
                     style={{ width:8, height:8, background:"#00ff55", boxShadow:"0 0 6px #00ff55" }} />
+                )}
+                {/* Yellow ring — active track is from this category but user has spun away */}
+                {isActiveFarCat && (
+                  <div className="absolute inset-0 rounded-xl pointer-events-none"
+                    style={{
+                      border: "2.5px solid rgba(255,204,0,0.95)",
+                      boxShadow: "0 0 16px rgba(255,200,0,0.75), inset 0 0 8px rgba(255,200,0,0.22)",
+                      animation: !isPlaying ? "trackBlink 1s ease-in-out infinite" : "none",
+                    }} />
                 )}
               </div>
 
@@ -963,17 +977,9 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
 function Home() {
   const engine = useAudioEngine();
   const [durationStep, setDurationStep] = useState<number>(10);
-  const [centerIdx,   setCenterIdx]   = useState<number>(() => {
-    const saved = localStorage.getItem("tr_last_category");
-    const id    = saved ?? "oceans";
-    const idx   = CATEGORIES.findIndex((c) => c.id === id);
-    return idx >= 0 ? idx : 0;
-  });
-  const [selectedId,  setSelectedId]  = useState<string | null>(() => {
-    const saved = localStorage.getItem("tr_last_category");
-    const id    = saved ?? "oceans";
-    return CATEGORIES.some((c) => c.id === id) ? id : CATEGORIES[0].id;
-  });
+  // Always start on Oceans (index 0) regardless of last session.
+  const [centerIdx,   setCenterIdx]   = useState<number>(0);
+  const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[0]?.id ?? null);
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
   const diagPausedRef = useRef(false);  // true when we auto-paused on diag open
@@ -1038,6 +1044,12 @@ function Home() {
 
   const isPlaying      = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
+
+  // Which category owns the currently active track (playing or paused/selected).
+  const activeTrackId    = playingTrackId ?? selectedTrackId;
+  const activeCategoryId = activeTrackId
+    ? (CATEGORIES.find(c => c.tracks.some(t => t.id === activeTrackId))?.id ?? null)
+    : null;
 
   // Optimistic play-button visual: flips instantly on click so the icon
   // doesn't wait for the audio fade to finish before changing state.
@@ -1121,9 +1133,10 @@ function Home() {
     const cat = CATEGORIES[idx];
     setCenterIdx(idx);
     setSelectedId(id);
-    // Clear track selection if the selected track isn't in the new category
+    // Keep the selected track if it lives in this category; otherwise default to
+    // the first track so selectedTrackId is never null (play button always blinks).
     setSelectedTrackId(prev =>
-      prev && cat.tracks.some(t => t.id === prev) ? prev : null
+      prev && cat.tracks.some(t => t.id === prev) ? prev : (cat.tracks[0]?.id ?? null)
     );
     localStorage.setItem("tr_last_category", id);
   };
@@ -1227,6 +1240,8 @@ function Home() {
                 onSelect={handleSelect}
                 onCenterChange={handleCenterChange}
                 engine={engine}
+                activeCategoryId={activeCategoryId}
+                isPlaying={isPlaying}
               />
             </div>
           </div>
