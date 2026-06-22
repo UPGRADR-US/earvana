@@ -1439,8 +1439,6 @@ function App() {
             <Router />
           </div>
         </WouterRouter>
-        {/* Portrait lock — shown when device is in landscape */}
-        <div className="landscape-overlay" aria-hidden="true" />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

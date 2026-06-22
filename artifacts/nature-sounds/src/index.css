@@ -20,29 +20,6 @@ html, body {
   }
 }
 
-/* Portrait-only lock: covers the viewport with a rotate prompt in landscape */
-.landscape-overlay {
-  display: none;
-}
-@media (orientation: landscape) {
-  .landscape-overlay {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    background: #070e0c;
-    justify-content: center;
-    align-items: center;
-  }
-  .landscape-overlay::after {
-    content: "please rotate your device";
-    font-family: 'Kallisto', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.12em;
-    color: #ffcc00;
-  }
-}
 
 @keyframes blinkYellow {
   0%, 100% { opacity: 1; }
