@@ -1133,11 +1133,16 @@ function Home() {
     const cat = CATEGORIES[idx];
     setCenterIdx(idx);
     setSelectedId(id);
-    // Keep the selected track if it lives in this category; otherwise default to
-    // the first track so selectedTrackId is never null (play button always blinks).
-    setSelectedTrackId(prev =>
-      prev && cat.tracks.some(t => t.id === prev) ? prev : (cat.tracks[0]?.id ?? null)
-    );
+    // Keep the selected track if it's in this category.
+    // If something is actively playing (in another category), leave selectedTrackId
+    // unchanged — don't falsely highlight the top track of the new view.
+    // If nothing is playing (idle / paused elsewhere), default to the first track
+    // so the play button always has something to blink for.
+    setSelectedTrackId(prev => {
+      if (prev && cat.tracks.some(t => t.id === prev)) return prev;
+      if (playingTrackId) return prev;
+      return cat.tracks[0]?.id ?? null;
+    });
     localStorage.setItem("tr_last_category", id);
   };
 
