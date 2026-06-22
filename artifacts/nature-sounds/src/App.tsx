@@ -1244,7 +1244,7 @@ function Home() {
               edge naturally clips a partial track, and the fade makes it look intentional. */}
           <div className="relative flex-1 min-h-0 z-10 overflow-hidden flex flex-col justify-center">
             <div className="w-full flex flex-col overflow-hidden"
-              style={{ maxHeight: "100%", paddingTop: "clamp(6px,1vh,12px)" }}>
+              style={{ maxHeight: "100%" }}>
               {selectedId && (() => {
                 const cat = CATEGORIES.find((c) => c.id === selectedId);
                 return cat ? (
@@ -1439,6 +1439,8 @@ function App() {
             <Router />
           </div>
         </WouterRouter>
+        {/* Portrait lock — shown when device is in landscape */}
+        <div className="landscape-overlay" aria-hidden="true" />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
