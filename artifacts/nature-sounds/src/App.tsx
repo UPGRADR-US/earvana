@@ -1182,7 +1182,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100dvh", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
       <img src={img("TR-bg.png")} alt=""
@@ -1263,8 +1263,8 @@ function Home() {
               extraStyle={{ bottom: "100%", paddingBottom: 10 }}
             />
 
-            {/* Duration slider — paddingBottom creates the gap between "duration" label and CPanl_bar_btm */}
-            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(4px,2.5vh,30px)", paddingBottom: "clamp(4px,1.5vh,16px)" }}>
+            {/* Duration slider — 10px gap above (volume meter) and below (bar) */}
+            <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "10px", paddingBottom: "10px" }}>
               <DurationSlider
                 step={durationStep}
                 onChange={handleDurationChange}
@@ -1286,7 +1286,7 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(72px,11vh,88px)" }}>
+              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
               {/* Diagnostics button — Diag_Butt.png graphic */}
               <button
@@ -1343,9 +1343,6 @@ function Home() {
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
             </div>{/* end icon row */}
-            {/* Safe-area spacer — bar graphic above covers this so it fills
-                flush to the home indicator without displacing the icons */}
-            <div style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
             </div>{/* end bar wrapper */}
           </div>
         </>
