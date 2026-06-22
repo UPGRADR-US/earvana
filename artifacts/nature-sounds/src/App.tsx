@@ -17,8 +17,8 @@ const BUILD_NUMBER = 23;
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
-function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
-  volume: number; onChange: (v: number) => void; bottomPad?: string;
+function VolumeMeter({ volume, onChange, extraStyle }: {
+  volume: number; onChange: (v: number) => void; extraStyle?: React.CSSProperties;
 }) {
   const meterRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -40,8 +40,8 @@ function VolumeMeter({ volume, onChange, bottomPad = "clamp(6px,1vh,12px)" }: {
   const onPU = useCallback(() => { dragging.current = false; setPressed(false); }, []);
 
   return (
-    <div className="absolute right-0 bottom-0 z-[30] flex items-end gap-[5px]"
-      style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", paddingBottom: bottomPad }}>
+    <div className="absolute right-0 z-[30] flex items-end gap-[5px]"
+      style={{ paddingRight: "clamp(6px, 1.5cqw, 14px)", bottom: 0, ...extraStyle }}>
       {/* Meter images fade with press; VOLUME label stays fully opaque */}
       <div ref={meterRef} className="relative cursor-pointer touch-none"
         style={{
@@ -1219,16 +1219,9 @@ function Home() {
               className="w-full h-auto block" draggable={false} />
           </div>
 
-          {/* Volume meter */}
-          <VolumeMeter
-            volume={engine.masterVolume}
-            onChange={engine.setMasterVolume}
-            bottomPad="calc(clamp(230px,30.5vh,288px) + env(safe-area-inset-bottom, 0px))"
-          />
-
           {/* Carousel */}
           <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
-            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "-10px" }}>
+            <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "clamp(2px,0.8vh,8px)" }}>
               <CylinderCarousel
                 centerIdx={centerIdx}
                 selectedId={selectedId}
@@ -1262,7 +1255,13 @@ function Home() {
           {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
               resolves against only the icon-row's own relative parent, not this outer wrapper.
               iOS WebKit picks the outermost relative ancestor when there are nested ones. */}
-          <div className="z-10 flex-shrink-0">
+          <div className="z-10 flex-shrink-0" style={{ position: "relative" }}>
+            {/* Volume meter — floats above this cluster, anchored to its top edge */}
+            <VolumeMeter
+              volume={engine.masterVolume}
+              onChange={engine.setMasterVolume}
+              extraStyle={{ bottom: "100%", paddingBottom: 10 }}
+            />
 
             {/* Duration slider — paddingBottom creates the gap between "duration" label and CPanl_bar_btm */}
             <div style={{ paddingLeft: "52px", paddingRight: "44px", paddingTop: "clamp(4px,2.5vh,30px)", paddingBottom: "clamp(4px,1.5vh,16px)" }}>
@@ -1287,7 +1286,7 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", paddingTop: "clamp(10px,2vh,16px)", paddingBottom: "clamp(10px,2vh,16px)" }}>
+              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(72px,11vh,88px)" }}>
 
               {/* Diagnostics button — Diag_Butt.png graphic */}
               <button

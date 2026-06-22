@@ -177,7 +177,7 @@ const BandRow = memo(function BandRow({
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
           <span style={{
             ...LIST_TXT,
-            fontSize: "clamp(13.5px,3.5vw,16px)",
+            fontSize: "clamp(15px,3.8cqw,18px)",
             fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
             color: isPlaying ? "#00ff55" : isExpanded ? "#00cc44" : hasActive ? "#c8a832" : "rgba(255,255,255,0.72)",
           }}>{band.label}</span>
@@ -222,7 +222,7 @@ const BandRow = memo(function BandRow({
                          padding: 0, paddingLeft: 22, flexShrink: 0 }}>
                 <span style={{
                   ...SUB_TXT,
-                  fontSize: "clamp(12.5px,3.2vw,15px)",
+                  fontSize: "clamp(13.5px,3.5cqw,16px)",
                   fontWeight: sfPlaying ? 700 : 300,
                   color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
                 }}>{fmtSub(sf)}</span>

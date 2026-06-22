@@ -5,17 +5,18 @@ html, body {
   background: #0a1f1a;
 }
 
-/* Force portrait layout on mobile (touch) devices held in landscape */
+/* Force portrait layout on touch devices held in landscape.
+   Positions #root at (0, 100vh) then rotates -90deg around its top-left
+   corner — mathematically verified to fill the full landscape viewport. */
 @media (orientation: landscape) and (pointer: coarse) {
   #root {
     position: fixed;
-    top: 0;
+    top: 100%;
     left: 0;
     width: 100vh;
     height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: top left;
-    translate: 0 -100vw;
+    transform: rotate(-90deg);
+    transform-origin: left top;
     overflow: hidden;
   }
 }
