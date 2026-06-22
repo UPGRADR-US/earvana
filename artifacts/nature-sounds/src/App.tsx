@@ -1304,6 +1304,23 @@ function Home() {
                   draggable={false}
                 />
               </button>
+
+              {/* Active therapy badge — shown between diag button and play button */}
+              {(engine.notchedFreq || engine.boostedFreq) && (
+                <div style={{
+                  fontFamily: "'Kallisto', sans-serif",
+                  fontWeight: 700,
+                  fontSize: "clamp(8px,2cqw,11px)",
+                  color: "#ffcc00",
+                  letterSpacing: "0.1em",
+                  marginLeft: 10,
+                  flexShrink: 0,
+                  animation: "blinkYellow 0.9s ease-in-out infinite",
+                }}>
+                  {engine.notchedFreq ? "NOTCH" : "BOOST"}
+                </div>
+              )}
+
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
               <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"

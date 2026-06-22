@@ -20,6 +20,10 @@ html, body {
   }
 }
 
+@keyframes blinkYellow {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.18; }
+}
 @keyframes timerFlash {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.25; }

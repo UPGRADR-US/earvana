@@ -92,9 +92,9 @@ function SpeakerIcon({ active, size = 16 }: { active: boolean; size?: number }) 
 
 // ─── Chevron svg ──────────────────────────────────────────────────────────────
 
-function Chevron({ color = "#ffcc00" }: { color?: string }) {
+function Chevron({ color = "#ffcc00", style }: { color?: string; style?: React.CSSProperties }) {
   return (
-    <svg width={8} height={10} viewBox="0 0 10 14" style={{ flexShrink: 0 }}>
+    <svg width={8} height={10} viewBox="0 0 10 14" style={{ flexShrink: 0, ...style }}>
       <polyline points="2,2 8,7 2,12"
         fill="none" stroke={color} strokeWidth="2.4"
         strokeLinecap="round" strokeLinejoin="round" />
@@ -162,7 +162,7 @@ const BandRow = memo(function BandRow({
                 flexShrink: 0,
                 transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                 transition: "transform 0.375s cubic-bezier(0.5,0,1,1)",
-                animation: isBlinking ? "blinkYellow 0.85s ease-in-out infinite" : "none",
+                animation: isBlinking ? "blinkYellow 0.9s ease-in-out infinite" : "none",
               }}>
                 <polyline points="2,2 8,7 2,12"
                   fill="none" stroke="#ffcc00" strokeWidth="2.4"
@@ -248,7 +248,7 @@ const BandRow = memo(function BandRow({
                 <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
                   <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#b89a2a", letterSpacing: "0.04em", animation: "blinkYellow 0.9s ease-in-out infinite" }}>RESET</span>
-                  <Chevron color="#b89a2a" />
+                  <Chevron color="#b89a2a" style={{ animation: "blinkYellow 0.9s ease-in-out infinite" }} />
                 </button>
               )}
 
