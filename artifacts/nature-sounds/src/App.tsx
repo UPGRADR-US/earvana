@@ -461,7 +461,7 @@ function CylinderCarousel({
                     style={{
                       border: "2.5px solid rgba(255,204,0,0.95)",
                       boxShadow: "0 0 16px rgba(255,200,0,0.75), inset 0 0 8px rgba(255,200,0,0.22)",
-                      animation: !isPlaying ? "trackBlink 1s ease-in-out infinite" : "none",
+                      animation: "carouselRingBlink 1s ease-in-out infinite",
                     }} />
                 )}
               </div>
