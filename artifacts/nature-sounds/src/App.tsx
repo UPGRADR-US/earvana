@@ -1192,6 +1192,15 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Lock orientation to portrait at the PWA/OS level.
+  // Works in standalone PWA mode (iOS 16.4+, Android). Silently ignored in browser tabs.
+  useEffect(() => {
+    try {
+      (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })
+        .lock?.('portrait')?.catch(() => {});
+    } catch { /* not supported */ }
+  }, []);
+
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
@@ -1446,7 +1455,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           {/* Max-width shell: constrains to 430px on desktop, full-width on mobile.
               container-type lets child cqw units resolve against this column width. */}
-          <div style={{ maxWidth: "430px", width: "100%", margin: "0 auto", height: "100%", containerType: "inline-size" }}>
+          <div style={{ maxWidth: "430px", width: "100%", margin: "0 auto", height: "100dvh", containerType: "inline-size" }}>
             <Router />
           </div>
         </WouterRouter>

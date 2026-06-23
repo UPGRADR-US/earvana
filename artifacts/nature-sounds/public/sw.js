@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v59";
+const CACHE = "tinnitus-relief-v60";
 
 const PRECACHE = [
   "/manifest.json",
@@ -6,18 +6,36 @@ const PRECACHE = [
   "/icon-512.png",
   "/apple-touch-icon.png",
   "/TR-bg.png",
-  "/TopBanner+title.png",
-  "/SpkrIcon.png",
-  "/PLAY_ON.png",
-  "/PLAY_standby.png",
+  "/TopBanner4.png",
+  "/PLAYbase.png",
+  "/PLAYgreen.png",
+  "/PLAYyellow.png",
+  "/CPanl_bar_btm.png",
+  "/Diag_Butt.png",
+  "/Diag_Butt(OnCLK).png",
   "/Settings_Sprocket.png",
+  "/Settings_Sprocket(OnCLK).png",
+  "/LoopIcon.png",
+  "/LoopIcon(OnCLK).png",
   "/SliderSlot_Base.png",
+  "/SliderSlot_Base(OnCLK).png",
   "/SliderKnob.png",
   "/VolSldrBase.png",
   "/VolSldr_LEDS.png",
-  "/diag_pane1_txt.png",
-  "/diag_pane2_txt.png",
+  "/TrackHilite-Green.png",
+  "/TrackHilite-Yellow.png",
   "/homepage_BLUR.png",
+  "/settings-pane.png",
+  "/NotchPopup.png",
+  "/TR_tn_oceans.png",
+  "/TR_tn_rains.png",
+  "/TR_tn_streams.png",
+  "/TR_tn_forests.png",
+  "/TR_tn_fields.png",
+  "/TR_tn_gardens.png",
+  "/TR_tn_fire.png",
+  "/TR_tn_winds.png",
+  "/TR_tn_noise.png",
 ];
 
 self.addEventListener("install", (event) => {
