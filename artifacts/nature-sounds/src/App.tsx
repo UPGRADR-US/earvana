@@ -1032,7 +1032,7 @@ function Home() {
     durationStep < LOOP_STEP ? stepToSeconds(durationStep) : 0,
   );
 
-  /* Tracks whether the 5-min fade-out has already been armed for this countdown cycle */
+  /* Tracks whether the 1-min fade-out has already been armed for this countdown cycle */
   const fadeOutStartedRef = useRef(false);
 
   /* Reset to full duration whenever the user moves the slider */
@@ -1105,10 +1105,10 @@ function Home() {
   /* React to timeRemaining changes: arm fade-out at ≤5 min, auto-stop at 0. */
   useEffect(() => {
     if (durationStep >= LOOP_STEP) return;
-    // Arm the fade-out once when we cross the 5-minute mark (skip if paused).
-    if (isPlaying && timeRemaining <= 300 && timeRemaining > 0 && !fadeOutStartedRef.current) {
+    // Arm the fade-out once when we cross the 1-minute mark (skip if paused).
+    if (isPlaying && timeRemaining <= 60 && timeRemaining > 0 && !fadeOutStartedRef.current) {
       fadeOutStartedRef.current = true;
-      engine.startFadeOut(150);
+      engine.startFadeOut(60); // fades to silence exactly at 0:00
     }
     if (timeRemaining <= 0) {
       fadeOutStartedRef.current = false;
