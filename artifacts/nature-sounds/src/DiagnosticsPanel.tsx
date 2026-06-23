@@ -285,6 +285,7 @@ export function DiagnosticsPanel({
   const [doneAction,       setDoneAction]        = useState<{ freq: number; type: "notch" | "boost" } | null>(null);
   const [startPressed,     setStartPressed]      = useState(false);
   const [p1ImgLoaded,      setP1ImgLoaded]       = useState(false);
+  const [p2ImgLoaded,      setP2ImgLoaded]       = useState(false);
   const [backPressed,      setBackPressed]       = useState(false);
   // true once the user has interacted on this p2 visit; locks justify to flex-start
   // so the list never re-centers mid-session. Resets only on page transitions.
@@ -506,9 +507,11 @@ export function DiagnosticsPanel({
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, willChange: "transform", filter: (processCandidate !== null || doneAction !== null) ? "blur(8px)" : "none", transition: `${wipeTx}, filter 0.5s ease` }}>
             <img src={diagP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false} />
+              draggable={false}
+              onLoad={() => setP2ImgLoaded(true)} />
 
-            {/* Frequency list — in the blank area between the two gold dividers */}
+            {/* Frequency list — only shown once the bg panel is painted */}
+            <div style={{ visibility: p2ImgLoaded ? "visible" : "hidden" }}>
             <div style={{
               position: "absolute",
               top: "22%", bottom: "15%",
@@ -569,6 +572,7 @@ export function DiagnosticsPanel({
                 transition: "color 0.08s, text-shadow 0.08s",
               }}>«« back</button>
 
+            </div>{/* end visibility gate */}
           </div>
 
         </div>{/* end carousel */}

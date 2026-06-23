@@ -1192,23 +1192,19 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Lock orientation to portrait at the PWA/OS level.
-  // Works in standalone PWA mode (iOS 16.4+, Android). Silently ignored in browser tabs.
-  useEffect(() => {
-    try {
-      (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })
-        .lock?.('portrait')?.catch(() => {});
-    } catch { /* not supported */ }
-  }, []);
+  // Orientation is locked to portrait via "orientation":"portrait" in manifest.json.
+  // The JS screen.orientation.lock() API is intentionally omitted — on iOS it can
+  // interfere with the compositor and corrupt the layout.
 
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100%", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100%", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
       <img src={img("TR-bg.png")} alt=""
-        className="absolute inset-0 w-full h-full object-cover z-0" draggable={false} />
+        className="absolute inset-0 w-full h-full object-cover z-0" draggable={false}
+        fetchPriority="high" />
 
       {/* Settings overlay */}
       {settingsOpen && (
@@ -1305,7 +1301,9 @@ function Home() {
                 The bar image sits on a wrapper that also covers the safe-area
                 spacer so the graphic fills all the way to the home indicator
                 without pushing the icons down. */}
-            <div className="relative">
+            {/* Bar wrapper extends into the safe area so CPanl_bar_btm.png fills
+                all the way to the home indicator. Icons sit above via paddingBottom. */}
+            <div className="relative" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
