@@ -284,6 +284,7 @@ export function DiagnosticsPanel({
   const [processCandidate, setProcessCandidate]  = useState<number | null>(null);
   const [doneAction,       setDoneAction]        = useState<{ freq: number; type: "notch" | "boost" } | null>(null);
   const [startPressed,     setStartPressed]      = useState(false);
+  const [p1ImgLoaded,      setP1ImgLoaded]       = useState(false);
   const [backPressed,      setBackPressed]       = useState(false);
   // true once the user has interacted on this p2 visit; locks justify to flex-start
   // so the list never re-centers mid-session. Resets only on page transitions.
@@ -470,7 +471,8 @@ export function DiagnosticsPanel({
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p1X})`, transition: wipeTx, willChange: "transform" }}>
             <img src={diagP1Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false} />
+              draggable={false}
+              onLoad={() => setP1ImgLoaded(true)} />
 
             <button
               onPointerDown={() => setStartPressed(true)}
@@ -479,6 +481,7 @@ export function DiagnosticsPanel({
               onClick={() => setPage(2)}
               style={{
                 position: "absolute", bottom: "4%", left: "50%", transform: "translateX(-50%)",
+                visibility: p1ImgLoaded ? "visible" : "hidden",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                 background: "none", border: "none", cursor: "pointer",
                 ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
