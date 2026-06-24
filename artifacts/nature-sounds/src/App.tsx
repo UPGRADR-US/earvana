@@ -1320,40 +1320,40 @@ function Home() {
                 return (
                   <button
                     onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); diagOpen ? closeDiag() : openDiag(); }, 160); }}
-                    className="flex-shrink-0 flex items-center"
+                    className="flex-shrink-0"
                     style={{
+                      position: "relative",
                       width: "clamp(118px,29.5cqw,162px)",
-                      background: isOn ? "rgba(28,20,0,0.74)" : "rgba(8,18,10,0.64)",
-                      border: isOn
-                        ? "1px solid rgba(200,158,0,0.50)"
-                        : "1px solid rgba(70,105,70,0.38)",
-                      borderRadius: "11px",
-                      boxShadow: isOn
-                        ? "0 0 10px rgba(170,130,0,0.28), inset 0 0 8px rgba(90,70,0,0.20)"
-                        : "0 0 6px rgba(0,0,0,0.45)",
-                      padding: "3px 8px 3px 3px",
-                      gap: 0,
-                      cursor: "pointer",
+                      background: "none", border: "none", padding: 0,
+                      cursor: "pointer", display: "block",
                     }}
                     data-testid="btn-diagnostics"
                     aria-label="Tinnitus diagnostics"
                   >
+                    {/* Graphic fills the button — icon is baked into the left ~40% */}
                     <img
-                      src={useOnCLK ? img("Diag_Butt(OnCLK).png") : img("Diag_Butt.png")}
+                      src={useOnCLK ? img("hp_diag_button_ON.png") : img("hp_diag_button_norm.png")}
                       alt="Diagnostics"
-                      style={{ width: "clamp(52px,13cqw,70px)", height: "auto", display: "block", flexShrink: 0 }}
+                      style={{ width: "100%", height: "auto", display: "block" }}
                       draggable={false}
                     />
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    {/* Text overlay in the right ~57% of the graphic */}
+                    <div style={{
+                      position: "absolute", top: 0, bottom: 0,
+                      left: "40%", right: "6%",
+                      display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center",
+                      pointerEvents: "none",
+                    }}>
                       {isOn && activeFreq !== null ? (
                         <>
-                          <span style={{ color: "#ffcc00", fontSize: "clamp(9px,2.2cqw,12px)", lineHeight: 1.1 }}>∨</span>
-                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(10px,2.5cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.25 }}>
+                          <span style={{ fontSize: "clamp(8px,2cqw,11px)", lineHeight: 1, color: "#1a3000", fontWeight: 700 }}>∨</span>
+                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#1a3000", fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.3 }}>
                             {fmtFreq(activeFreq)}
                           </span>
                         </>
                       ) : (
-                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#c8d040", fontSize: "clamp(12px,3cqw,16px)", letterSpacing: "0.09em" }}>
+                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#1a3000", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em" }}>
                           test
                         </span>
                       )}
