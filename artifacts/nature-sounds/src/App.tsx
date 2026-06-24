@@ -1308,7 +1308,7 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "32px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
+              style={{ paddingLeft: "38px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
               {/* Diagnostics pill — icon + "test" label, or active therapy frequency */}
               {(() => {
