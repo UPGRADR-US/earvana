@@ -1326,6 +1326,7 @@ function Home() {
                       width: "clamp(118px,29.5cqw,162px)",
                       background: "none", border: "none", padding: 0,
                       cursor: "pointer", display: "block",
+                      marginLeft: 6,
                     }}
                     data-testid="btn-diagnostics"
                     aria-label="Tinnitus diagnostics"
@@ -1347,13 +1348,19 @@ function Home() {
                     }}>
                       {isOn && activeFreq !== null ? (
                         <>
-                          <span style={{ fontSize: "clamp(8px,2cqw,11px)", lineHeight: 1, color: "#1a3000", fontWeight: 700 }}>∨</span>
-                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#1a3000", fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.3 }}>
+                          {/* Wide-flat chevron, 3× the old text size */}
+                          <svg width="clamp(28px,7cqw,38px)" height="clamp(10px,2.5cqw,14px)"
+                            viewBox="0 0 38 14" style={{ display: "block", marginBottom: 1 }}>
+                            <polyline points="2,2 19,12 36,2"
+                              fill="none" stroke="#ffcc00" strokeWidth="3.2"
+                              strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.3 }}>
                             {fmtFreq(activeFreq)}
                           </span>
                         </>
                       ) : (
-                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#1a3000", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em" }}>
+                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em" }}>
                           test
                         </span>
                       )}
@@ -1365,7 +1372,7 @@ function Home() {
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
               <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
-                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(8px)" }}>
+                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(14px)" }}>
                 <PlayButton
                   isPlaying={btnPlaying}
                   isStandby={!btnPlaying && !!selectedTrackId}
