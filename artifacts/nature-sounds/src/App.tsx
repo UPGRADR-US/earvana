@@ -1310,36 +1310,57 @@ function Home() {
             <div className="relative flex items-center"
               style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
-              {/* Diagnostics button — Diag_Butt.png graphic */}
-              <button
-                onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); diagOpen ? closeDiag() : openDiag(); }, 160); }}
-                className="flex-shrink-0"
-                style={{ width: "clamp(74px,18.5cqw,100px)" }}
-                data-testid="btn-diagnostics"
-                aria-label="Tinnitus diagnostics"
-              >
-                <img
-                  src={diagFlash || diagOpen ? img("Diag_Butt(OnCLK).png") : img("Diag_Butt.png")}
-                  alt="Diagnostics"
-                  className="w-full h-auto block"
-                  draggable={false}
-                />
-              </button>
-
-              {/* Active therapy badge — shown between diag button and play button */}
-              {(engine.notchedFreq || engine.boostedFreq) && (
-                <div style={{
-                  fontFamily: "'Kallisto', sans-serif",
-                  fontWeight: 700,
-                  fontSize: "clamp(8px,2cqw,11px)",
-                  color: "#ffcc00",
-                  letterSpacing: "0.1em",
-                  marginLeft: 4,
-                  flexShrink: 0,
-                }}>
-                  {engine.notchedFreq ? "NOTCH" : "BOOST"}
-                </div>
-              )}
+              {/* Diagnostics pill — icon + "test" label, or active therapy frequency */}
+              {(() => {
+                const activeFreq = engine.notchedFreq ?? engine.boostedFreq;
+                const isOn   = !!activeFreq;
+                const useOnCLK = diagFlash || diagOpen || isOn;
+                const fmtFreq = (hz: number) =>
+                  hz >= 1000 ? `${(hz / 1000).toFixed(1)}k hz` : `${hz} hz`;
+                return (
+                  <button
+                    onClick={() => { setDiagFlash(true); setTimeout(() => { setDiagFlash(false); diagOpen ? closeDiag() : openDiag(); }, 160); }}
+                    className="flex-shrink-0 flex items-center"
+                    style={{
+                      width: "clamp(118px,29.5cqw,162px)",
+                      background: isOn ? "rgba(28,20,0,0.74)" : "rgba(8,18,10,0.64)",
+                      border: isOn
+                        ? "1px solid rgba(200,158,0,0.50)"
+                        : "1px solid rgba(70,105,70,0.38)",
+                      borderRadius: "11px",
+                      boxShadow: isOn
+                        ? "0 0 10px rgba(170,130,0,0.28), inset 0 0 8px rgba(90,70,0,0.20)"
+                        : "0 0 6px rgba(0,0,0,0.45)",
+                      padding: "3px 8px 3px 3px",
+                      gap: 0,
+                      cursor: "pointer",
+                    }}
+                    data-testid="btn-diagnostics"
+                    aria-label="Tinnitus diagnostics"
+                  >
+                    <img
+                      src={useOnCLK ? img("Diag_Butt(OnCLK).png") : img("Diag_Butt.png")}
+                      alt="Diagnostics"
+                      style={{ width: "clamp(52px,13cqw,70px)", height: "auto", display: "block", flexShrink: 0 }}
+                      draggable={false}
+                    />
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      {isOn && activeFreq !== null ? (
+                        <>
+                          <span style={{ color: "#ffcc00", fontSize: "clamp(9px,2.2cqw,12px)", lineHeight: 1.1 }}>∨</span>
+                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(10px,2.5cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.25 }}>
+                            {fmtFreq(activeFreq)}
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#c8d040", fontSize: "clamp(12px,3cqw,16px)", letterSpacing: "0.09em" }}>
+                          test
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })()}
 
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
