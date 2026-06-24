@@ -1308,7 +1308,7 @@ function Home() {
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
-              style={{ paddingLeft: "22px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
+              style={{ paddingLeft: "32px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
               {/* Diagnostics pill — icon + "test" label, or active therapy frequency */}
               {(() => {
@@ -1326,7 +1326,6 @@ function Home() {
                       width: "clamp(118px,29.5cqw,162px)",
                       background: "none", border: "none", padding: 0,
                       cursor: "pointer", display: "block",
-                      marginLeft: 6,
                     }}
                     data-testid="btn-diagnostics"
                     aria-label="Tinnitus diagnostics"
@@ -1372,7 +1371,7 @@ function Home() {
               {/* Play + EQ bars — absolutely centred; EQ slot always present so
                   the pair doesn't shift when bars appear/disappear */}
               <div className="absolute inset-x-0 flex justify-center items-center pointer-events-none"
-                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(14px)" }}>
+                style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(32px)" }}>
                 <PlayButton
                   isPlaying={btnPlaying}
                   isStandby={!btnPlaying && !!selectedTrackId}
