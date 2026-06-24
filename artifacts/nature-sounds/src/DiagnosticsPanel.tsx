@@ -277,7 +277,14 @@ interface Props {
 export function DiagnosticsPanel({
   onClose, onNotch, currentNotch, onBoost, currentBoost,
 }: Props) {
-  const [page,             setPage]             = useState<1 | 2>(1);
+  const [page,             setPage]             = useState<"intro" | 1 | 2>("intro");
+  // Frequency shown in the intro returning-user panel (persists if mode → normal)
+  const [lastStoredFreq,  setLastStoredFreq]   = useState<number | null>(() => currentNotch ?? currentBoost);
+  // Which therapy mode is active inside the intro panel
+  type IntroMode = "notched" | "normal" | "boosted";
+  const [introMode,       setIntroMode]        = useState<IntroMode>(() =>
+    currentNotch !== null ? "notched" : currentBoost !== null ? "boosted" : "notched"
+  );
   const [playingFreq,      setPlayingFreq]       = useState<number | null>(null);
   const [expandedBand,     setExpandedBand]      = useState<string | null>(null);
   const [toneVolume,       setToneVolume]        = useState(0.25);
@@ -380,6 +387,7 @@ export function DiagnosticsPanel({
   const handleNotch = () => {
     if (processCandidate === null) return;
     onBoost(null); onNotch(processCandidate);
+    setLastStoredFreq(processCandidate); setIntroMode("notched");
     setDoneAction({ freq: processCandidate, type: "notch" });
     setProcessCandidate(null);
   };
@@ -387,6 +395,7 @@ export function DiagnosticsPanel({
   const handleBoost = () => {
     if (processCandidate === null) return;
     onNotch(null); onBoost(processCandidate);
+    setLastStoredFreq(processCandidate); setIntroMode("boosted");
     setDoneAction({ freq: processCandidate, type: "boost" });
     setProcessCandidate(null);
   };
@@ -407,7 +416,8 @@ export function DiagnosticsPanel({
   const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
 
-  const p1X    = page === 1 ? "0%" : "-100%";
+  const introX = page === "intro" ? "0%" : "-100%";
+  const p1X    = page === 1 ? "0%" : page === "intro" ? "100%" : "-100%";
   const p2X    = page === 2 ? "0%" : "100%";
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
@@ -465,6 +475,93 @@ export function DiagnosticsPanel({
             pointerEvents: (processCandidate !== null || doneAction !== null) ? "none" : "auto",
             transition: "opacity 0.2s ease",
           }}>✕</button>
+
+          {/* ════════════════════════════════════════════════════════════════════
+              PAGE i — intro bumper (glass card)
+          ════════════════════════════════════════════════════════════════════ */}
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${introX})`, transition: wipeTx, willChange: "transform",
+            background: "rgba(14,24,34,0.82)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "clamp(20px,5cqw,32px)" }}>
+
+            {/* Header */}
+            <p style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3cqw,15px)", letterSpacing: "0.30em", color: "#ffcc00", textAlign: "center", margin: 0 }}>
+              ~ DIAGNOSTICS ~
+            </p>
+
+            {/* Disclaimer */}
+            <p style={{ fontStyle: "italic", fontSize: "clamp(9px,2.2cqw,11px)", color: "rgba(220,200,130,0.75)", textAlign: "center", margin: "clamp(6px,1.5cqw,10px) 0 0", lineHeight: 1.45, maxWidth: "88%" }}>
+              (Important: this should not be used as a substitute for professional medical diagnosis)
+            </p>
+
+            {/* Body question */}
+            <p style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4.2cqw,22px)", color: "#ffffff", textAlign: "center", margin: "clamp(24px,6cqw,40px) 0 0", lineHeight: 1.25, letterSpacing: "0.04em" }}>
+              WHAT IS YOUR<br />TINNITUS FREQUENCY?
+            </p>
+
+            {/* CTA button */}
+            <button
+              onClick={() => setPage(1)}
+              style={{
+                ...KALLISTO, fontWeight: 700,
+                fontSize: "clamp(13px,3.3cqw,16px)", letterSpacing: "0.14em",
+                color: "#ffcc00",
+                textShadow: "0 0 8px rgba(220,180,0,0.5)",
+                background: "none", border: "none", cursor: "pointer",
+                margin: "clamp(18px,4.5cqw,28px) 0 0",
+                transition: "color 0.08s, text-shadow 0.08s",
+              }}>
+              {lastStoredFreq !== null ? "REPEAT TEST  >>" : "START TEST  »"}
+            </button>
+
+            {/* Returning-user frequency + mode panel */}
+            {lastStoredFreq !== null && (
+              <div style={{
+                marginTop: "clamp(14px,3.5cqw,22px)",
+                width: "90%",
+                background: "rgba(38,46,18,0.82)",
+                border: "1px solid rgba(140,120,30,0.30)",
+                borderRadius: "10px",
+                padding: "clamp(10px,2.5cqw,16px) clamp(10px,2.5cqw,16px)",
+                display: "flex", alignItems: "center", gap: 0,
+              }}>
+                {/* Stored frequency */}
+                <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,20px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
+                    {fmtSub(lastStoredFreq)}
+                  </span>
+                </div>
+
+                {/* Mode selector */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(4px,1cqw,7px)" }}>
+                  {(["notched", "normal", "boosted"] as const).map(mode => {
+                    const active = introMode === mode;
+                    const label  = mode.toUpperCase();
+                    return (
+                      <button key={mode}
+                        onClick={() => {
+                          setIntroMode(mode);
+                          if (mode === "notched") { onNotch(lastStoredFreq); onBoost(null); }
+                          else if (mode === "normal") { onNotch(null); onBoost(null); }
+                          else { onBoost(lastStoredFreq); onNotch(null); }
+                        }}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 0,
+                          display: "flex", alignItems: "center", gap: 6,
+                          ...KALLISTO, fontWeight: active ? 700 : 400,
+                          fontSize: "clamp(10px,2.4cqw,13px)",
+                          letterSpacing: "0.10em",
+                          color: active ? "#ffcc00" : "rgba(200,190,140,0.55)",
+                          transition: "color 0.12s",
+                        }}>
+                        {label}
+                        {active && <span style={{ color: "#ffcc00", fontSize: "clamp(10px,2.4cqw,13px)" }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          </div>
 
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 1 — burned-in art + START TEST overlay
