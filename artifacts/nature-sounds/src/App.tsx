@@ -1348,9 +1348,9 @@ function Home() {
                     }}>
                       {isOn && activeFreq !== null ? (
                         <>
-                          {/* Wide-flat chevron, 3× the old text size */}
-                          <svg width="clamp(28px,7cqw,38px)" height="clamp(10px,2.5cqw,14px)"
-                            viewBox="0 0 38 14" style={{ display: "block", marginBottom: 1 }}>
+                          {/* Wide-flat chevron — 75% reduced from 3× version */}
+                          <svg width="clamp(8px,2cqw,11px)" height="clamp(4px,1cqw,6px)"
+                            viewBox="0 0 38 14" style={{ display: "block", marginBottom: 4 }}>
                             <polyline points="2,2 19,12 36,2"
                               fill="none" stroke="#ffcc00" strokeWidth="3.2"
                               strokeLinecap="round" strokeLinejoin="round" />
