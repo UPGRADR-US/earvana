@@ -619,7 +619,8 @@ function EqBandSlider({ label, value, onChange }: {
       {/* Vertical track */}
       <div ref={trackRef}
         style={{ width: "6px", height: "80px", background: "rgba(255,255,255,0.1)", borderRadius: "3px",
-          position: "relative", cursor: "ns-resize", WebkitTouchCallout: "none", userSelect: "none" }}
+          position: "relative", cursor: "ns-resize", WebkitTouchCallout: "none", userSelect: "none",
+          touchAction: "none" }}
         onPointerDown={e => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); compute(e.clientY); }}
         onPointerMove={e => { if (dragging.current) compute(e.clientY); }}
         onPointerUp={() => { dragging.current = false; }}>
@@ -987,12 +988,16 @@ function Home() {
   const diagPausedRef = useRef(false);  // true when we auto-paused on diag open
 
   const openDiag = useCallback(() => {
+    setDiagOpen(true);
+  }, []);
+
+  // Called when user clicks START TEST / REPEAT TEST — pause here, not on panel open
+  const pauseForDiagTest = useCallback(() => {
     const id = engine.lastPlayedId;
     if (id && engine.tracks[id]?.isPlaying) {
       engine.pause(id);
       diagPausedRef.current = true;
     }
-    setDiagOpen(true);
   }, [engine]);
 
   const closeDiag = useCallback(() => {
@@ -1221,6 +1226,7 @@ function Home() {
       {diagOpen && !settingsOpen && (
         <DiagnosticsPanel
           onClose={closeDiag}
+          onStartTest={pauseForDiagTest}
           onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
           onBoost={(freq) => engine.setBoost(freq ?? null)}

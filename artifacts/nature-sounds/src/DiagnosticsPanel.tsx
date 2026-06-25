@@ -267,6 +267,7 @@ const BandRow = memo(function BandRow({
 
 interface Props {
   onClose:      () => void;
+  onStartTest?: () => void;
   onNotch:      (freq: number | null) => void;
   currentNotch: number | null;
   onBoost:      (freq: number | null) => void;
@@ -276,7 +277,7 @@ interface Props {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DiagnosticsPanel({
-  onClose, onNotch, currentNotch, onBoost, currentBoost,
+  onClose, onStartTest, onNotch, currentNotch, onBoost, currentBoost,
 }: Props) {
   const [page,             setPage]             = useState<"intro" | 1 | 2>("intro");
   // Frequency shown in the intro returning-user panel (persists if mode → normal)
@@ -523,7 +524,7 @@ export function DiagnosticsPanel({
 
                 {/* CTA button — always first (above status box for returning users) */}
                 <button
-                  onClick={() => lastStoredFreq !== null ? setPage(2) : setPage(1)}
+                  onClick={() => { onStartTest?.(); lastStoredFreq !== null ? setPage(2) : setPage(1); }}
                   style={{
                     ...KALLISTO, fontWeight: 700,
                     fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
