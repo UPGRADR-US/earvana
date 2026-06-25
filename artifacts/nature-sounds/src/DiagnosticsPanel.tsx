@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import diagIntroImg from "@assets/diag_intro_pane.png";
-import diagP1Img   from "@assets/diagNEW_p1_1781898279568.png";
-import diagP2Img   from "@assets/diagNEW_base_p2_1781898314245.png";
+import diagP1Img   from "@assets/diagNEW_p1_1782399159528.png";
+import diagP2Img   from "@assets/diagNEW_base_p2_1782398943949.png";
 import diagCardImg from "@assets/diagNEW_base_p3-4_1781898318899.png";
 
 const BASE = import.meta.env.BASE_URL;
