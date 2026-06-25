@@ -480,15 +480,20 @@ export function DiagnosticsPanel({
           {/* ════════════════════════════════════════════════════════════════════
               PAGE i — intro bumper (glass card)
           ════════════════════════════════════════════════════════════════════ */}
-          {/* Outer slide: full-panel for transition; flex-center so the pane image sits at natural height */}
+          {/* Outer slide: full-panel for transition; flex-center so the card stays centered */}
           <div style={{
             position: "absolute", inset: 0,
             transform: `translateX(${introX})`, transition: wipeTx, willChange: "transform",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
 
-            {/* Inner pane — natural image height, full width */}
-            <div style={{ position: "relative", width: "100%" }}>
+            {/* Inner pane — aspect-ratio locked, never taller than the panel */}
+            <div style={{
+              position: "relative",
+              width: "100%",
+              maxHeight: "100%",
+              aspectRatio: "1713 / 1850",
+            }}>
 
               {/* Pane-local ✕ — upper-left corner of the card */}
               <button onClick={handleClose} aria-label="Close" style={{
@@ -499,18 +504,18 @@ export function DiagnosticsPanel({
                 background: "none", border: "none", cursor: "pointer",
               }}>✕</button>
 
-              {/* PNG pane — header/disclaimer/question baked in */}
+              {/* PNG pane fills the aspect-ratio box exactly */}
               <img src={diagIntroImg} alt=""
-                style={{ width: "100%", height: "auto", display: "block" }}
+                style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
                 draggable={false} />
 
-              {/* Dynamic overlay — sits over the image at natural size */}
+              {/* Dynamic overlay — sits over the image */}
               <div style={{
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                paddingTop: lastStoredFreq !== null ? "56%" : "52%",
+                paddingTop: lastStoredFreq !== null ? "56%" : "74%",
                 paddingBottom: "clamp(16px,5cqw,28px)",
                 paddingLeft: "clamp(14px,3.5cqw,22px)",
                 paddingRight: "clamp(14px,3.5cqw,22px)",
