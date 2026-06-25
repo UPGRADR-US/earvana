@@ -579,7 +579,7 @@ export function DiagnosticsPanel({
               style={{
                 position: "absolute", bottom: "4%", left: "50%", transform: "translateX(-50%)",
                 visibility: p1ImgLoaded ? "visible" : "hidden",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
                 background: "none", border: "none", cursor: "pointer",
                 ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
                 color: startPressed ? "#ffe566" : "#ffcc00",
@@ -587,10 +587,11 @@ export function DiagnosticsPanel({
                   ? "0 0 8px rgba(255,200,0,0.9), 0 0 20px rgba(220,160,0,0.6)"
                   : "0 0 8px rgba(220,180,0,0.5)",
                 transition: "color 0.08s, text-shadow 0.08s",
+                marginTop: 6,
               }}>
               <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>CONTINUE</span>
-              <svg width={22} height={22} viewBox="0 0 20 20" style={{ marginTop: 1, transform: "rotate(-90deg)" }}>
-                <polygon points="2,4 18,4 10,17"
+              <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                <polygon points="4,2 4,18 17,10"
                   fill={startPressed ? "#ffe566" : "#ffcc00"}
                   style={{ filter: startPressed ? "drop-shadow(0 0 5px rgba(255,200,0,0.9))" : "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
               </svg>
