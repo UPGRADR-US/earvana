@@ -41,37 +41,9 @@ html, body {
 @import "tw-animate-css";
 
 @font-face {
-  font-family: 'Kallisto';
-  src: url('/fonts/Kallisto_Thin.otf') format('opentype');
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Kallisto';
-  src: url('/fonts/Kallisto_Light.otf') format('opentype');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Kallisto';
-  src: url('/fonts/Kallisto_Medium.otf') format('opentype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Kallisto';
-  src: url('/fonts/Kallisto_Bold.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Kallisto';
-  src: url('/fonts/Kallisto_Heavy.otf') format('opentype');
-  font-weight: 900;
+  font-family: 'Figtree';
+  src: url('/fonts/Figtree-VariableFont.ttf') format('truetype');
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -177,7 +149,7 @@ html, body {
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/30;
-    font-family: 'Kallisto', sans-serif;
+    font-family: 'Figtree', sans-serif;
     background: #070e0c;
     display: flex;
     justify-content: center;

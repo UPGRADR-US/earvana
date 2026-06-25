@@ -1363,12 +1363,12 @@ function Home() {
                               fill="none" stroke="#ffcc00" strokeWidth="3.2"
                               strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                          <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.3 }}>
+                          <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.04em", lineHeight: 1.3 }}>
                             {fmtFreq(activeFreq)}
                           </span>
                         </>
                       ) : (
-                        <span style={{ fontFamily: "'Kallisto', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em" }}>
+                        <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em" }}>
                           test
                         </span>
                       )}
