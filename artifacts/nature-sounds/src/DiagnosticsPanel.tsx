@@ -522,29 +522,46 @@ export function DiagnosticsPanel({
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column",
                 alignItems: "center",
-                justifyContent: lastStoredFreq !== null ? "flex-end" : "flex-start",
-                paddingTop: lastStoredFreq !== null ? 0 : "74%",
+                justifyContent: "flex-start",
+                paddingTop: lastStoredFreq !== null ? "47%" : "74%",
                 paddingBottom: lastStoredFreq !== null ? "6%" : "clamp(16px,5cqw,28px)",
                 paddingLeft: "clamp(14px,3.5cqw,22px)",
                 paddingRight: "clamp(14px,3.5cqw,22px)",
               }}>
 
-                {/* CTA button — always first (above status box for returning users) */}
-                <button
-                  onClick={() => { onStartTest?.(); lastStoredFreq !== null ? setPage(2) : setPage(1); }}
-                  style={{
-                    ...KALLISTO, fontWeight: 700,
-                    fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
-                    color: "#ffcc00",
-                    textShadow: "0 0 8px rgba(220,180,0,0.5)",
-                    background: "none", border: "none", cursor: "pointer",
-                    transition: "color 0.08s, text-shadow 0.08s",
-                    width: lastStoredFreq !== null ? undefined : "50%",
-                    textAlign: "center",
-                    marginBottom: lastStoredFreq !== null ? "clamp(10px,2.5cqw,16px)" : 0,
-                  }}>
-                  {lastStoredFreq !== null ? "REPEAT TEST  >>" : "START TEST  »"}
-                </button>
+                {/* CTA button — for returning users, wrapped in flex-1 so it centres
+                    vertically between the burned-in question text and the status box */}
+                {lastStoredFreq !== null ? (
+                  <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <button
+                      onClick={() => { onStartTest?.(); setPage(2); }}
+                      style={{
+                        ...KALLISTO, fontWeight: 700,
+                        fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
+                        color: "#ffcc00",
+                        textShadow: "0 0 8px rgba(220,180,0,0.5)",
+                        background: "none", border: "none", cursor: "pointer",
+                        transition: "color 0.08s, text-shadow 0.08s",
+                        textAlign: "center",
+                      }}>
+                      REPEAT TEST  &gt;&gt;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { onStartTest?.(); setPage(1); }}
+                    style={{
+                      ...KALLISTO, fontWeight: 700,
+                      fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
+                      color: "#ffcc00",
+                      textShadow: "0 0 8px rgba(220,180,0,0.5)",
+                      background: "none", border: "none", cursor: "pointer",
+                      transition: "color 0.08s, text-shadow 0.08s",
+                      width: "50%", textAlign: "center",
+                    }}>
+                    START TEST  »
+                  </button>
+                )}
 
                 {/* Returning-user frequency + mode panel (below button) */}
                 {lastStoredFreq !== null && (
@@ -759,16 +776,16 @@ export function DiagnosticsPanel({
             }}>
 
               <div style={{ textAlign: "center", marginBottom: 10 }}>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(13px,3.3vw,15px)", fontWeight: 700, marginBottom: 2 }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(13px,3.3vw,15px)", fontWeight: 700, marginBottom: 2 }}>
                   Great!
                 </div>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(11.5px,2.9vw,13.5px)", lineHeight: 1.4 }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11.5px,2.9vw,13.5px)", lineHeight: 1.4 }}>
                   You've pinpointed
                 </div>
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.95)", fontSize: "clamp(20px,5.2vw,25px)", fontWeight: 700, lineHeight: 1.2, margin: "3px 0" }}>
                   {fmtSub(processCandidate)}
                 </div>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(11.5px,2.9vw,13.5px)" }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11.5px,2.9vw,13.5px)" }}>
                   as your tinnitus frequency.
                 </div>
               </div>
@@ -784,7 +801,7 @@ export function DiagnosticsPanel({
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.48)", fontSize: "clamp(9.5px,2.4vw,11.5px)", lineHeight: 1.5, textAlign: "center" }}>
                   Both have shown positive results<br />in reducing, or in some cases curing tinnitus.
                 </div>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(10px,2.5vw,12px)", lineHeight: 1.5, textAlign: "center" }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(10px,2.5vw,12px)", lineHeight: 1.5, textAlign: "center" }}>
                   The earvana app can help you explore<br />both of these experimental therapies.
                 </div>
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.28)", fontSize: "clamp(8.5px,2.1vw,10px)", lineHeight: 1.5, textAlign: "center" }}>
@@ -805,7 +822,7 @@ export function DiagnosticsPanel({
                   background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
                   ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
                   color: "#ffffff", cursor: "pointer", letterSpacing: "0.03em",
-                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#00ee88" }}>▲</span> boost {fmtSub(processCandidate)}</button>
+                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#ffcc00" }}>▲</span> boost {fmtSub(processCandidate)}</button>
               </div>
 
             </div>
@@ -863,16 +880,16 @@ export function DiagnosticsPanel({
             }}>
 
               <div style={{ textAlign: "center" }}>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(20px,5vw,24px)", fontWeight: 700, marginBottom: 12 }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(20px,5vw,24px)", fontWeight: 700, marginBottom: 12 }}>
                   Done!
                 </div>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
                   The narrow-band frequency of
                 </div>
                 <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.92)", fontSize: "clamp(18px,4.6vw,22px)", fontWeight: 700, lineHeight: 1.2, margin: "4px 0" }}>
                   {fmtSub(doneAction.freq)}
                 </div>
-                <div style={{ ...KALLISTO, color: "#00cc44", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
+                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
                   {doneAction.type === "notch"
                     ? "has been notched out of the earvana audio mix."
                     : "has been boosted in the earvana audio mix."}
