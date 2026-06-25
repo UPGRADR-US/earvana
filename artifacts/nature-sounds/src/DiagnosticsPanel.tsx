@@ -522,9 +522,9 @@ export function DiagnosticsPanel({
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "flex-start",
-                paddingTop: lastStoredFreq !== null ? "56%" : "74%",
-                paddingBottom: "clamp(16px,5cqw,28px)",
+                justifyContent: lastStoredFreq !== null ? "flex-end" : "flex-start",
+                paddingTop: lastStoredFreq !== null ? 0 : "74%",
+                paddingBottom: lastStoredFreq !== null ? "6%" : "clamp(16px,5cqw,28px)",
                 paddingLeft: "clamp(14px,3.5cqw,22px)",
                 paddingRight: "clamp(14px,3.5cqw,22px)",
               }}>
@@ -553,7 +553,7 @@ export function DiagnosticsPanel({
                     background: "rgba(38,46,18,0.82)",
                     border: "1px solid rgba(140,120,30,0.30)",
                     borderRadius: "10px",
-                    padding: "clamp(10px,2.5cqw,16px)",
+                    padding: "clamp(14px,3.5cqw,20px)",
                     display: "flex", alignItems: "center",
                   }}>
                     <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -561,7 +561,7 @@ export function DiagnosticsPanel({
                         {fmtSub(lastStoredFreq)}
                       </span>
                     </div>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(4px,1cqw,7px)" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(8px,2cqw,12px)" }}>
                       {(["notched", "normal", "boosted"] as const).map(mode => {
                         const active = introMode === mode;
                         return (
@@ -608,7 +608,7 @@ export function DiagnosticsPanel({
               onPointerLeave={() => setStartPressed(false)}
               onClick={() => setPage(2)}
               style={{
-                position: "absolute", bottom: "4%", left: "50%", transform: "translateX(-50%)",
+                position: "absolute", bottom: "8%", left: "50%", transform: "translateX(-50%)",
                 visibility: p1ImgLoaded ? "visible" : "hidden",
                 display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
                 background: "none", border: "none", cursor: "pointer",
@@ -620,6 +620,8 @@ export function DiagnosticsPanel({
                 transition: "color 0.08s, text-shadow 0.08s",
                 marginTop: 6,
               }}>
+              {/* transparent left spacer = arrow width so "CONTINUE" is visually centred */}
+              <span style={{ width: 14, flexShrink: 0 }} />
               <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>CONTINUE</span>
               <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
                 <polygon points="4,2 4,18 17,10"

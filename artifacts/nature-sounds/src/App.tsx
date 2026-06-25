@@ -1353,10 +1353,13 @@ function Home() {
                     }}>
                       {isOn && activeFreq !== null ? (
                         <>
-                          {/* Wide-flat chevron — 75% reduced from 3× version */}
-                          <svg width="clamp(8px,2cqw,11px)" height="clamp(4px,1cqw,6px)"
+                          {/* Chevron — UP = boosted, DOWN = notched; 50% larger than previous */}
+                          <svg width="clamp(12px,3cqw,16.5px)" height="clamp(6px,1.5cqw,9px)"
                             viewBox="0 0 38 14" style={{ display: "block", marginBottom: 4 }}>
-                            <polyline points="2,2 19,12 36,2"
+                            <polyline
+                              points={engine.notchedFreq === null && engine.boostedFreq !== null
+                                ? "2,12 19,2 36,12"
+                                : "2,2 19,12 36,2"}
                               fill="none" stroke="#ffcc00" strokeWidth="3.2"
                               strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
