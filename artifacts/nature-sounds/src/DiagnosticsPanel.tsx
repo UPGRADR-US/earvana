@@ -466,14 +466,14 @@ export function DiagnosticsPanel({
         {/* Carousel container */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", clipPath: "inset(0 round 22px)" }}>
 
-          {/* Global ✕ — hidden while PROCESS popup is open */}
+          {/* Global ✕ — p1 / p2 only (intro has its own pane-local ✕) */}
           <button onClick={handleClose} aria-label="Close" style={{
             position: "absolute", top: 0, left: 0, zIndex: 70,
             width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
-            ...KALLISTO, fontWeight: 500, fontSize: "1.55rem", lineHeight: 1,
+            ...KALLISTO, fontWeight: 300, fontSize: "1.3rem", lineHeight: 1,
             color: "rgba(255,255,255,0.80)",
-            opacity: (processCandidate !== null || doneAction !== null) ? 0 : 1,
-            pointerEvents: (processCandidate !== null || doneAction !== null) ? "none" : "auto",
+            opacity: (processCandidate !== null || doneAction !== null || page === "intro") ? 0 : 1,
+            pointerEvents: (processCandidate !== null || doneAction !== null || page === "intro") ? "none" : "auto",
             transition: "opacity 0.2s ease",
           }}>✕</button>
 
@@ -489,6 +489,15 @@ export function DiagnosticsPanel({
 
             {/* Inner pane — natural image height, full width */}
             <div style={{ position: "relative", width: "100%" }}>
+
+              {/* Pane-local ✕ — upper-left corner of the card */}
+              <button onClick={handleClose} aria-label="Close" style={{
+                position: "absolute", top: 0, left: 0, zIndex: 10,
+                width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
+                ...KALLISTO, fontWeight: 300, fontSize: "1.3rem", lineHeight: 1,
+                color: "rgba(255,255,255,0.80)",
+                background: "none", border: "none", cursor: "pointer",
+              }}>✕</button>
 
               {/* PNG pane — header/disclaimer/question baked in */}
               <img src={diagIntroImg} alt=""
