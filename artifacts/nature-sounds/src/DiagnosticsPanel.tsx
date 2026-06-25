@@ -7,6 +7,13 @@ import diagCardImg from "@assets/diagNEW_base_p3-4_1781898318899.png";
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
 
+// Eagerly decode all panel images so they're cached before the user navigates to each page
+const _PRELOAD_IMGS = [diagIntroImg, diagP1Img, diagP2Img, diagCardImg].map(src => {
+  const im = new window.Image();
+  im.src = src;
+  return im;
+});
+
 const KALLISTO: React.CSSProperties = { fontFamily: "'Kallisto', sans-serif" };
 const WIPE_MS    = 340;
 const TONE_MAX_GAIN = 0.120;
