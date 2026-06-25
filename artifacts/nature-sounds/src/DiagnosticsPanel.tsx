@@ -480,85 +480,94 @@ export function DiagnosticsPanel({
           {/* ════════════════════════════════════════════════════════════════════
               PAGE i — intro bumper (glass card)
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${introX})`, transition: wipeTx, willChange: "transform" }}>
+          {/* Outer slide: full-panel for transition; flex-center so the pane image sits at natural height */}
+          <div style={{
+            position: "absolute", inset: 0,
+            transform: `translateX(${introX})`, transition: wipeTx, willChange: "transform",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
 
-            {/* PNG pane — header/disclaimer/question are baked into the image */}
-            <img src={diagIntroImg} alt=""
-              style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false} />
+            {/* Inner pane — natural image height, full width */}
+            <div style={{ position: "relative", width: "100%" }}>
 
-            {/* Dynamic overlay — CTA + optional returning-user panel in the lower half */}
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "flex", flexDirection: "column",
-              alignItems: "center",
-              justifyContent: lastStoredFreq !== null ? "flex-end" : "center",
-              paddingTop: lastStoredFreq !== null ? 0 : "48%",
-              paddingBottom: "clamp(18px,6cqw,32px)",
-              paddingLeft: "clamp(14px,3.5cqw,22px)",
-              paddingRight: "clamp(14px,3.5cqw,22px)",
-            }}>
+              {/* PNG pane — header/disclaimer/question baked in */}
+              <img src={diagIntroImg} alt=""
+                style={{ width: "100%", height: "auto", display: "block" }}
+                draggable={false} />
 
-              {/* Returning-user frequency + mode panel */}
-              {lastStoredFreq !== null && (
-                <div style={{
-                  width: "90%",
-                  background: "rgba(38,46,18,0.82)",
-                  border: "1px solid rgba(140,120,30,0.30)",
-                  borderRadius: "10px",
-                  padding: "clamp(10px,2.5cqw,16px)",
-                  display: "flex", alignItems: "center",
-                  marginBottom: "clamp(14px,3.5cqw,22px)",
-                }}>
-                  <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,20px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
-                      {fmtSub(lastStoredFreq)}
-                    </span>
+              {/* Dynamic overlay — sits over the image at natural size */}
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                paddingTop: lastStoredFreq !== null ? "56%" : "52%",
+                paddingBottom: "clamp(16px,5cqw,28px)",
+                paddingLeft: "clamp(14px,3.5cqw,22px)",
+                paddingRight: "clamp(14px,3.5cqw,22px)",
+              }}>
+
+                {/* CTA button — always first (above status box for returning users) */}
+                <button
+                  onClick={() => lastStoredFreq !== null ? setPage(2) : setPage(1)}
+                  style={{
+                    ...KALLISTO, fontWeight: 700,
+                    fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
+                    color: "#ffcc00",
+                    textShadow: "0 0 8px rgba(220,180,0,0.5)",
+                    background: "none", border: "none", cursor: "pointer",
+                    transition: "color 0.08s, text-shadow 0.08s",
+                    width: lastStoredFreq !== null ? undefined : "50%",
+                    textAlign: "center",
+                    marginBottom: lastStoredFreq !== null ? "clamp(10px,2.5cqw,16px)" : 0,
+                  }}>
+                  {lastStoredFreq !== null ? "REPEAT TEST  >>" : "START TEST  »"}
+                </button>
+
+                {/* Returning-user frequency + mode panel (below button) */}
+                {lastStoredFreq !== null && (
+                  <div style={{
+                    width: "90%",
+                    background: "rgba(38,46,18,0.82)",
+                    border: "1px solid rgba(140,120,30,0.30)",
+                    borderRadius: "10px",
+                    padding: "clamp(10px,2.5cqw,16px)",
+                    display: "flex", alignItems: "center",
+                  }}>
+                    <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,20px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
+                        {fmtSub(lastStoredFreq)}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(4px,1cqw,7px)" }}>
+                      {(["notched", "normal", "boosted"] as const).map(mode => {
+                        const active = introMode === mode;
+                        return (
+                          <button key={mode}
+                            onClick={() => {
+                              setIntroMode(mode);
+                              if (mode === "notched") { onNotch(lastStoredFreq); onBoost(null); }
+                              else if (mode === "normal") { onNotch(null); onBoost(null); }
+                              else { onBoost(lastStoredFreq); onNotch(null); }
+                            }}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer", padding: 0,
+                              display: "flex", alignItems: "center", gap: 6,
+                              ...KALLISTO, fontWeight: active ? 700 : 400,
+                              fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.10em",
+                              color: active ? "#ffcc00" : "rgba(200,190,140,0.55)",
+                              transition: "color 0.12s",
+                            }}>
+                            {mode.toUpperCase()}
+                            {active && <span style={{ color: "#ffcc00" }}>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(4px,1cqw,7px)" }}>
-                    {(["notched", "normal", "boosted"] as const).map(mode => {
-                      const active = introMode === mode;
-                      return (
-                        <button key={mode}
-                          onClick={() => {
-                            setIntroMode(mode);
-                            if (mode === "notched") { onNotch(lastStoredFreq); onBoost(null); }
-                            else if (mode === "normal") { onNotch(null); onBoost(null); }
-                            else { onBoost(lastStoredFreq); onNotch(null); }
-                          }}
-                          style={{
-                            background: "none", border: "none", cursor: "pointer", padding: 0,
-                            display: "flex", alignItems: "center", gap: 6,
-                            ...KALLISTO, fontWeight: active ? 700 : 400,
-                            fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.10em",
-                            color: active ? "#ffcc00" : "rgba(200,190,140,0.55)",
-                            transition: "color 0.12s",
-                          }}>
-                          {mode.toUpperCase()}
-                          {active && <span style={{ color: "#ffcc00" }}>✓</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* CTA button — first-time: 50% wide, centered; returning: full-width text pinned to bottom */}
-              <button
-                onClick={() => lastStoredFreq !== null ? setPage(2) : setPage(1)}
-                style={{
-                  ...KALLISTO, fontWeight: 700,
-                  fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
-                  color: "#ffcc00",
-                  textShadow: "0 0 8px rgba(220,180,0,0.5)",
-                  background: "none", border: "none", cursor: "pointer",
-                  transition: "color 0.08s, text-shadow 0.08s",
-                  width: lastStoredFreq !== null ? undefined : "50%",
-                  textAlign: "center",
-                }}>
-                {lastStoredFreq !== null ? "REPEAT TEST  >>" : "START TEST  »"}
-              </button>
-
+              </div>
             </div>
           </div>
 
