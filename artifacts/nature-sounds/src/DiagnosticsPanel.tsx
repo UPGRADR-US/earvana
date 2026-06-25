@@ -491,7 +491,9 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "flex-end",
+              alignItems: "center",
+              justifyContent: lastStoredFreq !== null ? "flex-end" : "center",
+              paddingTop: lastStoredFreq !== null ? 0 : "48%",
               paddingBottom: "clamp(18px,6cqw,32px)",
               paddingLeft: "clamp(14px,3.5cqw,22px)",
               paddingRight: "clamp(14px,3.5cqw,22px)",
@@ -541,16 +543,18 @@ export function DiagnosticsPanel({
                 </div>
               )}
 
-              {/* CTA button */}
+              {/* CTA button — first-time: 50% wide, centered; returning: full-width text pinned to bottom */}
               <button
-                onClick={() => setPage(1)}
+                onClick={() => lastStoredFreq !== null ? setPage(2) : setPage(1)}
                 style={{
                   ...KALLISTO, fontWeight: 700,
-                  fontSize: "clamp(13px,3.3cqw,16px)", letterSpacing: "0.14em",
+                  fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
                   color: "#ffcc00",
                   textShadow: "0 0 8px rgba(220,180,0,0.5)",
                   background: "none", border: "none", cursor: "pointer",
                   transition: "color 0.08s, text-shadow 0.08s",
+                  width: lastStoredFreq !== null ? undefined : "50%",
+                  textAlign: "center",
                 }}>
                 {lastStoredFreq !== null ? "REPEAT TEST  >>" : "START TEST  »"}
               </button>
@@ -578,17 +582,17 @@ export function DiagnosticsPanel({
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                 background: "none", border: "none", cursor: "pointer",
                 ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
-                color: startPressed ? "#ccffcc" : "#00ee44",
+                color: startPressed ? "#ffe566" : "#ffcc00",
                 textShadow: startPressed
-                  ? "0 0 8px #00ff66, 0 0 20px #00dd44, 0 0 40px #00aa33"
-                  : "0 0 6px rgba(0,220,60,0.45)",
+                  ? "0 0 8px rgba(255,200,0,0.9), 0 0 20px rgba(220,160,0,0.6)"
+                  : "0 0 8px rgba(220,180,0,0.5)",
                 transition: "color 0.08s, text-shadow 0.08s",
               }}>
-              <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
+              <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>CONTINUE</span>
               <svg width={22} height={22} viewBox="0 0 20 20" style={{ marginTop: 1, transform: "rotate(-90deg)" }}>
                 <polygon points="2,4 18,4 10,17"
-                  fill={startPressed ? "#ccffcc" : "#00ee44"}
-                  style={{ filter: startPressed ? "drop-shadow(0 0 5px #00ff55)" : "drop-shadow(0 0 3px rgba(0,220,60,0.5))" }} />
+                  fill={startPressed ? "#ffe566" : "#ffcc00"}
+                  style={{ filter: startPressed ? "drop-shadow(0 0 5px rgba(255,200,0,0.9))" : "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
               </svg>
             </button>
           </div>
