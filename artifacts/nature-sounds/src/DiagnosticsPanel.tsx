@@ -542,9 +542,14 @@ export function DiagnosticsPanel({
                         textShadow: "0 0 8px rgba(220,180,0,0.5)",
                         background: "none", border: "none", cursor: "pointer",
                         transition: "color 0.08s, text-shadow 0.08s",
-                        textAlign: "center",
+                        display: "flex", alignItems: "center", gap: 7,
                       }}>
-                      REPEAT TEST  &gt;&gt;
+                      <span style={{ width: 14, flexShrink: 0 }} />
+                      <span>REPEAT TEST</span>
+                      <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                        <polygon points="4,2 4,18 17,10" fill="#ffcc00"
+                          style={{ filter: "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
+                      </svg>
                     </button>
                   </div>
                 ) : (
@@ -557,9 +562,14 @@ export function DiagnosticsPanel({
                       textShadow: "0 0 8px rgba(220,180,0,0.5)",
                       background: "none", border: "none", cursor: "pointer",
                       transition: "color 0.08s, text-shadow 0.08s",
-                      width: "50%", textAlign: "center",
+                      display: "flex", alignItems: "center", gap: 7,
                     }}>
-                    START TEST  »
+                    <span style={{ width: 14, flexShrink: 0 }} />
+                    <span>START TEST</span>
+                    <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                      <polygon points="4,2 4,18 17,10" fill="#ffcc00"
+                        style={{ filter: "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
+                    </svg>
                   </button>
                 )}
 
