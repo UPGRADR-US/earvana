@@ -1205,7 +1205,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100%", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
+      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
       <img src={img("TR-bg.png")} alt=""
