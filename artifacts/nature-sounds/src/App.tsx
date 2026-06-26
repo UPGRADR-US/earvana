@@ -2,7 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
@@ -275,9 +275,9 @@ const EDGE_LEFT   = "linear-gradient(to left,   #22435e, #162c40)";
 const EDGE_TOP    = "#1a3a52";
 const EDGE_BOTTOM = "#09141e";
 
-function CylinderCarousel({
-  centerIdx, selectedId, onSelect, onCenterChange, engine, activeCategoryId, isPlaying,
-}: {
+interface CarouselHandle { animateTo: (i: number) => void; }
+
+const CylinderCarousel = forwardRef<CarouselHandle, {
   centerIdx: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -285,7 +285,9 @@ function CylinderCarousel({
   engine: ReturnType<typeof useAudioEngine>;
   activeCategoryId: string | null;
   isPlaying: boolean;
-}) {
+}>(function CylinderCarousel({
+  centerIdx, selectedId, onSelect, onCenterChange, engine, activeCategoryId, isPlaying,
+}, ref) {
   // rotation is React state — used ONLY for tile visibility/opacity calcs.
   // style.transform and style.transition on the cylinder are managed 100%
   // via direct DOM writes so React never touches them and can never cancel
@@ -347,6 +349,8 @@ function CylinderCarousel({
     setRotation(target);   // updates tile visibility/opacity only
     onCenterChange(i);
   };
+
+  useImperativeHandle(ref, () => ({ animateTo }));
 
   const onPointerDown = (e: React.PointerEvent) => {
     // Kill any in-flight CSS transition immediately.
@@ -456,24 +460,25 @@ function CylinderCarousel({
                   <div className="absolute top-[6px] right-[6px] rounded-full"
                     style={{ width:8, height:8, background:"#00ff55", boxShadow:"0 0 6px #00ff55" }} />
                 )}
-                {/* Yellow ring — active track is from this category but user has spun away */}
-                {isActiveFarCat && (
-                  <div className="absolute inset-0 rounded-xl pointer-events-none"
-                    style={{
-                      border: "2.5px solid rgba(255,204,0,0.95)",
-                      boxShadow: "0 0 16px rgba(255,200,0,0.75), inset 0 0 8px rgba(255,200,0,0.22)",
-                      animation: "carouselRingBlink 1s ease-in-out infinite",
-                    }} />
-                )}
               </div>
 
+              {/* Yellow ring — sits OUTSIDE the faded wrapper so opacity is always 1
+                  even when this tile has spun away from centre. */}
+              {isActiveFarCat && (
+                <div className="absolute inset-0 rounded-xl pointer-events-none"
+                  style={{
+                    border: "2.5px solid rgba(255,204,0,0.95)",
+                    boxShadow: "0 0 16px rgba(255,200,0,0.75), inset 0 0 8px rgba(255,200,0,0.22)",
+                    animation: "carouselRingBlink 1s ease-in-out infinite",
+                  }} />
+              )}
             </div>
           );
         })}
       </div>
     </div>
   );
-}
+});
 
 // ─── Track List ───────────────────────────────────────────────────────────────
 
@@ -986,7 +991,8 @@ function Home() {
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[0]?.id ?? null);
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
-  const diagPausedRef = useRef(false);  // true when we auto-paused on diag open
+  const diagPausedRef  = useRef(false);  // true when we auto-paused on diag open
+  const carouselRef    = useRef<CarouselHandle>(null);
 
   const openDiag = useCallback(() => {
     setDiagOpen(true);
@@ -1167,8 +1173,15 @@ function Home() {
     } else if (selectedTrackId) {
       setOptimisticPlaying(true);
       engine.play(selectedTrackId);
+      // If the carousel was spun away from the playing category, spin it back.
+      const targetCatIdx = CATEGORIES.findIndex(cat =>
+        cat.tracks.some(t => t.id === selectedTrackId)
+      );
+      if (targetCatIdx !== -1 && targetCatIdx !== centerIdx) {
+        carouselRef.current?.animateTo(targetCatIdx);
+      }
     }
-  }, [isPlaying, playingTrackId, selectedTrackId, engine]);
+  }, [isPlaying, playingTrackId, selectedTrackId, engine, centerIdx]);
 
   const handleSprocketClick = useCallback(() => {
     setSprocketFlash(true);
@@ -1248,6 +1261,7 @@ function Home() {
           <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
             <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "clamp(2px,0.8vh,8px)" }}>
               <CylinderCarousel
+                ref={carouselRef}
                 centerIdx={centerIdx}
                 selectedId={selectedId}
                 onSelect={handleSelect}
