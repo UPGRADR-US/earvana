@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v60";
+const CACHE = "tinnitus-relief-v61";
 
 const PRECACHE = [
   "/manifest.json",
@@ -6,7 +6,7 @@ const PRECACHE = [
   "/icon-512.png",
   "/apple-touch-icon.png",
   "/TR-bg.png",
-  "/TopBanner4.png",
+  "/TopBanner3_1782438108143.png",
   "/PLAYbase.png",
   "/PLAYgreen.png",
   "/PLAYyellow.png",
