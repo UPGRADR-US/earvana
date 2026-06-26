@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { execSync } from "child_process";
 
 const rawPort = process.env.PORT;
 
@@ -32,6 +33,13 @@ export default defineConfig({
     // Injected at build/dev-server-start time so the UI can show which
     // build is running — lets you confirm the latest deploy is live.
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_NUMBER__: (() => {
+      try {
+        return Number(execSync("git rev-list --count HEAD", { encoding: "utf8" }).trim());
+      } catch {
+        return 0;
+      }
+    })(),
   },
   plugins: [
     react(),

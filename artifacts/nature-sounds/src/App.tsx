@@ -13,7 +13,8 @@ const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
-const BUILD_NUMBER = 23;
+const BUILD_NUMBER = __BUILD_NUMBER__;
+const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
@@ -959,7 +960,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                 earvana: tinnitus relief
               </div>
               <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "10px" }}>
-                v1.0&nbsp;&nbsp;(build {BUILD_NUMBER})
+                v1.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
               </div>
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", letterSpacing: "0.04em", marginBottom: "3px" }}>
                 composed and produced by:&nbsp;&nbsp;jay oliver
