@@ -1409,6 +1409,19 @@ function Home() {
               </div>
               {/* Sprocket — right edge, nudged left for balance */}
               <div className="flex-1" />
+              {/* EQ active badge — yellow, shown whenever a non-default EQ is set */}
+              {eqMode !== "normal" && (
+                <span style={{
+                  color: "rgba(255,204,0,0.92)",
+                  fontSize: "clamp(9px,2.2cqw,12px)",
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  marginRight: "clamp(4px,1cqw,8px)",
+                  alignSelf: "center",
+                  flexShrink: 0,
+                  textShadow: "0 0 8px rgba(255,200,0,0.6)",
+                }}>EQ</span>
+              )}
               <button onClick={handleSprocketClick}
                 className="flex-shrink-0 transition-opacity duration-150 hover:opacity-80"
                 style={{ width: "clamp(64px,16cqw,84px)", marginRight: "clamp(14px,3cqw,22px)" }} data-testid="btn-settings">
