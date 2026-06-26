@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v63";
+const CACHE = "tinnitus-relief-v64";
 
 const PRECACHE = [
   "/manifest.json",
@@ -27,16 +27,9 @@ const PRECACHE = [
   "/homepage_BLUR.png",
   "/settings-pane.png",
   "/NotchPopup.png",
-  "/TR_tn_oceans.png",
-  "/TR_tn_rains.png",
-  "/TR_tn_streams.png",
-  "/TR_tn_forests.png",
-  "/TR_tn_fields.png",
-  "/TR_tn_gardens.png",
-  "/TR_tn_fire.png",
-  "/TR_tn_winds.png",
-  "/TR_tn_noise.png",
 ];
+// Carousel thumbnails are intentionally excluded from PRECACHE — they use
+// network-first with HTTP-cache bypass so swapped images are always fresh.
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -61,10 +54,10 @@ self.addEventListener("fetch", (event) => {
   // Never intercept cross-origin requests (fonts, etc.)
   if (url.origin !== location.origin) return;
 
-  // Carousel thumbnails: network-first so swapped images are always fresh
+  // Carousel thumbnails: bypass HTTP cache entirely so swapped images are always fresh
   if (url.pathname.match(/\/TR_tn_.*\.png$/)) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "reload" })
         .then((res) => {
           if (res.ok) {
             const clone = res.clone();
