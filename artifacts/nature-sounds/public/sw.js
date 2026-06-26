@@ -1,4 +1,4 @@
-const CACHE = "tinnitus-relief-v62";
+const CACHE = "tinnitus-relief-v63";
 
 const PRECACHE = [
   "/manifest.json",
@@ -60,6 +60,22 @@ self.addEventListener("fetch", (event) => {
 
   // Never intercept cross-origin requests (fonts, etc.)
   if (url.origin !== location.origin) return;
+
+  // Carousel thumbnails: network-first so swapped images are always fresh
+  if (url.pathname.match(/\/TR_tn_.*\.png$/)) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
   // Audio files: network-first so new uploads are always fresh
   if (url.pathname.startsWith("/sounds/")) {
