@@ -14,7 +14,7 @@ const _PRELOAD_IMGS = [diagIntroImg, diagP1Img, diagP2Img, diagCardImg].map(src 
   return im;
 });
 
-const KALLISTO: React.CSSProperties = { fontFamily: "'Figtree', sans-serif" };
+const KALLISTO: React.CSSProperties = { fontFamily: "'Figtree', sans-serif", transform: "scaleY(0.9)", transformOrigin: "center center" };
 const WIPE_MS    = 340;
 const TONE_MAX_GAIN = 0.120;
 
