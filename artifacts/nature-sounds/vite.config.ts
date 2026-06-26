@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { execSync } from "child_process";
@@ -44,6 +45,51 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    VitePWA({
+      // main.tsx manually registers /sw.js, so don't inject a second registration
+      injectRegister: null,
+      registerType: "autoUpdate",
+      filename: "sw.js",
+      strategies: "generateSW",
+      // Only active during production build — dev uses the fallback public/sw-dev.js stub
+      devOptions: { enabled: false },
+      // Don't auto-generate manifest.json; we keep the one in public/
+      manifest: false,
+      workbox: {
+        // Precache every JS/CSS/HTML/image produced by the build
+        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,webp,woff,woff2}"],
+        // Audio files are too large to precache upfront — cache them at runtime instead
+        globIgnores: ["**/sounds/**"],
+        // Background and diag art can exceed 2 MiB; raise limit so they're precached
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        // SPA fallback so any navigation offline lands on index.html
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/sounds\//],
+        runtimeCaching: [
+          {
+            // Audio: cache-first after first play; served offline thereafter
+            urlPattern: /\/sounds\/.+/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "earvana-audio-v1",
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Carousel thumbnails: network-first so swapped images stay fresh;
+            // cached copy serves offline
+            urlPattern: /\/sounds\/TR_tn_.*\.png$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "earvana-thumbnails-v1",
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
