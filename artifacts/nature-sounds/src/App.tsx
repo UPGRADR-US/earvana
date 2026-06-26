@@ -617,16 +617,16 @@ function EqBandSlider({ label, value, onChange }: {
   const col = value > 0 ? "#00ff55" : value < 0 ? "#ff6b6b" : "rgba(255,255,255,0.5)";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "38px" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "38px",
+      touchAction: "none", WebkitTouchCallout: "none", userSelect: "none" }}>
       {/* dB readout */}
       <div style={{ fontSize: "10px", height: "15px", textAlign: "center", color: col, lineHeight: 1.5 }}>
         {value === 0 ? "0" : value > 0 ? `+${value}` : value}
       </div>
-      {/* Vertical track */}
+      {/* Vertical track — pointer events handled here; touch-action:none on parent covers full column width */}
       <div ref={trackRef}
         style={{ width: "6px", height: "80px", background: "rgba(255,255,255,0.1)", borderRadius: "3px",
-          position: "relative", cursor: "ns-resize", WebkitTouchCallout: "none", userSelect: "none",
-          touchAction: "none" }}
+          position: "relative", cursor: "ns-resize" }}
         onPointerDown={e => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); compute(e.clientY); }}
         onPointerMove={e => { if (dragging.current) compute(e.clientY); }}
         onPointerUp={() => { dragging.current = false; }}>
