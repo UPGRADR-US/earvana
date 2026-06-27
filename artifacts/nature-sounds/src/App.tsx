@@ -1126,7 +1126,9 @@ function Home() {
       fadeOutStartedRef.current = false;
       if (playingTrackId) engine.pause(playingTrackId);
       engine.cancelFade();
-      setTimeRemaining(stepToSeconds(durationStep));
+      // Reset slider to ∞ (continuous) so the countdown stops and the
+      // slider sits at the far-right position — not back to the old step.
+      setDurationStep(LOOP_STEP);
     }
   // engine methods are stable useCallback refs — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
