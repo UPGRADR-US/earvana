@@ -1384,11 +1384,7 @@ function Home() {
                             {fmtFreq(activeFreq)}
                           </span>
                         </>
-                      ) : (
-                        <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, color: "#ffcc00", fontSize: "clamp(12px,2.9cqw,15px)", letterSpacing: "0.09em", transform: "scaleY(0.9)", transformOrigin: "center center", display: "inline-block" }}>
-                          test
-                        </span>
-                      )}
+                      ) : null}
                     </div>
                   </button>
                 );
