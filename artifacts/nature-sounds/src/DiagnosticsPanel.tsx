@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
-import diagIntroImg from "@assets/diag__intro_pane_1782434859513.png";
-import diagP1Img   from "@assets/diagNEW_p1_1782434863020.png";
-import diagP2Img   from "@assets/diagNEW_base_p2_1782434866512.png";
-import diagCardImg from "@assets/diagNEW_base_p3-4_1781898318899.png";
+import freqTestP1Img from "@assets/freqtest_p1_1784147052188.png";
+import freqTestP2Img from "@assets/freqtest_p2_1784147052188.png";
+import freqTestPane  from "@assets/freqtest_emptypane_1784147052188.png";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
 
 // Eagerly decode all panel images so they're cached before the user navigates to each page
-const _PRELOAD_IMGS = [diagIntroImg, diagP1Img, diagP2Img, diagCardImg].map(src => {
+const _PRELOAD_IMGS = [freqTestP1Img, freqTestP2Img, freqTestPane].map(src => {
   const im = new window.Image();
   im.src = src;
   return im;
@@ -41,7 +40,7 @@ function getSubBands(band: Band): number[] {
 
 function fmtSub(hz: number): string {
   if (hz < 1000) return `${hz} hz`;
-  return `${(hz / 1000).toFixed(1)} khz`;   // always show .0 (4.0 khz, not 4 khz)
+  return `${(hz / 1000).toFixed(1)} khz`;
 }
 
 function volToGain(v: number) { return v * TONE_MAX_GAIN; }
@@ -110,15 +109,22 @@ function Chevron({ color = "#ffcc00", style }: { color?: string; style?: React.C
   );
 }
 
+// ─── Double chevron ───────────────────────────────────────────────────────────
+
+function DblChevron({ color = "#ffcc00" }: { color?: string }) {
+  return (
+    <svg width={14} height={10} viewBox="0 0 20 14" style={{ flexShrink: 0 }}>
+      <polyline points="2,2 8,7 2,12"  fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="10,2 16,7 10,12" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // ─── Shared text styles ───────────────────────────────────────────────────────
-// Defined at module level so BandRow (also module-level) can reference them.
 const LIST_TXT: React.CSSProperties = { ...KALLISTO, letterSpacing: "0.09em" };
 const SUB_TXT:  React.CSSProperties = { ...KALLISTO, letterSpacing: "0.11em" };
 
 // ─── BandRow ──────────────────────────────────────────────────────────────────
-// MUST be a top-level memo component — if defined inside DiagnosticsPanel React
-// treats every render as a new component type, unmounts+remounts all rows, and
-// CSS transitions are destroyed before they can play.
 
 interface BandRowProps {
   band: Band;
@@ -151,10 +157,8 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      {/* ── Parent row ─────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
 
-        {/* Gutter 33% — EXPAND + chevron when playing; chevron rotates right→down */}
         <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 14 }}>
           {(isPlaying || isExpanded || isBlinking) && (
             <button
@@ -180,7 +184,6 @@ const BandRow = memo(function BandRow({
           )}
         </div>
 
-        {/* Label — auto width, inline with speaker */}
         <button onClick={() => onBandPlay(band)}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
           <span style={{
@@ -191,7 +194,6 @@ const BandRow = memo(function BandRow({
           }}>{band.label}</span>
         </button>
 
-        {/* Speaker — inline, 6px right of label; hidden when expanded */}
         {!isExpanded && (
           <button onClick={() => onBandPlay(band)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center",
@@ -203,9 +205,6 @@ const BandRow = memo(function BandRow({
 
       </div>
 
-      {/* ── Sub-band accordion ─────────────────────────────────────────────── */}
-      {/* grid-template-rows 0fr→1fr: animates to exact content height.
-          minHeight:0 on the inner div is required for 0fr to actually collapse. */}
       <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.375s cubic-bezier(0.5,0,1,1)" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
@@ -221,10 +220,8 @@ const BandRow = memo(function BandRow({
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
 
-              {/* Gutter 33% — empty, keeps sub-label aligned with parent label */}
               <div style={{ width: "33%", flexShrink: 0 }} />
 
-              {/* Label — indented 22px, auto width, inline with speaker */}
               <button onClick={() => onSubPlay(sf)}
                 style={{ background: "none", border: "none", cursor: "pointer",
                          padding: 0, paddingLeft: 22, flexShrink: 0 }}>
@@ -236,7 +233,6 @@ const BandRow = memo(function BandRow({
                 }}>{fmtSub(sf)}</span>
               </button>
 
-              {/* Speaker — inline, 6px right of label */}
               <button onClick={() => onSubPlay(sf)}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center",
                          background: "none", border: "none", cursor: "pointer",
@@ -244,7 +240,6 @@ const BandRow = memo(function BandRow({
                 <SpeakerIcon active={sfPlaying} size={14} />
               </button>
 
-              {/* PROCESS / reset — right of speaker */}
               {sfPlaying && !sfActive && (
                 <button onClick={() => onSelectClick(sf)}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
@@ -263,8 +258,8 @@ const BandRow = memo(function BandRow({
             </div>
           );
         })}
-      </div>{/* end inner clip */}
-      </div>{/* end outer grid */}
+      </div>
+      </div>
 
     </div>
   );
@@ -286,32 +281,24 @@ interface Props {
 export function DiagnosticsPanel({
   onClose, onStartTest, onNotch, currentNotch, onBoost, currentBoost,
 }: Props) {
-  const [page,             setPage]             = useState<"intro" | 1 | 2>("intro");
-  // Frequency shown in the intro returning-user panel (persists if mode → normal)
-  const [lastStoredFreq,  setLastStoredFreq]   = useState<number | null>(() => currentNotch ?? currentBoost);
-  // Which therapy mode is active inside the intro panel
-  type IntroMode = "notched" | "normal" | "boosted";
-  const [introMode,       setIntroMode]        = useState<IntroMode>(() =>
-    currentNotch !== null ? "notched" : currentBoost !== null ? "boosted" : "notched"
-  );
-  const [playingFreq,      setPlayingFreq]       = useState<number | null>(null);
-  const [expandedBand,     setExpandedBand]      = useState<string | null>(null);
-  const [toneVolume,       setToneVolume]        = useState(0.25);
-  const [processCandidate, setProcessCandidate]  = useState<number | null>(null);
-  const [doneAction,       setDoneAction]        = useState<{ freq: number; type: "notch" | "boost" } | null>(null);
-  const [startPressed,     setStartPressed]      = useState(false);
-  const [p1ImgLoaded,      setP1ImgLoaded]       = useState(false);
-  const [p2ImgLoaded,      setP2ImgLoaded]       = useState(false);
-  const [backPressed,      setBackPressed]       = useState(false);
-  // true once the user has interacted on this p2 visit; locks justify to flex-start
-  // so the list never re-centers mid-session. Resets only on page transitions.
-  const [p2Anchored,       setP2Anchored]        = useState(false);
-  // which band's chevron should blink; persists after collapse until another parent row is clicked
-  const [blinkingBand,     setBlinkingBand]      = useState<string | null>(null);
-  // true while the PROCESS popup is animating out (scale-to-zero)
-  const [processDismissing, setProcessDismissing] = useState(false);
-  // true while the DONE card is animating out
-  const [doneDismissing,    setDoneDismissing]    = useState(false);
+  const hasActiveSetting = currentNotch !== null || currentBoost !== null;
+
+  // Page flow: 1 = instructions, 2 = pitch selector, "stat" = profile card
+  const [page,           setPage]           = useState<1 | 2 | "stat">(() => hasActiveSetting ? "stat" : 1);
+  // true when stat window was opened because a setting was already engaged (vs. just processed)
+  const [statIsReturning, setStatIsReturning] = useState(hasActiveSetting);
+  // the frequency anchored in the stat window (persists across mode changes)
+  const [statFreq,       setStatFreq]       = useState<number | null>(() => currentNotch ?? currentBoost);
+  const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
+  const [expandedBand,   setExpandedBand]   = useState<string | null>(null);
+  const [toneVolume,     setToneVolume]     = useState(0.25);
+  const [startPressed,   setStartPressed]   = useState(false);
+  const [p1ImgLoaded,    setP1ImgLoaded]    = useState(false);
+  const [p2ImgLoaded,    setP2ImgLoaded]    = useState(false);
+  const [backPressed,    setBackPressed]    = useState(false);
+  const [p2Anchored,     setP2Anchored]     = useState(false);
+  const [blinkingBand,   setBlinkingBand]   = useState<string | null>(null);
+  const [statDismissing, setStatDismissing] = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -361,8 +348,6 @@ export function DiagnosticsPanel({
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  // Clicking a band label or its speaker: play root pitch, turn green, show EXPAND.
-  // Also clears the blinking chevron (another parent was clicked).
   const handleBandPlay = useCallback((band: Band) => {
     setExpandedBand(prev => (prev !== null && prev !== band.label) ? null : prev);
     setBlinkingBand(null);
@@ -370,63 +355,72 @@ export function DiagnosticsPanel({
     else playTone(band.base, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Clicking EXPAND: expand/collapse the band (tone keeps playing).
-  // Sets the blinking chevron to this band, locks vertical centering.
   const handleBandExpand = useCallback((label: string) => {
     setExpandedBand(prev => prev === label ? null : label);
     setBlinkingBand(label);
     setP2Anchored(true);
   }, []);
 
-  // Clicking a sub-freq label or its speaker: play, turn green, show PROCESS
   const handleSubPlay = useCallback((sf: number) => {
     if (playingFreq === sf) stopTone();
     else playTone(sf, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // Clicking SELECT (sub-freq): stop tone and open modal
-  const handleSelectClick = (freq: number) => { stopTone(); setProcessDismissing(false); setProcessCandidate(freq); };
-
-  // Close PROCESS popup with scale-out animation, then clear state
-  const handleProcessClose = () => {
-    setProcessDismissing(true);
-    setTimeout(() => { setProcessCandidate(null); setProcessDismissing(false); }, 200);
+  // PROCESS: apply notch as default, anchor freq, open stat window
+  const handleSelectClick = (freq: number) => {
+    stopTone();
+    onBoost(null);
+    onNotch(freq);
+    setStatFreq(freq);
+    setStatIsReturning(false);
+    setStatDismissing(false);
+    setPage("stat");
   };
 
-  const handleNotch = () => {
-    if (processCandidate === null) return;
-    onBoost(null); onNotch(processCandidate);
-    setLastStoredFreq(processCandidate); setIntroMode("notched");
-    setDoneAction({ freq: processCandidate, type: "notch" });
-    setProcessCandidate(null);
+  // Stat window: live mode change
+  const handleModeChange = (mode: "normal" | "notch" | "boost") => {
+    const freq = statFreq;
+    if (freq === null) return;
+    if (mode === "normal") { onNotch(null); onBoost(null); }
+    else if (mode === "notch") { onNotch(freq); onBoost(null); }
+    else { onBoost(freq); onNotch(null); }
   };
 
-  const handleBoost = () => {
-    if (processCandidate === null) return;
-    onNotch(null); onBoost(processCandidate);
-    setLastStoredFreq(processCandidate); setIntroMode("boosted");
-    setDoneAction({ freq: processCandidate, type: "boost" });
-    setProcessCandidate(null);
-  };
-
-  // Animated Done card dismiss helpers
-  const handleDoneClose = () => {
-    setDoneDismissing(true);
-    setTimeout(() => { setDoneAction(null); setDoneDismissing(false); onClose(); }, 200);
-  };
-  const handleBackFromDone = () => {
-    setDoneDismissing(true);
+  // "repeat test >>" → go back to p2
+  const handleRepeatTest = () => {
+    setStatDismissing(true);
     setTimeout(() => {
-      setDoneAction(null); setDoneDismissing(false);
+      setStatDismissing(false);
       stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null);
     }, 200);
   };
-  // p2 «back» → p1: reset anchor + blink so p2 re-centers next time it's entered
-  const handleBack = () => { setDoneAction(null); stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
+
+  // "reset >>" → clear notch/boost, close panel
+  const handleReset = () => {
+    onNotch(null); onBoost(null);
+    setStatFreq(null);
+    stopTone();
+    onClose();
+  };
+
+  // p2 back → p1
+  const handleBack = () => { stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
 
-  const introX = page === "intro" ? "0%" : "-100%";
-  const p1X    = page === 1 ? "0%" : page === "intro" ? "100%" : "-100%";
+  // Derive current mode from engine state
+  const currentMode: "normal" | "notch" | "boost" =
+    currentNotch !== null ? "notch" :
+    currentBoost !== null ? "boost" : "normal";
+
+  // Mode option label — 'ed' suffix for returning users
+  const modeLabel = (m: "normal" | "notch" | "boost"): string => {
+    if (m === "normal") return "normal";
+    if (m === "notch")  return statIsReturning ? "notched" : "notch";
+    return statIsReturning ? "boosted" : "boost";
+  };
+
+  // Slide positions — stat shows over whatever page is underneath
+  const p1X    = page === 1 ? "0%" : "-100%";
   const p2X    = page === 2 ? "0%" : "100%";
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
@@ -446,11 +440,11 @@ export function DiagnosticsPanel({
           0%, 100% { opacity: 1; }
           50%      { opacity: 0.18; }
         }
-        @keyframes processScaleIn {
+        @keyframes statScaleIn {
           0%   { transform: scale(0.05); opacity: 0; }
           100% { transform: scale(1);    opacity: 1; }
         }
-        @keyframes processScaleOut {
+        @keyframes statScaleOut {
           0%   { transform: scale(1);    opacity: 1; }
           100% { transform: scale(0.05); opacity: 0; }
         }
@@ -460,171 +454,38 @@ export function DiagnosticsPanel({
       <img src={img("homepage_BLUR.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
-      {/* Shadow + animation wrapper */}
+      {/* Shadow + animation wrapper — main panel (p1 / p2) */}
       <div onClick={e => e.stopPropagation()} style={{
         position: "absolute",
         top:    "clamp(48px,7.5vh,70px)",
         left:   "clamp(22px,5cqw,34px)",
         right:  "clamp(22px,5cqw,34px)",
         bottom: "clamp(48px,7vh,70px)",
-        filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
+        filter: page === "stat" ? "blur(6px)" : "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
         animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
+        transition: "filter 0.4s ease",
       }}>
 
         {/* Carousel container */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", clipPath: "inset(0 round 22px)" }}>
 
-          {/* Global ✕ — p1 / p2 only (intro has its own pane-local ✕) */}
+          {/* ✕ — hidden when stat window is showing */}
           <button onClick={handleClose} aria-label="Close" style={{
             position: "absolute", top: 0, left: 0, zIndex: 70,
             width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
             ...KALLISTO, fontWeight: 300, fontSize: "1.3rem", lineHeight: 1,
             color: "rgba(255,255,255,0.80)",
-            opacity: (processCandidate !== null || doneAction !== null || page === "intro") ? 0 : 1,
-            pointerEvents: (processCandidate !== null || doneAction !== null || page === "intro") ? "none" : "auto",
+            background: "none", border: "none", cursor: "pointer",
+            opacity: page === "stat" ? 0 : 1,
+            pointerEvents: page === "stat" ? "none" : "auto",
             transition: "opacity 0.2s ease",
           }}>✕</button>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE i — intro bumper (glass card)
-          ════════════════════════════════════════════════════════════════════ */}
-          {/* Outer slide: full-panel for transition; flex-center so the card stays centered */}
-          <div style={{
-            position: "absolute", inset: 0,
-            transform: `translateX(${introX})`, transition: wipeTx, willChange: "transform",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-
-            {/* Inner pane — aspect-ratio locked, never taller than the panel */}
-            <div style={{
-              position: "relative",
-              width: "100%",
-              maxHeight: "100%",
-              aspectRatio: "1713 / 1850",
-            }}>
-
-              {/* Pane-local ✕ — upper-left corner of the card */}
-              <button onClick={handleClose} aria-label="Close" style={{
-                position: "absolute", top: 0, left: 0, zIndex: 10,
-                width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
-                ...KALLISTO, fontWeight: 300, fontSize: "1.3rem", lineHeight: 1,
-                color: "rgba(255,255,255,0.80)",
-                background: "none", border: "none", cursor: "pointer",
-              }}>✕</button>
-
-              {/* PNG pane fills the aspect-ratio box exactly */}
-              <img src={diagIntroImg} alt=""
-                style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-                draggable={false} />
-
-              {/* Dynamic overlay — sits over the image */}
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                paddingTop: lastStoredFreq !== null ? "47%" : "74%",
-                paddingBottom: lastStoredFreq !== null ? "6%" : "clamp(16px,5cqw,28px)",
-                paddingLeft: "clamp(14px,3.5cqw,22px)",
-                paddingRight: "clamp(14px,3.5cqw,22px)",
-              }}>
-
-                {/* CTA button — for returning users, wrapped in flex-1 so it centres
-                    vertically between the burned-in question text and the status box */}
-                {lastStoredFreq !== null ? (
-                  <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <button
-                      onClick={() => { onStartTest?.(); setPage(2); }}
-                      style={{
-                        ...KALLISTO, fontWeight: 700,
-                        fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
-                        color: "#ffcc00",
-                        textShadow: "0 0 8px rgba(220,180,0,0.5)",
-                        background: "none", border: "none", cursor: "pointer",
-                        transition: "color 0.08s, text-shadow 0.08s",
-                        display: "flex", alignItems: "center", gap: 7,
-                      }}>
-                      <span style={{ width: 14, flexShrink: 0 }} />
-                      <span>REPEAT TEST</span>
-                      <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
-                        <polygon points="4,2 4,18 17,10" fill="#ffcc00"
-                          style={{ filter: "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
-                      </svg>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { onStartTest?.(); setPage(1); }}
-                    style={{
-                      ...KALLISTO, fontWeight: 700,
-                      fontSize: "clamp(14px,4cqw,19px)", letterSpacing: "0.14em",
-                      color: "#ffcc00",
-                      textShadow: "0 0 8px rgba(220,180,0,0.5)",
-                      background: "none", border: "none", cursor: "pointer",
-                      transition: "color 0.08s, text-shadow 0.08s",
-                      display: "flex", alignItems: "center", gap: 7,
-                    }}>
-                    <span style={{ width: 14, flexShrink: 0 }} />
-                    <span>START TEST</span>
-                    <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
-                      <polygon points="4,2 4,18 17,10" fill="#ffcc00"
-                        style={{ filter: "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
-                    </svg>
-                  </button>
-                )}
-
-                {/* Returning-user frequency + mode panel (below button) */}
-                {lastStoredFreq !== null && (
-                  <div style={{
-                    width: "90%",
-                    background: "rgba(38,46,18,0.82)",
-                    border: "1px solid rgba(140,120,30,0.30)",
-                    borderRadius: "10px",
-                    padding: "clamp(14px,3.5cqw,20px)",
-                    display: "flex", alignItems: "center",
-                  }}>
-                    <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,20px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
-                        {fmtSub(lastStoredFreq)}
-                      </span>
-                    </div>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "clamp(8px,2cqw,12px)" }}>
-                      {(["notched", "normal", "boosted"] as const).map(mode => {
-                        const active = introMode === mode;
-                        return (
-                          <button key={mode}
-                            onClick={() => {
-                              setIntroMode(mode);
-                              if (mode === "notched") { onNotch(lastStoredFreq); onBoost(null); }
-                              else if (mode === "normal") { onNotch(null); onBoost(null); }
-                              else { onBoost(lastStoredFreq); onNotch(null); }
-                            }}
-                            style={{
-                              background: "none", border: "none", cursor: "pointer", padding: 0,
-                              display: "flex", alignItems: "center", gap: 6,
-                              ...KALLISTO, fontWeight: active ? 700 : 400,
-                              fontSize: "clamp(10px,2.4cqw,13px)", letterSpacing: "0.10em",
-                              color: active ? "#ffcc00" : "rgba(200,190,140,0.55)",
-                              transition: "color 0.12s",
-                            }}>
-                            {mode.toUpperCase()}
-                            {active && <span style={{ color: "#ffcc00" }}>✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-          </div>
-
-          {/* ════════════════════════════════════════════════════════════════════
-              PAGE 1 — burned-in art + START TEST overlay
+              PAGE 1 — freqtest_p1 instructions + START TEST button
           ════════════════════════════════════════════════════════════════════ */}
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p1X})`, transition: wipeTx, willChange: "transform" }}>
-            <img src={diagP1Img} alt=""
+            <img src={freqTestP1Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false}
               onLoad={() => setP1ImgLoaded(true)} />
@@ -633,9 +494,9 @@ export function DiagnosticsPanel({
               onPointerDown={() => setStartPressed(true)}
               onPointerUp={() => setStartPressed(false)}
               onPointerLeave={() => setStartPressed(false)}
-              onClick={() => setPage(2)}
+              onClick={() => { onStartTest?.(); setPage(2); }}
               style={{
-                position: "absolute", bottom: "8%", left: "50%", transform: "translateX(-50%)",
+                position: "absolute", bottom: "5%", left: "50%", transform: "translateX(-50%)",
                 visibility: p1ImgLoaded ? "visible" : "hidden",
                 display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
                 background: "none", border: "none", cursor: "pointer",
@@ -645,11 +506,9 @@ export function DiagnosticsPanel({
                   ? "0 0 8px rgba(255,200,0,0.9), 0 0 20px rgba(220,160,0,0.6)"
                   : "0 0 8px rgba(220,180,0,0.5)",
                 transition: "color 0.08s, text-shadow 0.08s",
-                marginTop: 6,
               }}>
-              {/* transparent left spacer = arrow width so "CONTINUE" is visually centred */}
               <span style={{ width: 14, flexShrink: 0 }} />
-              <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>CONTINUE</span>
+              <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
               <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
                 <polygon points="4,2 4,18 17,10"
                   fill={startPressed ? "#ffe566" : "#ffcc00"}
@@ -659,15 +518,14 @@ export function DiagnosticsPanel({
           </div>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE 2 — base art + interactive list
+              PAGE 2 — freqtest_p2 base art + interactive list
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, willChange: "transform", filter: (processCandidate !== null || doneAction !== null) ? "blur(8px)" : "none", transition: `${wipeTx}, filter 0.5s ease` }}>
-            <img src={diagP2Img} alt=""
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: wipeTx, willChange: "transform" }}>
+            <img src={freqTestP2Img} alt=""
               style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
               draggable={false}
               onLoad={() => setP2ImgLoaded(true)} />
 
-            {/* Frequency list — only shown once the bg panel is painted */}
             <div style={{ visibility: p2ImgLoaded ? "visible" : "hidden" }}>
             <div style={{
               position: "absolute",
@@ -729,184 +587,133 @@ export function DiagnosticsPanel({
                 transition: "color 0.08s, text-shadow 0.08s",
               }}>«« back</button>
 
-            </div>{/* end visibility gate */}
+            </div>
           </div>
 
-        </div>{/* end carousel */}
-      </div>{/* end shadow wrapper */}
+        </div>
+      </div>
 
       {/* ════════════════════════════════════════════════════════════════════════
-          PROCESS modal  (p3)
+          STAT WINDOW — profile card (shown after PROCESS or for returning users)
       ════════════════════════════════════════════════════════════════════════ */}
-      {processCandidate !== null && (
+      {page === "stat" && (
         <div onClick={e => e.stopPropagation()} style={{
-          position: "absolute", inset: 0, zIndex: 80,
+          position: "absolute", inset: 0, zIndex: 90,
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 clamp(12px,3cqw,20px)",
+          padding: "0 clamp(28px,7cqw,44px)",
         }}>
 
-          {/* Invisible backdrop — tap outside card to dismiss */}
-          <div style={{ position: "absolute", inset: 0 }} onClick={handleProcessClose} />
-
-          {/* Popup card — scales in/out; drop-shadow on wrapper covers image + footer */}
           <div style={{
-            position: "relative", zIndex: 10, width: "100%", maxWidth: 330,
-            filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))",
+            position: "relative", width: "100%", maxWidth: 340,
+            filter: "drop-shadow(0 14px 52px rgba(0,0,0,0.92))",
             willChange: "transform, opacity",
-            animation: processDismissing
-              ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
-              : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
+            animation: statDismissing
+              ? "statScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
+              : "statScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
 
-            {/* ✕ close button — top-left corner, 2 sizes up */}
-            <button onClick={handleProcessClose} style={{
-              position: "absolute", top: -17, left: -17, zIndex: 11,
+            {/* Background pane image */}
+            <img src={freqTestPane} alt="" draggable={false}
+              style={{ display: "block", width: "100%", height: "auto" }} />
+
+            {/* ✕ close — top-left, outside card */}
+            <button onClick={handleClose} style={{
+              position: "absolute", top: -16, left: -16, zIndex: 11,
               width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(22,24,28,0.96)", border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(10,18,16,0.95)", border: "1px solid rgba(0,200,180,0.35)",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", padding: 0,
               ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
-            {/* Art wrapper — bg-image stretches to cover natural height + 20px extra */}
-            <div style={{
-              backgroundImage: `url(${diagCardImg})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}>
-              <img src={diagCardImg} alt="" draggable={false}
-                style={{ display: "block", width: "100%", height: "auto", visibility: "hidden" }} />
-              <div style={{ height: 20 }} />
-            </div>
-
+            {/* Content overlay */}
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
-              padding: "clamp(14px,4svh,22px) 18px clamp(28px,7svh,36px)",
+              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,6svh,30px)",
             }}>
 
-              <div style={{ textAlign: "center", marginBottom: 10 }}>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(13px,3.3vw,15px)", fontWeight: 700, marginBottom: 2 }}>
-                  Great!
-                </div>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11.5px,2.9vw,13.5px)", lineHeight: 1.4 }}>
-                  You've pinpointed
-                </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.95)", fontSize: "clamp(20px,5.2vw,25px)", fontWeight: 700, lineHeight: 1.2, margin: "3px 0" }}>
-                  {fmtSub(processCandidate)}
-                </div>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11.5px,2.9vw,13.5px)" }}>
-                  as your tinnitus frequency.
+              {/* Header */}
+              <div style={{ marginBottom: "clamp(14px,4svh,20px)" }}>
+                <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(15px,3.8cqw,18px)", color: "#7adf6a", letterSpacing: "0.06em" }}>
+                  your earvana profile:
                 </div>
               </div>
 
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.60)", fontSize: "clamp(10px,2.5vw,12px)", textAlign: "center" }}>
-                  From here you can choose:
+              {/* Dominant frequency */}
+              <div style={{ marginBottom: "clamp(16px,4.5svh,22px)" }}>
+                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.8cqw,13px)", color: "rgba(220,240,230,0.65)", letterSpacing: "0.07em", marginBottom: 5 }}>
+                  dominant frequency:
                 </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.88)", fontSize: "clamp(11px,2.8vw,13px)", fontWeight: 700, lineHeight: 1.65, textAlign: "center" }}>
-                  1) Subtractive (notch) therapy.<br />
-                  2) Additive (boost) therapy.
-                </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.48)", fontSize: "clamp(9.5px,2.4vw,11.5px)", lineHeight: 1.5, textAlign: "center" }}>
-                  Both have shown positive results<br />in reducing, or in some cases curing tinnitus.
-                </div>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(10px,2.5vw,12px)", lineHeight: 1.5, textAlign: "center" }}>
-                  The earvana app can help you explore<br />both of these experimental therapies.
-                </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.28)", fontSize: "clamp(8.5px,2.1vw,10px)", lineHeight: 1.5, textAlign: "center" }}>
-                  NOTE:  As of May 2026, neither of these therapies are<br />medically conclusive.  This feature is provided for your<br />own personal experimentation.
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(18px,4.6cqw,22px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
+                    {statFreq !== null ? fmtSub(statFreq) : "—"}
+                  </span>
+                  {statFreq !== null && (
+                    <span style={{ color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,20px)", lineHeight: 1 }}>✓</span>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginTop: 8, flexShrink: 0 }}>
-                <button onClick={handleNotch} style={{
-                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
-                  background: "rgba(0,110,210,0.18)", border: "1px solid rgba(0,150,255,0.45)",
-                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
-                  color: "#ffffff", cursor: "pointer", letterSpacing: "0.03em",
-                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#00ccff" }}>▼</span> notch {fmtSub(processCandidate)}</button>
-
-                <button onClick={handleBoost} style={{
-                  flex: 1, height: 44, borderRadius: 8, padding: "0 6px",
-                  background: "rgba(0,180,80,0.18)", border: "1px solid rgba(0,220,80,0.45)",
-                  ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3vw,14px)",
-                  color: "#ffffff", cursor: "pointer", letterSpacing: "0.03em",
-                }}><span style={{ fontSize: "1.55em", lineHeight: 1, color: "#ffcc00" }}>▲</span> boost {fmtSub(processCandidate)}</button>
+              {/* Listening mode */}
+              <div style={{ flex: 1 }}>
+                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.8cqw,13px)", color: "rgba(220,240,230,0.65)", letterSpacing: "0.07em", marginBottom: 8 }}>
+                  listening mode:
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "clamp(6px,1.8svh,10px)", paddingLeft: 8 }}>
+                  {(["normal", "notch", "boost"] as const).map(mode => {
+                    const active = currentMode === mode;
+                    return (
+                      <button key={mode}
+                        onClick={() => handleModeChange(mode)}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: 0,
+                          display: "flex", alignItems: "center", gap: 8, textAlign: "left",
+                        }}>
+                        <span style={{
+                          ...KALLISTO,
+                          fontWeight: active ? 700 : 300,
+                          fontSize: "clamp(13px,3.2cqw,15px)",
+                          color: active ? "rgba(220,240,230,0.95)" : "rgba(180,210,195,0.42)",
+                          letterSpacing: "0.05em",
+                          transition: "color 0.12s",
+                        }}>
+                          {modeLabel(mode)}
+                        </span>
+                        {active && (
+                          <span style={{ color: "#7adf6a", fontSize: "clamp(14px,3.4cqw,16px)", lineHeight: 1 }}>✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Action buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "clamp(8px,2.2svh,12px)", marginTop: "clamp(16px,4svh,22px)" }}>
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          DONE card  (p4)
-      ════════════════════════════════════════════════════════════════════════ */}
-      {doneAction !== null && (
-        <div onClick={e => e.stopPropagation()} style={{
-          position: "absolute", inset: 0, zIndex: 85,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 clamp(12px,3cqw,20px)",
-        }}>
+                <button onClick={handleRepeatTest}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(14px,3.5cqw,17px)", color: "#ffcc00", letterSpacing: "0.09em" }}>
+                    repeat test
+                  </span>
+                  <DblChevron color="#ffcc00" />
+                </button>
 
-          {/* Invisible backdrop — tap outside to dismiss */}
-          <div style={{ position: "absolute", inset: 0 }} onClick={handleDoneClose} />
+                <button onClick={handleReset}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: 0,
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                  <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(13px,3.2cqw,15px)", color: "rgba(220,240,230,0.72)", letterSpacing: "0.09em" }}>
+                    reset
+                  </span>
+                  <DblChevron color="rgba(220,240,230,0.72)" />
+                </button>
 
-          {/* Card — scales in/out; drop-shadow on wrapper covers image + footer */}
-          <div style={{
-            position: "relative", zIndex: 10, width: "100%", maxWidth: 310,
-            filter: "drop-shadow(0 14px 48px rgba(0,0,0,0.90))",
-            animation: doneDismissing
-              ? "processScaleOut 0.2s cubic-bezier(0.4,0,1,1) both"
-              : "processScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
-          }}>
-
-            {/* ✕ close button — same style as PROCESS popup, 2 sizes up */}
-            <button onClick={handleDoneClose} style={{
-              position: "absolute", top: -17, left: -17, zIndex: 11,
-              width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(22,24,28,0.96)", border: "1px solid rgba(255,255,255,0.22)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", padding: 0,
-              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
-            }}>✕</button>
-
-            {/* Art wrapper — bg-image stretches to cover natural height + 20px extra */}
-            <div style={{
-              backgroundImage: `url(${diagCardImg})`,
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}>
-              <img src={diagCardImg} alt="" draggable={false}
-                style={{ display: "block", width: "100%", height: "auto", visibility: "hidden" }} />
-              <div style={{ height: 20 }} />
-            </div>
-
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: "clamp(16px,4.5svh,24px) 20px clamp(28px,7svh,36px)",
-            }}>
-
-              <div style={{ textAlign: "center" }}>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(20px,5vw,24px)", fontWeight: 700, marginBottom: 12 }}>
-                  Done!
-                </div>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
-                  The narrow-band frequency of
-                </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.92)", fontSize: "clamp(18px,4.6vw,22px)", fontWeight: 700, lineHeight: 1.2, margin: "4px 0" }}>
-                  {fmtSub(doneAction.freq)}
-                </div>
-                <div style={{ ...KALLISTO, color: "#ffcc00", fontSize: "clamp(11px,2.8vw,13px)", lineHeight: 1.6 }}>
-                  {doneAction.type === "notch"
-                    ? "has been notched out of the earvana audio mix."
-                    : "has been boosted in the earvana audio mix."}
-                </div>
-                <div style={{ ...KALLISTO, color: "rgba(255,255,255,0.55)", fontSize: "clamp(10px,2.5vw,12px)", lineHeight: 1.55, marginTop: 12 }}>
-                  You can reset at any time<br />by coming back to the<br />diagnostic section.
-                </div>
               </div>
 
             </div>
