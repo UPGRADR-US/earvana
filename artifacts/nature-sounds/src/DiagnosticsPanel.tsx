@@ -451,7 +451,7 @@ export function DiagnosticsPanel({
       `}</style>
 
       {/* Blurred background */}
-      <img src={img("homepage_BLUR.png")} alt=""
+      <img src={img("homepage_BLUR_1784150009315.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
       {/* Shadow + animation wrapper — main panel (p1 / p2) */}
@@ -630,7 +630,7 @@ export function DiagnosticsPanel({
             <div style={{
               position: "absolute", inset: 0,
               display: "flex", flexDirection: "column",
-              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,6svh,30px)",
+              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,6svh,30px) clamp(28px,7cqw,38px)",
             }}>
 
               {/* Header */}
