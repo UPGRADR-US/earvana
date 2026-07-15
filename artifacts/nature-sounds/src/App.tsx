@@ -556,6 +556,25 @@ function TrackList({
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
 
+            {/* Play-motion indicator — right edge of the highlight bar */}
+            {showGreen && !isLoading && !hasError && (
+              <video
+                key={track.id + "-anim"}
+                autoPlay loop muted playsInline
+                className="absolute pointer-events-none"
+                style={{
+                  right: "calc(19% + 3px)",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  height: "clamp(20px,4.5dvh,28px)",
+                  width: "auto",
+                }}
+              >
+                <source src={img("PlayAnim.webm")} type="video/webm" />
+                <source src={img("PlayAnim.mp4")} type="video/mp4" />
+              </video>
+            )}
+
             {/* Loading spinner — right-aligned while decoding */}
             {isLoading && (
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-white/60"
