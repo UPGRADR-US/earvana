@@ -556,23 +556,12 @@ function TrackList({
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
 
-            {/* Play-motion indicator — right edge of the highlight bar */}
+            {/* Bouncing-bars indicator — pinned to right edge of highlight */}
             {showGreen && !isLoading && !hasError && (
-              <video
-                key={track.id + "-anim"}
-                autoPlay loop muted playsInline
-                className="absolute pointer-events-none"
-                style={{
-                  right: "calc(19% + 3px)",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  height: "clamp(20px,4.5dvh,28px)",
-                  width: "auto",
-                }}
-              >
-                <source src={img("PlayAnim.webm")} type="video/webm" />
-                <source src={img("PlayAnim.mp4")} type="video/mp4" />
-              </video>
+              <span className="absolute pointer-events-none"
+                style={{ right: "calc(19% + 6px)", top: "50%", transform: "translateY(-50%)" }}>
+                <EqBarsSmall />
+              </span>
             )}
 
             {/* Loading spinner — right-aligned while decoding */}
@@ -1469,6 +1458,27 @@ function EqBars() {
     <svg
       width="clamp(18px,4.5cqw,26px)" viewBox="0 0 46 32"
       style={{ overflow: "visible", filter: "drop-shadow(0 0 4px #00ff55)", flexShrink: 0 }}
+    >
+      {EQ_BARS.map((bar, i) => (
+        <rect
+          key={i}
+          x={i * 12} y={0} width={8} height={32} rx={3}
+          fill="#00ff55"
+          style={{
+            transformOrigin: `${i * 12 + 4}px 32px`,
+            animation: `eqBar ${bar.dur} ease-in-out ${bar.delay} infinite`,
+          }}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function EqBarsSmall() {
+  return (
+    <svg
+      width="clamp(12px,3cqw,17px)" viewBox="0 0 46 32"
+      style={{ overflow: "visible", filter: "drop-shadow(0 0 3px #00ff55)", display: "block" }}
     >
       {EQ_BARS.map((bar, i) => (
         <rect
