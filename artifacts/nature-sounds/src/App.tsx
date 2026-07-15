@@ -1231,7 +1231,7 @@ function Home() {
       style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
       {/* Full-screen background — always visible */}
-      <img src={img("evTR_bg_1784129605512.png")} alt=""
+      <img src={img("evTR_bg_1784150368553.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover z-0" draggable={false}
         fetchPriority="high" />
 
@@ -1263,7 +1263,7 @@ function Home() {
         <>
           {/* Top Banner */}
           <div className="relative z-10 flex-shrink-0 w-full">
-            <img src={img("TopBanner7_1784132164517.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
+            <img src={img("TopBanner7_1784150386272.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
               className="w-full h-auto block" draggable={false} />
           </div>
 
