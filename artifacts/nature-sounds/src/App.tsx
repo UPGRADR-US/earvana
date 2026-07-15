@@ -1263,7 +1263,7 @@ function Home() {
         <>
           {/* Top Banner */}
           <div className="relative z-10 flex-shrink-0 w-full">
-            <img src={img("TopBanner8_1784150566059.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
+            <img src={img("TopBanner9_1784153475483.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
               className="w-full h-auto block" draggable={false} />
           </div>
 
