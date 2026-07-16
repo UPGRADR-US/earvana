@@ -671,7 +671,7 @@ export function DiagnosticsPanel({
                           ...KALLISTO,
                           fontWeight: active ? 700 : 300,
                           fontSize: "clamp(16px,4cqw,18px)",
-                          color: active ? "#ffffff" : "rgba(255,255,255,0.38)",
+                          color: active ? "#ffffff" : "rgba(255,255,255,0.62)",
                           letterSpacing: "0.05em",
                           transition: "color 0.12s",
                         }}>
