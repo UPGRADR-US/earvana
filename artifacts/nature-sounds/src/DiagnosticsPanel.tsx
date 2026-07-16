@@ -409,6 +409,11 @@ export function DiagnosticsPanel({
   };
 
   // p2 back → p1
+  const handleSetExpandedBand = useCallback((label: string | null) => {
+    setExpandedBand(label);
+    if (label === null) setP2Anchored(false);
+  }, []);
+
   const handleBack = () => { stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
 
@@ -554,7 +559,7 @@ export function DiagnosticsPanel({
                   currentNotch={currentNotch}
                   currentBoost={currentBoost}
                   onStopTone={stopTone}
-                  onSetExpandedBand={setExpandedBand}
+                  onSetExpandedBand={handleSetExpandedBand}
                   onBandExpand={handleBandExpand}
                   onBandPlay={handleBandPlay}
                   onSubPlay={handleSubPlay}
