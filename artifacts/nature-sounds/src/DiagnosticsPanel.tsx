@@ -175,9 +175,7 @@ const BandRow = memo(function BandRow({
               display: "flex", alignItems: "center", gap: 3,
               background: "none", border: "none", cursor: "pointer", padding: 0,
             }}>
-            {!isExpanded && (
-              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 2 }}>EXPAND</span>
-            )}
+            <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 2, visibility: isExpanded ? "hidden" : "visible" }}>EXPAND</span>
             <svg width={8} height={10} viewBox="0 0 10 14" style={{
               flexShrink: 0,
               transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
@@ -538,8 +536,8 @@ export function DiagnosticsPanel({
             <div style={{ visibility: p2ImgLoaded ? "visible" : "hidden" }}>
             <div style={{
               position: "absolute",
-              top: "24%", bottom: "17%",
-              left: 18, right: 38,
+              top: "calc(24% + 10px)", bottom: "17%",
+              left: 33, right: 38,
               overflowY: "auto",
               overflowX: "hidden",
               scrollbarWidth: "none",
