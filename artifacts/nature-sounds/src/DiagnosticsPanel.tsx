@@ -653,7 +653,7 @@ export function DiagnosticsPanel({
               </div>
 
               {/* Listening mode */}
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "clamp(10px,2.5svh,14px)", marginTop: 2 }}>
                 <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(17px,4.2cqw,19px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 8 }}>
                   listening mode:
                 </div>
@@ -687,7 +687,7 @@ export function DiagnosticsPanel({
               </div>
 
               {/* Action buttons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "clamp(8px,2.2svh,12px)", marginTop: "clamp(16px,4svh,22px)" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "clamp(8px,2.2svh,12px)", marginTop: "clamp(16px,4svh,22px)", borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "clamp(10px,2.5svh,14px)" }}>
 
                 <button onClick={handleRepeatTest}
                   style={{
