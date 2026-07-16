@@ -176,7 +176,7 @@ const BandRow = memo(function BandRow({
               background: "none", border: "none", cursor: "pointer", padding: 0,
             }}>
             {!isExpanded && (
-              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 2 }}>EXPAND</span>
+              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 2 }}>EXPAND</span>
             )}
             <svg width={8} height={10} viewBox="0 0 10 14" style={{
               flexShrink: 0,
@@ -248,7 +248,7 @@ const BandRow = memo(function BandRow({
               {sfPlaying && !sfActive && (
                 <button onClick={() => onSelectClick(sf)}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
                   <Chevron color="#ffcc00" />
                 </button>
               )}
@@ -466,9 +466,8 @@ export function DiagnosticsPanel({
         left:   "clamp(22px,5cqw,34px)",
         right:  "clamp(22px,5cqw,34px)",
         bottom: "clamp(48px,7vh,70px)",
-        filter: page === "stat" ? "blur(6px)" : "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
+        filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
         animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
-        transition: "filter 0.4s ease",
       }}>
 
         {/* Carousel container */}
