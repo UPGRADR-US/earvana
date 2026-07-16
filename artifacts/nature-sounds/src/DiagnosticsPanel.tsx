@@ -157,7 +157,7 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 34, gap: 5 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 34, gap: 5, paddingLeft: 16 }}>
 
         {(isPlaying || isExpanded || isBlinking) && (
           <button
@@ -213,7 +213,7 @@ const BandRow = memo(function BandRow({
 
           return (
             <div key={sf} style={{
-              display: "flex", alignItems: "center", justifyContent: "center", minHeight: 32, gap: 5,
+              display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 5, paddingLeft: 28,
               borderRadius: sfActive ? 5 : 0,
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
@@ -639,7 +639,7 @@ export function DiagnosticsPanel({
 
               {/* Dominant frequency */}
               <div style={{ marginBottom: "clamp(16px,4.5svh,22px)" }}>
-                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(14px,3.5cqw,16px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 5 }}>
+                <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(17px,4.2cqw,19px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 5 }}>
                   dominant frequency:
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -654,7 +654,7 @@ export function DiagnosticsPanel({
 
               {/* Listening mode */}
               <div style={{ flex: 1 }}>
-                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(14px,3.5cqw,16px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 8 }}>
+                <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(17px,4.2cqw,19px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 8 }}>
                   listening mode:
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "clamp(6px,1.8svh,10px)", paddingLeft: 8 }}>
