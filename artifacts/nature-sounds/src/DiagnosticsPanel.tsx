@@ -609,9 +609,9 @@ export function DiagnosticsPanel({
               : "statScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
 
-            {/* Background pane image */}
+            {/* Background pane — stretches to content height */}
             <img src={freqTestPane} alt="" draggable={false}
-              style={{ display: "block", width: "100%", height: "auto" }} />
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", display: "block" }} />
 
             {/* ✕ close — top-left, outside card */}
             <button onClick={handleClose} style={{
@@ -623,11 +623,11 @@ export function DiagnosticsPanel({
               ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
-            {/* Content overlay */}
+            {/* Content — determines card height */}
             <div style={{
-              position: "absolute", inset: 0,
+              position: "relative", zIndex: 1,
               display: "flex", flexDirection: "column",
-              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,6svh,30px) clamp(28px,7cqw,38px)",
+              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(28px,7svh,38px) clamp(28px,7cqw,38px)",
             }}>
 
               {/* Header */}
