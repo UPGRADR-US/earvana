@@ -157,7 +157,7 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 34, gap: 5, paddingLeft: 36 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 34, gap: 5, paddingLeft: 100 }}>
 
         {(isPlaying || isExpanded || isBlinking) && (
           <button
@@ -213,7 +213,7 @@ const BandRow = memo(function BandRow({
 
           return (
             <div key={sf} style={{
-              display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 5, paddingLeft: 48,
+              display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 5, paddingLeft: 120,
               borderRadius: sfActive ? 5 : 0,
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
