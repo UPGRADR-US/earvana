@@ -157,13 +157,10 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      {/* Band header — sticky when expanded so it stays visible while subs scroll */}
       <div style={{
-        position: isExpanded ? "sticky" : "static", top: 0, zIndex: isExpanded ? 5 : undefined,
-        background: isExpanded ? "rgba(6,14,10,0.96)" : "transparent",
+        position: "relative",
         display: "flex", alignItems: "center", justifyContent: "flex-start",
         minHeight: 34, paddingLeft: 100, gap: 5,
-        transition: "background 0.2s",
       }}>
 
         {/* EXPAND / collapse button — floats in the left padding so band name never shifts */}
