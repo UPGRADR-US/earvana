@@ -157,17 +157,29 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 34, gap: 5, paddingLeft: 100 }}>
+      {/* Band header — sticky when expanded so it stays visible while subs scroll */}
+      <div style={{
+        position: isExpanded ? "sticky" : "static", top: 0, zIndex: isExpanded ? 5 : undefined,
+        background: isExpanded ? "rgba(6,14,10,0.96)" : "transparent",
+        display: "flex", alignItems: "center", justifyContent: "flex-start",
+        minHeight: 34, paddingLeft: 100, gap: 5,
+        transition: "background 0.2s",
+      }}>
 
+        {/* EXPAND / collapse button — floats in the left padding so band name never shifts */}
         {(isPlaying || isExpanded || isBlinking) && (
           <button
             onClick={() => {
               if (isExpanded) { onStopTone(); onSetExpandedBand(null); }
               else            { onBandExpand(band.label); }
             }}
-            style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+            style={{
+              position: "absolute", left: 6,
+              display: "flex", alignItems: "center", gap: 3,
+              background: "none", border: "none", cursor: "pointer", padding: 0,
+            }}>
             {!isExpanded && (
-              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 4 }}>EXPAND</span>
+              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 2 }}>EXPAND</span>
             )}
             <svg width={8} height={10} viewBox="0 0 10 14" style={{
               flexShrink: 0,
