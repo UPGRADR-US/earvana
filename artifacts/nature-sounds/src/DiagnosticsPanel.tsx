@@ -168,7 +168,7 @@ const BandRow = memo(function BandRow({
               }}
               style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
               {!isExpanded && (
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 6 }}>EXPAND</span>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 6 }}>EXPAND</span>
               )}
               <svg width={8} height={10} viewBox="0 0 10 14" style={{
                 flexShrink: 0,
@@ -188,7 +188,7 @@ const BandRow = memo(function BandRow({
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
           <span style={{
             ...LIST_TXT,
-            fontSize: "clamp(15px,3.8cqw,18px)",
+            fontSize: "clamp(17px,4.3cqw,20px)",
             fontWeight: (isPlaying || isExpanded || hasActive) ? 700 : 300,
             color: isPlaying ? "#00ff55" : isExpanded ? "#00cc44" : hasActive ? "#c8a832" : "rgba(255,255,255,0.72)",
           }}>{band.label}</span>
@@ -227,7 +227,7 @@ const BandRow = memo(function BandRow({
                          padding: 0, paddingLeft: 22, flexShrink: 0 }}>
                 <span style={{
                   ...SUB_TXT,
-                  fontSize: "clamp(13.5px,3.5cqw,16px)",
+                  fontSize: "clamp(15.5px,4.0cqw,18px)",
                   fontWeight: sfPlaying ? 700 : 300,
                   color: sfPlaying ? "#00ff55" : sfActive ? "#c8a832" : "rgba(255,255,255,0.65)",
                 }}>{fmtSub(sf)}</span>
@@ -243,14 +243,14 @@ const BandRow = memo(function BandRow({
               {sfPlaying && !sfActive && (
                 <button onClick={() => onSelectClick(sf)}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(7px,1.8vw,9px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
                   <Chevron color="#ffcc00" />
                 </button>
               )}
               {sfActive && (
                 <button onClick={() => { sfNotched ? onNotch(null) : onBoost(null); }}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#b89a2a", letterSpacing: "0.04em", animation: "blinkYellow 0.9s ease-in-out infinite" }}>RESET</span>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3.0vw,14px)", color: "#b89a2a", letterSpacing: "0.04em", animation: "blinkYellow 0.9s ease-in-out infinite" }}>RESET</span>
                   <Chevron color="#b89a2a" style={{ animation: "blinkYellow 0.9s ease-in-out infinite" }} />
                 </button>
               )}
@@ -472,8 +472,8 @@ export function DiagnosticsPanel({
           {/* ✕ — hidden when stat window is showing */}
           <button onClick={handleClose} aria-label="Close" style={{
             position: "absolute", top: 0, left: 0, zIndex: 70,
-            width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center",
-            ...KALLISTO, fontWeight: 300, fontSize: "1.3rem", lineHeight: 1,
+            width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center",
+            ...KALLISTO, fontWeight: 300, fontSize: "1.55rem", lineHeight: 1,
             color: "rgba(255,255,255,0.80)",
             background: "none", border: "none", cursor: "pointer",
             opacity: page === "stat" ? 0 : 1,
@@ -529,9 +529,10 @@ export function DiagnosticsPanel({
             <div style={{ visibility: p2ImgLoaded ? "visible" : "hidden" }}>
             <div style={{
               position: "absolute",
-              top: "22%", bottom: "15%",
-              left: 16, right: 36,
+              top: "24%", bottom: "17%",
+              left: 18, right: 38,
               overflowY: "auto",
+              overflowX: "hidden",
               scrollbarWidth: "none",
               display: "flex",
               flexDirection: "column",
@@ -604,7 +605,7 @@ export function DiagnosticsPanel({
         }}>
 
           <div style={{
-            position: "relative", width: "100%", maxWidth: 340,
+            position: "relative", width: "100%", maxWidth: 390,
             filter: "drop-shadow(0 14px 52px rgba(0,0,0,0.92))",
             willChange: "transform, opacity",
             animation: statDismissing
@@ -635,29 +636,29 @@ export function DiagnosticsPanel({
 
               {/* Header */}
               <div style={{ marginBottom: "clamp(14px,4svh,20px)" }}>
-                <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(15px,3.8cqw,18px)", color: "#7adf6a", letterSpacing: "0.06em" }}>
+                <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(18px,4.5cqw,21px)", color: "#7adf6a", letterSpacing: "0.06em" }}>
                   your earvana profile:
                 </div>
               </div>
 
               {/* Dominant frequency */}
               <div style={{ marginBottom: "clamp(16px,4.5svh,22px)" }}>
-                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.8cqw,13px)", color: "rgba(220,240,230,0.65)", letterSpacing: "0.07em", marginBottom: 5 }}>
+                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(14px,3.5cqw,16px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 5 }}>
                   dominant frequency:
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(18px,4.6cqw,22px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(21px,5.3cqw,25px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
                     {statFreq !== null ? fmtSub(statFreq) : "—"}
                   </span>
                   {statFreq !== null && (
-                    <span style={{ color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,20px)", lineHeight: 1 }}>✓</span>
+                    <span style={{ color: "#7adf6a", fontSize: "clamp(20px,5cqw,23px)", lineHeight: 1 }}>✓</span>
                   )}
                 </div>
               </div>
 
               {/* Listening mode */}
               <div style={{ flex: 1 }}>
-                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(11px,2.8cqw,13px)", color: "rgba(220,240,230,0.65)", letterSpacing: "0.07em", marginBottom: 8 }}>
+                <div style={{ ...KALLISTO, fontWeight: 300, fontSize: "clamp(14px,3.5cqw,16px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 8 }}>
                   listening mode:
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "clamp(6px,1.8svh,10px)", paddingLeft: 8 }}>
@@ -673,15 +674,15 @@ export function DiagnosticsPanel({
                         <span style={{
                           ...KALLISTO,
                           fontWeight: active ? 700 : 300,
-                          fontSize: "clamp(13px,3.2cqw,15px)",
-                          color: active ? "rgba(220,240,230,0.95)" : "rgba(180,210,195,0.42)",
+                          fontSize: "clamp(16px,4cqw,18px)",
+                          color: active ? "#ffffff" : "rgba(255,255,255,0.38)",
                           letterSpacing: "0.05em",
                           transition: "color 0.12s",
                         }}>
                           {modeLabel(mode)}
                         </span>
                         {active && (
-                          <span style={{ color: "#7adf6a", fontSize: "clamp(14px,3.4cqw,16px)", lineHeight: 1 }}>✓</span>
+                          <span style={{ color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,19px)", lineHeight: 1 }}>✓</span>
                         )}
                       </button>
                     );
@@ -697,7 +698,7 @@ export function DiagnosticsPanel({
                     background: "none", border: "none", cursor: "pointer", padding: 0,
                     display: "flex", alignItems: "center", gap: 8,
                   }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(14px,3.5cqw,17px)", color: "#ffcc00", letterSpacing: "0.09em" }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(17px,4.2cqw,20px)", color: "#ffcc00", letterSpacing: "0.09em" }}>
                     repeat test
                   </span>
                   <DblChevron color="#ffcc00" />
@@ -708,10 +709,10 @@ export function DiagnosticsPanel({
                     background: "none", border: "none", cursor: "pointer", padding: 0,
                     display: "flex", alignItems: "center", gap: 8,
                   }}>
-                  <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(13px,3.2cqw,15px)", color: "rgba(220,240,230,0.72)", letterSpacing: "0.09em" }}>
+                  <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "#ffffff", letterSpacing: "0.09em" }}>
                     reset
                   </span>
-                  <DblChevron color="rgba(220,240,230,0.72)" />
+                  <DblChevron color="#ffffff" />
                 </button>
 
               </div>
