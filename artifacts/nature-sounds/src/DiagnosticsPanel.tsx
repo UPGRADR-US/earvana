@@ -157,32 +157,30 @@ const BandRow = memo(function BandRow({
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", minHeight: 34 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 34, gap: 5 }}>
 
-        <div style={{ width: "33%", flexShrink: 0, display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 14 }}>
-          {(isPlaying || isExpanded || isBlinking) && (
-            <button
-              onClick={() => {
-                if (isExpanded) { onStopTone(); onSetExpandedBand(null); }
-                else            { onBandExpand(band.label); }
-              }}
-              style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              {!isExpanded && (
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 6 }}>EXPAND</span>
-              )}
-              <svg width={8} height={10} viewBox="0 0 10 14" style={{
-                flexShrink: 0,
-                transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 0.375s cubic-bezier(0.5,0,1,1)",
-                animation: isBlinking ? "blinkYellow 0.9s ease-in-out infinite" : "none",
-              }}>
-                <polyline points="2,2 8,7 2,12"
-                  fill="none" stroke="#ffcc00" strokeWidth="2.4"
-                  strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-        </div>
+        {(isPlaying || isExpanded || isBlinking) && (
+          <button
+            onClick={() => {
+              if (isExpanded) { onStopTone(); onSetExpandedBand(null); }
+              else            { onBandExpand(band.label); }
+            }}
+            style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+            {!isExpanded && (
+              <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(11px,2.8vw,13px)", color: "#ffcc00", letterSpacing: "0.07em", marginRight: 4 }}>EXPAND</span>
+            )}
+            <svg width={8} height={10} viewBox="0 0 10 14" style={{
+              flexShrink: 0,
+              transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.375s cubic-bezier(0.5,0,1,1)",
+              animation: isBlinking ? "blinkYellow 0.9s ease-in-out infinite" : "none",
+            }}>
+              <polyline points="2,2 8,7 2,12"
+                fill="none" stroke="#ffcc00" strokeWidth="2.4"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
 
         <button onClick={() => onBandPlay(band)}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
@@ -198,7 +196,7 @@ const BandRow = memo(function BandRow({
           <button onClick={() => onBandPlay(band)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center",
                      background: "none", border: "none", cursor: "pointer",
-                     padding: 0, marginLeft: 6, flexShrink: 0 }}>
+                     padding: 0, flexShrink: 0 }}>
             <SpeakerIcon active={isPlaying} size={15} />
           </button>
         )}
@@ -215,16 +213,14 @@ const BandRow = memo(function BandRow({
 
           return (
             <div key={sf} style={{
-              display: "flex", alignItems: "center", minHeight: 32,
+              display: "flex", alignItems: "center", justifyContent: "center", minHeight: 32, gap: 5,
               borderRadius: sfActive ? 5 : 0,
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
 
-              <div style={{ width: "33%", flexShrink: 0 }} />
-
               <button onClick={() => onSubPlay(sf)}
                 style={{ background: "none", border: "none", cursor: "pointer",
-                         padding: 0, paddingLeft: 22, flexShrink: 0 }}>
+                         padding: 0, flexShrink: 0 }}>
                 <span style={{
                   ...SUB_TXT,
                   fontSize: "clamp(15.5px,4.0cqw,18px)",
@@ -236,7 +232,7 @@ const BandRow = memo(function BandRow({
               <button onClick={() => onSubPlay(sf)}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center",
                          background: "none", border: "none", cursor: "pointer",
-                         padding: 0, marginLeft: 6, flexShrink: 0 }}>
+                         padding: 0, flexShrink: 0 }}>
                 <SpeakerIcon active={sfPlaying} size={14} />
               </button>
 
