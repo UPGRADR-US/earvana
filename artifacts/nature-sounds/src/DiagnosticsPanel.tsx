@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { EarvanaAudio, isNativeAudio } from "./plugins/EarvanaAudio";
 import freqTestP1Img from "@assets/freqtest_p1_1784147052188.png";
 import freqTestP2Img from "@assets/freqtest_p2_1784147052188.png";
 import freqTestPane  from "@assets/freqtest_emptypane_1784147052188.png";
@@ -324,12 +325,25 @@ export function DiagnosticsPanel({
   const gRef   = useRef<GainNode | null>(null);
 
   const killOsc = useCallback(() => {
+    // Native iOS: sine tones via DiagnosticTonePlayer (AVAudioEngine), not WKWebView Web Audio.
+    // Web Audio here would fail silently / fight the therapy engine and stop nature playback.
+    if (isNativeAudio) {
+      EarvanaAudio.stopTestTone().catch(() => {});
+      return;
+    }
     if (oscRef.current) { try { oscRef.current.stop(); } catch { /**/ } oscRef.current.disconnect(); oscRef.current = null; }
     if (gRef.current)   { try { gRef.current.disconnect(); } catch { /**/ } gRef.current = null; }
   }, []);
 
   const playTone = useCallback((freq: number, gain: number) => {
     killOsc();
+    if (isNativeAudio) {
+      EarvanaAudio.playTestTone({ freq, gain }).catch((e) =>
+        console.error("[Diag] native test tone failed", e),
+      );
+      setPlayingFreq(freq);
+      return;
+    }
     if (!ctxRef.current) {
       const Ctx = ((window as unknown) as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext ?? window.AudioContext;
       ctxRef.current = new Ctx();
@@ -346,8 +360,18 @@ export function DiagnosticsPanel({
 
   const stopTone = useCallback(() => { killOsc(); setPlayingFreq(null); }, [killOsc]);
 
-  useEffect(() => { if (gRef.current) gRef.current.gain.value = volToGain(toneVolume); }, [toneVolume]);
-  useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
+  useEffect(() => {
+    const gain = volToGain(toneVolume);
+    if (isNativeAudio) {
+      if (playingFreq !== null) EarvanaAudio.setTestToneGain({ gain }).catch(() => {});
+      return;
+    }
+    if (gRef.current) gRef.current.gain.value = gain;
+  }, [toneVolume, playingFreq]);
+  useEffect(() => () => {
+    killOsc();
+    if (!isNativeAudio) ctxRef.current?.close().catch(() => {});
+  }, [killOsc]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -389,11 +413,12 @@ export function DiagnosticsPanel({
     else { onBoost(freq); onNotch(null); }
   };
 
-  // "repeat test >>" → go back to p2
+  // "repeat test >>" → go back to p2 (pause nature audio again for pure-tone listening)
   const handleRepeatTest = () => {
     setStatDismissing(true);
     setTimeout(() => {
       setStatDismissing(false);
+      onStartTest?.();
       stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null);
     }, 200);
   };

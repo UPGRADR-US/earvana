@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
 
-const DEFAULT_CROSSFADE  = 15;  // seconds
+// Long equal-power crossfades (30–45s) hide loop seams on nature recordings.
+// Cap is applied per-track via effectiveXfade() so short clips stay safe.
+const DEFAULT_CROSSFADE  = 40;  // seconds — seamless loop default (build-8 quality)
 const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
 const TRACK_SWITCH_FADE   = 0.75; // seconds — outgoing track fade when switching titles
@@ -93,12 +95,13 @@ class TrackEngine {
     return end - this.loopStart;
   }
 
-  // Cap crossfade at regionDuration/3 — prevents two pathological cases:
+  // Cap crossfade just under regionDuration/2 — hard limit for ping-pong safety:
   //   (a) crossfade ≥ regionDuration → crossStart ≤ 0 → fires immediately
   //   (b) crossfade × 2 > regionDuration → in-curve still running when next
   //       loop calls cancelScheduledValues on the same GainNode (undefined behaviour)
+  // /2.2 leaves a small margin while still allowing 30–45s fades on medium clips.
   private effectiveXfade(): number {
-    return Math.min(this.crossfadeDuration, this.regionDuration() / 3);
+    return Math.min(this.crossfadeDuration, this.regionDuration() / 2.2);
   }
 
   async load(): Promise<void> {

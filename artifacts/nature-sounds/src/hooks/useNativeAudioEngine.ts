@@ -50,6 +50,7 @@ export function useNativeAudioEngine(): AudioEngineState {
   const boostedFreqRef = useRef<number | null>(savedBoost ? Number(savedBoost) : null);
 
   const lastPlayedIdRef = useRef<string | null>(null);
+  const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
   const masterVolumeRef = useRef<number>(0.8);
 
   // Listen for native status-change events from the plugin
@@ -59,6 +60,7 @@ export function useNativeAudioEngine(): AudioEngineState {
       const status = data.tracks as Record<string, any>;
       setTracksState(prev => {
         const next = { ...prev };
+        const reported = new Set(Object.keys(status));
         for (const [id, st] of Object.entries(status)) {
           next[id] = {
             isPlaying: st["isPlaying"] as boolean,
@@ -66,6 +68,13 @@ export function useNativeAudioEngine(): AudioEngineState {
             hasError: st["hasError"] as boolean,
             volume: st["volume"] as number,
           };
+        }
+        // Native only reports the active track (or {} after stopAll).
+        // Clear isPlaying on anything not in the report so React can't lag behind AVAudioEngine.
+        for (const id of Object.keys(next)) {
+          if (!reported.has(id) && next[id].isPlaying) {
+            next[id] = { ...next[id], isPlaying: false };
+          }
         }
         return next;
       });
@@ -115,10 +124,20 @@ export function useNativeAudioEngine(): AudioEngineState {
     });
 
     lastPlayedIdRef.current = trackId;
+    setLastPlayedId(trackId);
     setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
 
     try {
-      await EarvanaAudio.play({ trackId, filePath: track.file });
+      // On native iOS this hits AVAudioEngine (EarvanaAudioPlugin), not Web Audio.
+      const volume = tracksState[trackId]?.volume ?? track.defaultVolume ?? 0.5;
+      await EarvanaAudio.play({
+        trackId,
+        filePath: track.file,
+        loopStart: track.loopStart ?? 0,
+        loopEnd: track.loopEnd,
+        crossfadeDuration: track.crossfadeDuration ?? 40,
+        volume,
+      });
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
     } catch (e) {
       console.error("[NativeAudio] play failed", e);
@@ -206,7 +225,7 @@ export function useNativeAudioEngine(): AudioEngineState {
     setMasterVolume,
     setEq,
     stopAll,
-    lastPlayedId: lastPlayedIdRef.current,
+    lastPlayedId,
     startFadeOut,
     cancelFade,
     notchedFreq,

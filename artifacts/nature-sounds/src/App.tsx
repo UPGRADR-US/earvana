@@ -973,7 +973,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                 earvana: tinnitus relief
               </div>
               <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "10px" }}>
-                v1.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
+                v2.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
               </div>
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", letterSpacing: "0.04em", marginBottom: "3px" }}>
                 composed and produced by:&nbsp;&nbsp;jay oliver
@@ -999,31 +999,35 @@ function Home() {
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[0]?.id ?? null);
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
-  const diagPausedRef  = useRef(false);  // true when we auto-paused on diag open
   const carouselRef    = useRef<CarouselHandle>(null);
+  // true when we auto-stopped nature audio so pure-tone calibration is audible
+  const diagPausedRef  = useRef(false);
+  // Always read latest engine from a ref so START TEST can't close over stale tracks state
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
 
   const openDiag = useCallback(() => {
     setDiagOpen(true);
   }, []);
 
-  // Called when user clicks START TEST / REPEAT TEST — pause here, not on panel open
-  const pauseForDiagTest = useCallback(() => {
-    const id = engine.lastPlayedId;
-    if (id && engine.tracks[id]?.isPlaying) {
-      engine.pause(id);
-      diagPausedRef.current = true;
-    }
-  }, [engine]);
+  // START TEST / REPEAT TEST — hard-stop nature sounds so pure tones are clear.
+  // stopAll() hits native AVAudioEngine immediately (React isPlaying can lag).
+  // Music resumes when the diagnostics panel is closed (if we stopped it).
+  const onStartDiagTest = useCallback(() => {
+    const e = engineRef.current;
+    const wasPlaying = Object.values(e.tracks).some((s) => s.isPlaying);
+    if (wasPlaying) diagPausedRef.current = true;
+    // Always stop — even if UI state says nothing is playing, native may still be
+    e.stopAll();
+  }, []);
 
   const closeDiag = useCallback(() => {
     setDiagOpen(false);
     if (diagPausedRef.current) {
       diagPausedRef.current = false;
-      engine.resume();
+      engineRef.current.resume();
     }
-  }, [engine]);
-
-  const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
+  }, []);  const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
   const [diagFlash,       setDiagFlash]       = useState<boolean>(false);
 
   const [eqMode,  setEqMode]  = useState<EqModeId>(
@@ -1221,18 +1225,29 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Orientation is locked to portrait via "orientation":"portrait" in manifest.json.
-  // The JS screen.orientation.lock() API is intentionally omitted — on iOS it can
-  // interfere with the compositor and corrupt the layout.
+  // Orientation is locked natively (Info.plist + AppDelegate + MyViewController)
+  // and via "orientation":"portrait" in manifest.json. The JS screen.orientation.lock()
+  // API is intentionally omitted — on iOS it can interfere with the compositor.
 
 
   return (
-    <div className="relative flex flex-col w-full overflow-hidden select-none"
-      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
+    <div className="relative flex flex-col w-full select-none"
+      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", touchAction: "none", overscrollBehavior: "none", overflow: "visible" }}>
 
-      {/* Full-screen background — always visible */}
+      {/* Full-screen background — bleeds under status bar and home indicator
+          so there is no black gap at the bottom of the iPhone. */}
       <img src={img("evTR_bg_1784150368553.png")} alt=""
-        className="absolute inset-0 w-full h-full object-cover z-0" draggable={false}
+        className="absolute z-0 pointer-events-none"
+        style={{
+          top: "calc(-1 * env(safe-area-inset-top))",
+          left: 0,
+          right: 0,
+          bottom: "calc(-1 * env(safe-area-inset-bottom))",
+          width: "100%",
+          height: "calc(100% + env(safe-area-inset-top) + env(safe-area-inset-bottom))",
+          objectFit: "cover",
+        }}
+        draggable={false}
         fetchPriority="high" />
 
       {/* Settings overlay */}
@@ -1250,7 +1265,7 @@ function Home() {
       {diagOpen && !settingsOpen && (
         <DiagnosticsPanel
           onClose={closeDiag}
-          onStartTest={pauseForDiagTest}
+          onStartTest={onStartDiagTest}
           onNotch={(freq) => engine.setNotch(freq ?? null)}
           currentNotch={engine.notchedFreq}
           onBoost={(freq) => engine.setBoost(freq ?? null)}
@@ -1261,8 +1276,8 @@ function Home() {
 
       {!settingsOpen && !diagOpen && (
         <>
-          {/* Top Banner */}
-          <div className="relative z-10 flex-shrink-0 w-full">
+          {/* Top Banner — pad under status bar; bg already bleeds behind it */}
+          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: "env(safe-area-inset-top)" }}>
             <img src={img("TopBanner11_1784158209757.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
               className="w-full h-auto block" draggable={false} />
           </div>
@@ -1303,10 +1318,12 @@ function Home() {
             </div>
           </div>
 
-          {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
-              resolves against only the icon-row's own relative parent, not this outer wrapper.
-              iOS WebKit picks the outermost relative ancestor when there are nested ones. */}
-          <div className="z-10 flex-shrink-0" style={{ position: "relative" }}>
+          {/* Bottom controls — sit above home indicator; footer graphic fills
+              the safe-area padding so no black gap appears under the dock. */}
+          <div className="relative z-10 flex-shrink-0" style={{
+            // Lift controls above the home indicator; footer art fills this pad.
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          }}>
             {/* Volume meter — floats above this cluster, anchored to its top edge */}
             <VolumeMeter
               volume={engine.masterVolume}
@@ -1328,16 +1345,7 @@ function Home() {
             </div>
 
             {/* Icon row — Diagnostics pinned left, Sprocket pinned right,
-                Play+EQ absolutely centred as a pair.
-                The bar image sits on a wrapper that also covers the safe-area
-                spacer so the graphic fills all the way to the home indicator
-                without pushing the icons down. */}
-            {/* Bar wrapper extends into the safe area so CPanl_bar_btm.png fills
-                all the way to the home indicator. Icons sit above via paddingBottom. */}
-            <div className="relative" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-              <img src={img("CPanl_bar_btm.png")} alt=""
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ objectFit: "fill" }} draggable={false} />
+                Play+EQ absolutely centred as a pair. */}
             <div className="relative flex items-center"
               style={{ paddingLeft: "38px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
@@ -1435,7 +1443,11 @@ function Home() {
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
             </div>{/* end icon row */}
-            </div>{/* end bar wrapper */}
+
+            {/* Footer dock graphic — fills outer block including safe-area padding */}
+            <img src={img("CPanl_bar_btm.png")} alt=""
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ objectFit: "fill", zIndex: -1 }} draggable={false} />
           </div>
         </>
       )}

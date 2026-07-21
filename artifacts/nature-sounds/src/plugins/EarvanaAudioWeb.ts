@@ -18,6 +18,9 @@ export const EarvanaAudioWeb: EarvanaAudioPlugin = {
   async getStatus() { return { tracks: {} }; },
   async setLastPlayed() { },
   async getLastPlayed() { return { trackId: null }; },
+  async playTestTone() { },
+  async stopTestTone() { },
+  async setTestToneGain() { },
   async addListener() { return { remove: () => {} }; },
   async removeAllListeners() { },
 };

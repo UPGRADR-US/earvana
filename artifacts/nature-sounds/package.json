@@ -1,6 +1,6 @@
 {
   "name": "@workspace/nature-sounds",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,10 +8,15 @@
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "cap:build": "vite build --config vite.cap.config.ts && npx cap sync ios",
-    "cap:sync": "npx cap sync ios"
+    "cap:build": "vite build --config vite.cap.config.ts && npx cap sync",
+    "cap:sync": "npx cap sync",
+    "cap:sync:ios": "npx cap sync ios",
+    "cap:sync:android": "npx cap sync android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/ios": "^8.4.0",
     "@hookform/resolvers": "^3.10.0",
