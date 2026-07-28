@@ -287,8 +287,8 @@ export function DiagnosticsPanel({
 }: Props) {
   const hasActiveSetting = currentNotch !== null || currentBoost !== null;
 
-  // Page flow: 1 = instructions, 2 = pitch selector, "stat" = profile card
-  const [page,           setPage]           = useState<1 | 2 | "stat">(() => hasActiveSetting ? "stat" : 1);
+  // Page flow: 1 = instructions, 2 = pitch selector, "confirm" = process confirmation, "stat" = profile card
+  const [page,           setPage]           = useState<1 | 2 | "confirm" | "stat">(() => hasActiveSetting ? "stat" : 1);
   // true when stat window was opened because a setting was already engaged (vs. just processed)
   const [statIsReturning, setStatIsReturning] = useState(hasActiveSetting);
   // the frequency anchored in the stat window (persists across mode changes)
@@ -393,15 +393,13 @@ export function DiagnosticsPanel({
     else playTone(sf, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // PROCESS: apply notch as default, anchor freq, open stat window
+  // PROCESS: anchor freq, open confirmation page (notch applied only when user confirms)
   const handleSelectClick = (freq: number) => {
     stopTone();
-    onBoost(null);
-    onNotch(freq);
     setStatFreq(freq);
     setStatIsReturning(false);
     setStatDismissing(false);
-    setPage("stat");
+    setPage("confirm");
   };
 
   // Stat window: live mode change
@@ -625,6 +623,97 @@ export function DiagnosticsPanel({
 
         </div>
       </div>
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          PROCESS CONFIRMATION PAGE — shown immediately after clicking PROCESS
+      ════════════════════════════════════════════════════════════════════════ */}
+      {page === "confirm" && statFreq !== null && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: "absolute", inset: 0, zIndex: 90,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "0 clamp(28px,7cqw,44px)",
+        }}>
+          <div style={{
+            position: "relative", width: "100%", maxWidth: 390,
+            filter: "drop-shadow(0 14px 52px rgba(0,0,0,0.92))",
+            animation: "statScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}>
+            <img src={freqTestPane} alt="" draggable={false}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", display: "block" }} />
+
+            <button onClick={handleClose} style={{
+              position: "absolute", top: -16, left: -16, zIndex: 11,
+              width: 34, height: 34, borderRadius: "50%",
+              background: "rgba(10,18,16,0.95)", border: "1px solid rgba(0,200,180,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
+            }}>✕</button>
+
+            <div style={{
+              position: "relative", zIndex: 1,
+              display: "flex", flexDirection: "column",
+              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,5svh,30px) clamp(28px,7cqw,38px)",
+            }}>
+
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12.5px,3.1cqw,14.5px)", color: "rgba(255,255,255,0.82)", letterSpacing: "0.01em", marginBottom: 10, lineHeight: 1.4 }}>
+                Your dominant tinnitus frequency:
+              </p>
+
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1.5px solid #4adf5a", borderRadius: 7, padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start" }}>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(15px,3.8cqw,17px)", color: "#fff", letterSpacing: "0.05em" }}>{fmtSub(statFreq)}</span>
+                <span style={{ color: "#4adf5a", fontSize: "clamp(16px,4cqw,18px)", lineHeight: 1 }}>✓</span>
+              </div>
+
+              <p style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10.5px,2.6cqw,12px)", color: "#ffcc00", letterSpacing: "0.12em", marginBottom: 11 }}>
+                FREQUENCY-NOTCHING THERAPY
+              </p>
+
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
+                Recent clinical studies have shown positive results with the use of frequency-notching therapy for suppression of tinnitus as well as reducing levels of stress and anxiety.
+              </p>
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
+                With the <strong style={{ color: "#fff", fontWeight: 700 }}>earvana</strong><sup style={{ fontSize: "0.65em", color: "rgba(255,255,255,0.5)", fontWeight: 300, fontStyle: "normal" }}>™</sup> app (in buds or headphones), this therapy is possible.
+              </p>
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
+                The listening period is suggested for a minimum of 1-hour per day for 2-3 weeks.
+              </p>
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 16 }}>
+                Choose any soundscape.<br />
+                This process will stay engaged until you come back to the &quot;Ring Match&quot; section of the app and reset the process.
+              </p>
+
+              <button
+                onClick={() => { onBoost(null); onNotch(statFreq!); setStatIsReturning(false); onClose(); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 9,
+                  background: "linear-gradient(135deg, rgba(0,55,18,0.97) 0%, rgba(0,90,35,0.93) 100%)",
+                  border: "1.5px solid rgba(74,223,90,0.45)",
+                  borderRadius: 28, padding: "10px 14px 10px 12px",
+                  cursor: "pointer", marginBottom: 14, width: "100%",
+                }}
+              >
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <rect x="0" y="7"  width="3.5" height="7"  rx="1"/>
+                  <rect x="4.5" y="3.5" width="3.5" height="10.5" rx="1"/>
+                  <rect x="9"  y="5"  width="3.5" height="9"  rx="1"/>
+                  <rect x="13.5" y="0" width="3.5" height="14" rx="1"/>
+                </svg>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3cqw,13.5px)", color: "#fff", letterSpacing: "0.04em", flexShrink: 0 }}>Notch</span>
+                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12px,3cqw,13.5px)", color: "rgba(255,255,255,0.85)", flex: 1, textAlign: "left" }}>{fmtSub(statFreq)} from my playback</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </button>
+
+              <p style={{ ...KALLISTO, fontWeight: 400, fontStyle: "italic", fontSize: "clamp(9.5px,2.3cqw,11px)", color: "rgba(255,255,255,0.35)", lineHeight: 1.65 }}>
+                IMPORTANT:&nbsp; This is an experimental process and should not be used as a substitute for professional medical advice or treatment.
+              </p>
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════════════════════
           STAT WINDOW — profile card (shown after PROCESS or for returning users)

@@ -12,7 +12,7 @@ function buildNumber(): number {
   const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
   if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
   // Default for this release train
-  return 11;
+  return 12;
 }
 
 export default defineConfig({

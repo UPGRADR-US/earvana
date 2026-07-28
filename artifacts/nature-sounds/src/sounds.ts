@@ -84,6 +84,7 @@ export const CATEGORIES: SoundCategory[] = [
     tracks: [
       { id: "garden_tranquil_koi_pond", name: "garden: tranquil koi pond", file: "sounds/garden-TranquilKoiPond.mp3", icon: "Leaf" },
       { id: "garden_spa_moon_garden",   name: "garden: spa moon garden",   file: "sounds/garden-SpaMoonGarden.mp3",   icon: "Leaf" },
+      { id: "garden_morning_melody",    name: "garden: morning melody",    file: "sounds/garden-MorningMelody.mp3",    icon: "Leaf" },
     ],
   },
   {
