@@ -8,6 +8,10 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
 import { useAudioEngine } from "./hooks/useAudioEngine";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import {
+  EarphoriaBilling,
+  isPlayBillingAvailable,
+} from "./plugins/EarphoriaBilling";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
@@ -15,6 +19,14 @@ const img = (name: string) => `${BASE}${name}`;
 
 const BUILD_NUMBER = __BUILD_NUMBER__;
 const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/**
+ * Safe-area insets for edge-to-edge (iOS + Android 15/16).
+ * Prefer Capacitor SystemBars-injected --safe-area-inset-* (fixes Android WebView
+ * env() bugs); fall back to standard env() then 0px.
+ */
+const SAFE_TOP = "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))";
+const SAFE_BOTTOM = "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
@@ -56,7 +68,12 @@ function VolumeMeter({ volume, onChange, extraStyle }: {
           className="block h-full w-auto pointer-events-none" draggable={false} />
         <img src={img("VolSldr_LEDS.png")} alt=""
           className="absolute top-0 left-0 h-full w-auto pointer-events-none"
-          style={{ clipPath: `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)` }}
+          style={{
+            clipPath: volume === 0
+              ? "inset(0 0 0 0)"
+              : `inset(${((1 - volume) * 100).toFixed(1)}% 0 0 0)`,
+            filter: volume === 0 ? "hue-rotate(-120deg) saturate(1.35)" : "none",
+          }}
           draggable={false} />
       </div>
       <div className="flex flex-col items-center justify-center gap-[3px]"
@@ -275,7 +292,7 @@ const EDGE_LEFT   = "linear-gradient(to left,   #22435e, #162c40)";
 const EDGE_TOP    = "#1a3a52";
 const EDGE_BOTTOM = "#09141e";
 
-interface CarouselHandle { animateTo: (i: number) => void; }
+interface CarouselHandle { animateTo: (i: number) => void; launchSpin: () => void; }
 
 const CylinderCarousel = forwardRef<CarouselHandle, {
   centerIdx: number;
@@ -350,7 +367,19 @@ const CylinderCarousel = forwardRef<CarouselHandle, {
     onCenterChange(i);
   };
 
-  useImperativeHandle(ref, () => ({ animateTo }));
+  const launchSpin = () => {
+    if (!cylinderRef.current) return;
+    const target = rotRef.current;
+    // Jump ahead with no transition so the browser sees a real FROM value,
+    // then animate back — forcing a visible launch rotation (visual only).
+    cylinderRef.current.style.transition = "none";
+    cylinderRef.current.style.transform  = `rotateY(${-(target - 120)}deg)`;
+    void cylinderRef.current.offsetHeight; // flush reflow so the jump registers
+    cylinderRef.current.style.transition = "transform 0.5s cubic-bezier(0,0,0.05,1)";
+    setCylinderRot(target);
+  };
+
+  useImperativeHandle(ref, () => ({ animateTo, launchSpin }));
 
   const onPointerDown = (e: React.PointerEvent) => {
     // Kill any in-flight CSS transition immediately.
@@ -625,25 +654,26 @@ function EqBandSlider({ label, value, onChange }: {
   const col = value > 0 ? "#00ff55" : value < 0 ? "#ff6b6b" : "rgba(255,255,255,0.5)";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "38px",
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "44px",
       touchAction: "none", WebkitTouchCallout: "none", userSelect: "none" }}>
       {/* dB readout */}
       <div style={{ fontSize: "10px", height: "15px", textAlign: "center", color: col, lineHeight: 1.5 }}>
         {value === 0 ? "0" : value > 0 ? `+${value}` : value}
       </div>
-      {/* Vertical track — pointer events handled here; touch-action:none on parent covers full column width */}
+      {/* Vertical track — full-width hit area for easy touch grab; visual track is centred inside */}
       <div ref={trackRef}
-        style={{ width: "6px", height: "80px", background: "rgba(255,255,255,0.1)", borderRadius: "3px",
-          position: "relative", cursor: "ns-resize" }}
+        style={{ width: "100%", height: "80px", position: "relative", cursor: "ns-resize" }}
         onPointerDown={e => { dragging.current = true; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); compute(e.clientY); }}
         onPointerMove={e => { if (dragging.current) compute(e.clientY); }}
         onPointerUp={() => { dragging.current = false; }}>
+        {/* Visual track bar — centred horizontally */}
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", width: "6px", height: "100%", background: "rgba(255,255,255,0.1)", borderRadius: "3px" }} />
         {/* 0 dB hairline */}
-        <div style={{ position: "absolute", left: "-4px", right: "-4px", top: "50%", height: "1px", background: "rgba(255,255,255,0.22)" }} />
+        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: "1px", background: "rgba(255,255,255,0.22)" }} />
         {/* Filled segment between centre and thumb */}
         {value !== 0 && (
           <div style={{
-            position: "absolute", left: 0, right: 0, borderRadius: "3px",
+            position: "absolute", left: "50%", transform: "translateX(-50%)", width: "6px", borderRadius: "3px",
             background: col,
             ...(value > 0
               ? { bottom: "50%", height: `${thumbPct - 50}%` }
@@ -654,7 +684,7 @@ function EqBandSlider({ label, value, onChange }: {
         <div style={{
           position: "absolute", left: "50%", transform: "translate(-50%, 50%)",
           bottom: `${thumbPct}%`,
-          width: "14px", height: "6px", borderRadius: "2px",
+          width: "18px", height: "10px", borderRadius: "3px",
           background: col,
           boxShadow: value !== 0 ? `0 0 6px ${col}` : "none",
         }} />
@@ -668,30 +698,28 @@ function EqBandSlider({ label, value, onChange }: {
 }
 
 const FAQ_ITEMS: { q: string; a: string }[] = [
-  { q: "how will the earvana app help relieve my tinnitus ringing?",
-    a: "the easiest and quickest way to get tinnitus relief is by 'masking', which is to apply an EXTERNAL sound to overshadow (mask) the INTERNAL ringing.\n\ntraditional approaches often use WHITE NOISE, which is a blast of all sound frequencies simultaneously.  while this can be effective in masking internal auditory ringing, the sound of white noise itself is known to increase stress and agitation, and is not particularly pleasant.\n\nthe earvana method replaces your internal ringing with audio that is not only pleasing to the ear, but calming to the mind;  the experience of being outdoors, in nature.\n\nbut these are not just nature recordings.\n\nthe earvana audio suite features rich soundtracks, digitally mastered with an unprecedented spatial realism.  the result is an audio 'experience' that so closely mimics the real thing, your brain will release the same neurotransmitters as if you are - in fact - standing on the coastal rocks as the waves lap beneath you, or at the edge of a mountain spring.  you can almost smell the fresh air.\n\nand it doesn't stop there.\n\nthese earvana soundscapes are selected and tailored for optimum tinnitus masking, with a unique added layer of treated audio targeting the most common tinnitus frequency bands.\n\nin simple terms, all of the earvana soundscapes not only can mask your internal ringing, but they will instantly calm you and nurture you with an audio experience you will want every day." },
-  { q: "my ringing is a constant high-pitch squeal. which earvana soundscapes will work best?",
-    a: "the short answer: all of them can be effective.\n\nif your tinnitus is in the high-frequency range (the most common), the ocean, rain, streams and winds are a great fit because they naturally carry sound energy at those frequencies.  also the sound of crickets carry specific high frequencies that can be effective.\n\nthe best advice is to go through all the categories and soundscapes and note which ones serve you the best." },
-  { q: "what is the diagnostic tool?",
-    a: "for your convenience, the on-board frequency-matching engine is a simple and quick way to help pinpoint your specific tinnitus frequency.\n\nthis is not meant to replace a proper diagnosis by a qualified medical professional, but it is provided for your exploration and understanding.\n\nthe diagnostic tool section can be invoked from the bottom control bar.\n\nclicking 'start test' will load the test tone page, where you can preview all possible tinnitus frequencies.  once you've identified the general 'range', then you can click the yellow blinking arrow to expand the list to narrow down your search.  Continue auditioning until you find the one you feel is closest to matching the pitch of your internal ringing.\n\nNOTE: experiment with different tone durations and volumes.  playing shorter bursts can often help to identify the correct pitch frequency.\n\nalso NOTE:  when the correct frequency is played, you may experience a short term/momentary relief of your ringing.  this is a common occurrence, and can be an excellent way to identify your specific frequency.  letting the player continue for a minute or more may extend the relief period." },
-  { q: "what is frequency-notching?",
-    a: "in some cases, long-term or permanent relief can be achieved with notching therapy.  this is when the patient/user listens to audio content (in headphones/earbuds) where their specific tinnitus frequency band has been notched out.\n\nover time, the brain fills in the missing frequency and the internal ringing can be suppressed.  the recommended duration is: 1-2 hours daily for 2-3 weeks.\n\nin the diagnostic pages, once you pinpoint your tinnitus frequency, you can choose to notch out that frequency.  settings will be remembered, and you can reset at any time by simply going back to the test page and clicking 'reset' next to that frequency.\n\nfurther research is needed and this is not intended to replace professional medical consultation or treatment." },
-  { q: "what is frequency-boosting?",
-    a: "same as frequency-notching (above), except the pinpointed frequency is added/boosted louder, rather than subtracted/removed.  You may find that boosting can be piercing at higher volumes, so you may have to listen, overall, quieter.\n\nthese are the exact opposite therapies, but both have had positive reports.  frequency notching has been studied more.\n\nReminder: neither of these therapies will be effective unless you listen with headphones or ear buds." },
-  { q: "how do I set the timer?",
+  { q: "How can earphoria™ help relieve my tinnitus ringing?",
+    a: "The easiest and quickest way to get tinnitus relief is by ‘masking’, which is to apply an EXTERNAL sound to overshadow (mask) the INTERNAL ringing.\n\nTraditional approaches often use WHITE NOISE, which is a blast of all sound frequencies simultaneously. While this can be effective in tinnitus masking, the sound of white noise itself can increase stress and agitation, and is not particularly pleasant.\n\nThe earphoria™ method aims to replace your internal ringing with audio that is not only pleasing to the ear, but calming to the mind; the experience of being outdoors, in nature, while achieving the same tinnitus masking effect.\n\nBut these are not just nature recordings.\n\nThe earphoria™ audio suite features rich soundscapes, digitally mastered with an unprecedented spatial realism. The result is an audio ‘experience’ that so closely mimics the real thing, your brain may release the same neurotransmitters as if you are — in fact — standing on the coastal rocks as the waves lap beneath you, or at the edge of a mountain spring.\n\nThese soundscapes are selected and tailored for optimum tinnitus masking, with a unique added layer of treated audio targeting the most common tinnitus frequency bands." },
+  { q: "My ringing is a constant high-pitch squeal. Which soundscapes will work best?",
+    a: "The short answer: all of them can be effective.\n\nIf your tinnitus is in the high-frequency range (the most common), the ocean, rain, streams and winds are a great fit because they naturally carry sound energy at those frequencies. Also the sound of crickets carry specific high frequencies that can be effective.\n\nThe best advice is to go through all the categories and soundscapes and note which ones serve you the best." },
+  { q: "What is RingMatch™?",
+    a: "For your convenience, the on-board frequency-matching tool is a simple and quick way to help you pinpoint your specific tinnitus frequency.\n\nThis is not meant to replace a proper diagnosis by a qualified medical professional, but it is provided for your exploration, experimentation, and understanding.\n\nThe RingMatch tool can be invoked from the bottom control bar.\n\nClicking ‘START TEST’ will load the test tone page, where you can preview the most common tinnitus frequencies. Once you’ve identified the general ‘range’, then you can click the yellow blinking arrow to expand the list to narrow down your search. Continue auditioning until you find the one you feel is closest to matching the pitch of your internal ringing.\n\nTIP: Experiment with different tone durations and volumes. Playing shorter bursts can often help to identify the correct pitch frequency.\n\nWhen the correct frequency is played, you may experience a short term/momentary relief of your ringing. This is a common occurrence, and can be helpful in pinpointing your specific frequency. Letting the player continue for a minute or more may extend the relief period." },
+  { q: "What is frequency-notching?",
+    a: "This is when the audio you are listening to (in this case, the nature recordings) is digitally processed to ‘remove’ or ‘notch’ a thin band of frequencies. This is EQ, but with an ultra narrow frequency band, and mostly unnoticeable.\n\nSome people report a longer-term or even permanent relief after explorations with frequency-notching.\n\nHeadphones/earbuds recommended.\nWe suggest that you Google ‘frequency notching, tinnitus’ for more detail on this process.\n\nThis is not - in any way - a guaranteed fix. Reports vary and there is not sufficient medical substantiation. Further research is needed and this is not intended to replace professional medical consultation or treatment.\n\nIf you choose to notch any frequency band, you can reset at any time by going back to the RingMatch™ section." },
+  { q: "How do I set the timer?",
     a: "Tap the duration bar at the bottom of the screen to select 1–10 hours, or tap the ∞ icon at the far right for continuous playback. A countdown timer appears above the bar while a track is playing." },
-  { q: "what are the recommended speakers for earvana audio?",
-    a: "the earvana soundscapes sound great on any playback system, but specifically, earbuds/airpods/headphones will provide the most effective experience for tinnitus sufferers.\n\nwhen playing through external speakers, the most immersive realism happens when your stereo speakers can be physically separated; the wider the better.\n\nBEST: in-ear/over-ear (even better with noise cancellation).\n\nGREAT: higher quality full-range external speakers, separated by 3+ feet.\n\nGOOD: laptop speakers\n\nDECENT: any device where the speakers are closer together (i.e., boombox or portable player or smart speaker or built-in phone/tablet speakers)." },
-  { q: "will this work over bluetooth wireless?",
-    a: "yes.  the earvana soundscapes work in both wired and wireless mode.\n\nconnect your airpods or wireless buds/phones before pressing play.  audio routes automatically through your device's active output.  depending on your device, clicking the speaker icon on the lower left of your screen can give you output options." },
-  { q: "earvana is playing but I don't hear any audio.",
-    a: "all devices are different, making it a challenge to get audio to the right place.\n\n1) stop the earvana playback, and then start again.\n\n2) make sure the earvana volume slider is up (showing green LEDs).\n\n3) make sure your device's volume is up (i.e., on the side of your device).\n\n4) it's likely that your device's audio output is going to a nearby bluetooth speaker or device.  to change this, stop the earvana playback and manage your output routing through your device's settings pages.  then restart the earvana playback.\n\n5) quit the earvana app and relaunch." },
-  { q: "can I play this through my TV system?",
-    a: "yes.  the method depends on your device's settings as well as your TV setup.\n\nin general, the following may help:\n\n1) on iOS (iPhone/iPad):  use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n\n2) on Android:  use Chromecast or bluetooth to your TV's audio system." },
+  { q: "What are the recommended speakers?",
+    a: "The earphoria™ soundscapes sound great on any playback system. If you are a tinnitus sufferer, you will find that using earbuds/airpods/headphones will provide the most effective experience.\n\nWhen playing through external speakers, the most immersive realism happens when your stereo speakers can be physically separated; the wider the better.\n\nFor example: When playing this directly from your smartphone, (and assuming your device is not set to MONO playback), you will notice a big difference in the stereo field by simply rotating your phone 90 degrees to landscape mode.\n\nThe closer the speakers are to your ears, the more immersive and effective." },
+  { q: "Will this work over bluetooth wireless?",
+    a: "Yes. The soundscapes play back in both wired and wireless mode.\n\nConnect your AirPods or wireless buds/headphones before pressing play. Audio routes automatically through your device’s active output." },
+  { q: "I press PLAY, the button turns green, but I don’t hear any audio.",
+    a: "All devices are different, and sometimes it can be a challenge to get audio to the right place.\n\n1) Stop the playback, and then start again.\n\n2) On the right side of the screen, make sure the LED volume slider is up (showing green LEDs).\n\n3) Make sure your device’s physical volume is up (i.e., on the side edge of your device).\n\n4) It’s likely that your device’s audio output is going to a nearby bluetooth speaker or device. To change this, stop playback and manage your output routing through your device’s settings pages. Then restart the playback.\n\n5) When all else fails, quit the app and relaunch." },
+  { q: "Can I play this through my TV system?",
+    a: "Yes. The method depends on your device’s settings as well as your TV setup.\n\nIn general, the following may help:\n\n1) on iOS (iPhone/iPad): use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n\n2) on Android: use Chromecast or bluetooth to your TV’s audio system." },
   { q: "How can I cancel my subscription?",
-    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find Tinnitus Relief by Earvana and tap Cancel. Access continues through the end of your current billing period." },
+    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find Tinnitus Relief and tap Cancel. Access continues through the end of your current billing period." },
   { q: "Will there be new tracks added in the future?",
-    a: "Yes — new sound categories and tracks are in production and delivered automatically to all subscribers at no additional charge." },
+    a: "Yes — new categories and soundscapes are in production and will be delivered automatically to subscribers at no additional charge." },
 ];
 
 const PRIVACY_POLICY = `Effective: May 2026
@@ -699,7 +727,7 @@ const PRIVACY_POLICY = `Effective: May 2026
 Silverman Music Inc. ("we") is committed to protecting your privacy.
 
 DATA WE COLLECT
-Tinnitus Relief by Earvana does not collect, transmit, or store any personal information. No account or login is required. All preferences are stored locally on your device only and are never sent to our servers.
+earphoria™ does not collect, transmit, or store any personal information. No account or login is required. All preferences are stored locally on your device only and are never sent to our servers.
 
 SUBSCRIPTIONS
 Subscription billing is managed entirely by Apple App Store or Google Play. We do not access your payment information. Please refer to Apple's or Google's privacy policies for details.
@@ -711,11 +739,11 @@ CHILDREN'S PRIVACY
 This app does not knowingly collect data from children under 13.
 
 CONTACT
-info@earvana.org`;
+info@sonic-space.net`;
 
 const TERMS_OF_SERVICE = `Effective: May 2026
 
-By using Tinnitus Relief by Earvana ("the App") you agree to these Terms.
+By using earphoria™ ("the App") you agree to these Terms.
 
 LICENSE
 Silverman Music Inc. grants you a personal, non-transferable, non-exclusive license to use the App for personal, non-commercial purposes only.
@@ -778,6 +806,8 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
   const [reviewText,  setReviewText]  = useState("");
   const [reviewSent,  setReviewSent]  = useState(false);
   const [xFlash,      setXFlash]      = useState(false);
+  const [subStatus,   setSubStatus]   = useState<string | null>(null);
+  const [subBusy,     setSubBusy]     = useState(false);
 
   const handleClose = () => { setXFlash(true); setTimeout(() => { setXFlash(false); onClose(); }, 200); };
 
@@ -791,6 +821,65 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
     if (!reviewText.trim()) return;
     setReviewSent(true); setReviewText("");
     setTimeout(() => setReviewSent(false), 3500);
+  };
+
+  // Google Play Billing — monthly subscription (earphoria499 / monthly-plan)
+  useEffect(() => {
+    if (!isPlayBillingAvailable) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await EarphoriaBilling.initialize();
+        const status = await EarphoriaBilling.getSubscriptionStatus();
+        if (!cancelled) {
+          setSubStatus(status.isSubscribed ? "active" : "inactive");
+        }
+      } catch {
+        /* billing optional at UI layer */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSubscribe = async () => {
+    if (!isPlayBillingAvailable || subBusy) return;
+    setSubBusy(true);
+    try {
+      await EarphoriaBilling.getProductDetails();
+      const result = await EarphoriaBilling.purchase();
+      if (result.pending) {
+        setSubStatus("pending");
+        alert("Payment is pending. Access unlocks when Google Play confirms the purchase.");
+      } else {
+        setSubStatus("active");
+        alert("Subscription activated. Thank you!");
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/cancel/i.test(msg)) alert(msg || "Purchase failed");
+    } finally {
+      setSubBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (isPlayBillingAvailable) {
+      if (subBusy) return;
+      setSubBusy(true);
+      try {
+        const status = await EarphoriaBilling.restore();
+        setSubStatus(status.isSubscribed ? "active" : "inactive");
+        alert(status.isSubscribed
+          ? "Subscription restored."
+          : "No active Google Play subscription found for this account.");
+      } catch (e: unknown) {
+        alert(e instanceof Error ? e.message : "Restore failed");
+      } finally {
+        setSubBusy(false);
+      }
+      return;
+    }
+    alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.");
   };
 
   return (
@@ -808,7 +897,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
         }}>✕</button>
 
       {/* Panel */}
-      <div className="relative" style={{ width: "88%", maxWidth: "390px", height: "88svh", maxHeight: "760px" }}>
+      <div className="relative" style={{ width: "88%", maxWidth: "88cqw", height: "min(88svh, calc(88cqw * 2.01))" }}>
         <img src={img("settings-pane.png")} alt=""
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
 
@@ -876,16 +965,30 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
             {/* Items — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
+              {isPlayBillingAvailable && subStatus && (
+                <div style={{ padding: "4px 0 10px", fontSize: "13px",
+                  color: subStatus === "active" ? "#00ee88" : "rgba(255,255,255,0.45)" }}>
+                  status: {subStatus === "active" ? "active" : subStatus === "pending" ? "pending" : "not subscribed"}
+                </div>
+              )}
               {([
-                { label: "restore on a new device",
-                  action: () => alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.") },
+                ...(isPlayBillingAvailable
+                  ? [{ label: subBusy ? "please wait…" : "subscribe — monthly", action: handleSubscribe }]
+                  : []),
+                { label: "restore on a new device", action: handleRestore },
                 { label: "cancel my subscription",
-                  action: () => window.open("https://support.apple.com/en-us/118428", "_blank") },
+                  action: () => window.open(
+                    isPlayBillingAvailable
+                      ? "https://play.google.com/store/account/subscriptions"
+                      : "https://support.apple.com/en-us/118428",
+                    "_blank"
+                  ) },
               ] as { label: string; action: () => void }[]).map((item, i, arr) => (
                 <button key={i} onClick={item.action} className="block w-full text-left"
-                  style={{ padding: "9px 0", background: "none", border: "none", cursor: "pointer",
+                  disabled={subBusy}
+                  style={{ padding: "9px 0", background: "none", border: "none", cursor: subBusy ? "default" : "pointer",
                     borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
-                    color: "rgba(255,255,255,0.78)", fontSize: "14px" }}>
+                    color: "rgba(255,255,255,0.78)", fontSize: "14px", opacity: subBusy ? 0.55 : 1 }}>
                   <span style={{ color: "#00c8ff", marginRight: "8px" }}>{">"}</span>{item.label}
                 </button>
               ))}
@@ -900,7 +1003,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                 ? <div style={{ color: "#00ff55", fontSize: "15px", padding: "4px 0" }}>Thank you for your feedback! ✓</div>
                 : <>
                     <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} rows={4}
-                      placeholder="Share your experience with Tinnitus Relief by Earvana…"
+                      placeholder="Share your experience with earphoria™…"
                       style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.18)",
                         borderRadius: "6px", color: "rgba(255,255,255,0.88)", fontSize: "14px",
                         padding: "8px", resize: "none", boxSizing: "border-box" }} />
@@ -970,10 +1073,10 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           <SettingsRow label="about" isOpen={openSection === "about"} onToggle={() => toggleSection("about")}>
             <div style={{ paddingLeft: "14px", paddingTop: "4px", paddingBottom: "8px" }}>
               <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "15px", letterSpacing: "0.04em", marginBottom: "6px" }}>
-                earvana: tinnitus relief
+                earphoria™
               </div>
               <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "10px" }}>
-                v2.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
+                v1.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
               </div>
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", letterSpacing: "0.04em", marginBottom: "3px" }}>
                 composed and produced by:&nbsp;&nbsp;jay oliver
@@ -1005,6 +1108,12 @@ function Home() {
   // Always read latest engine from a ref so START TEST can't close over stale tracks state
   const engineRef = useRef(engine);
   engineRef.current = engine;
+
+  // Fire the launch spin shortly after mount — matches the carouselLaunch CSS delay (visual only)
+  useEffect(() => {
+    const t = setTimeout(() => carouselRef.current?.launchSpin(), 350);
+    return () => clearTimeout(t);
+  }, []);
 
   const openDiag = useCallback(() => {
     setDiagOpen(true);
@@ -1235,16 +1344,16 @@ function Home() {
       style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", touchAction: "none", overscrollBehavior: "none", overflow: "visible" }}>
 
       {/* Full-screen background — bleeds under status bar and home indicator
-          so there is no black gap at the bottom of the iPhone. */}
+          so there is no black gap at the bottom of the iPhone / Android 16. */}
       <img src={img("evTR_bg_1784150368553.png")} alt=""
         className="absolute z-0 pointer-events-none"
         style={{
-          top: "calc(-1 * env(safe-area-inset-top))",
+          top: `calc(-1 * ${SAFE_TOP})`,
           left: 0,
           right: 0,
-          bottom: "calc(-1 * env(safe-area-inset-bottom))",
+          bottom: `calc(-1 * ${SAFE_BOTTOM})`,
           width: "100%",
-          height: "calc(100% + env(safe-area-inset-top) + env(safe-area-inset-bottom))",
+          height: `calc(100% + ${SAFE_TOP} + ${SAFE_BOTTOM})`,
           objectFit: "cover",
         }}
         draggable={false}
@@ -1277,13 +1386,17 @@ function Home() {
       {!settingsOpen && !diagOpen && (
         <>
           {/* Top Banner — pad under status bar; bg already bleeds behind it */}
-          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-            <img src={img("TopBanner11_1784158209757.png")} alt="tinnitus relief by earvana with AUDIO-MERSIVE technology"
+          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: SAFE_TOP }}>
+            <img src={img("TopBanner20_1786146771580.png")} alt="earphoria tinnitus relief with RingMatch technology"
               className="w-full h-auto block" draggable={false} />
           </div>
 
-          {/* Carousel */}
-          <div className="relative flex-shrink-0 z-10" style={{ overflow: "visible" }}>
+          {/* Carousel — scales + spins in on launch (visual only) */}
+          <div className="relative flex-shrink-0 z-10"
+            style={{
+              overflow: "visible",
+              animation: "carouselLaunch 0.55s linear 0.3s both",
+            }}>
             <div className="pb-1" style={{ paddingLeft: "8px", paddingRight: "8px", marginTop: "clamp(2px,0.8vh,8px)" }}>
               <CylinderCarousel
                 ref={carouselRef}
@@ -1318,12 +1431,8 @@ function Home() {
             </div>
           </div>
 
-          {/* Bottom controls — sit above home indicator; footer graphic fills
-              the safe-area padding so no black gap appears under the dock. */}
-          <div className="relative z-10 flex-shrink-0" style={{
-            // Lift controls above the home indicator; footer art fills this pad.
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          }}>
+          {/* Bottom controls — bar graphic fills safe-area; icons pad above home indicator. */}
+          <div className="z-10 flex-shrink-0" style={{ position: "relative" }}>
             {/* Volume meter — floats above this cluster, anchored to its top edge */}
             <VolumeMeter
               volume={engine.masterVolume}
@@ -1345,7 +1454,12 @@ function Home() {
             </div>
 
             {/* Icon row — Diagnostics pinned left, Sprocket pinned right,
-                Play+EQ absolutely centred as a pair. */}
+                Play+EQ absolutely centred as a pair.
+                Bar wrapper extends into safe area so CPanl_bar_btm fills to home indicator. */}
+            <div className="relative" style={{ paddingBottom: SAFE_BOTTOM }}>
+              <img src={img("CPanl_bar_btm.png")} alt=""
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ objectFit: "fill" }} draggable={false} />
             <div className="relative flex items-center"
               style={{ paddingLeft: "38px", paddingRight: "clamp(12px,3cqw,22px)", minHeight: "clamp(88px,14dvh,110px)", paddingTop: "5px", paddingBottom: "5px" }}>
 
@@ -1371,7 +1485,7 @@ function Home() {
                   >
                     {/* Graphic fills the button — icon is baked into the left ~40% */}
                     <img
-                      src={useOnCLK ? img("hp_diag_button_ON_1784061017107.png") : img("hp_diag_button_norm_1784061017107.png")}
+                      src={useOnCLK ? img("ringmatch_butt_ON.png") : img("ringmatch_butt_norm.png")}
                       alt="Diagnostics"
                       style={{ width: "100%", height: "auto", display: "block" }}
                       draggable={false}
@@ -1443,11 +1557,7 @@ function Home() {
                   alt="Settings" className="w-full h-auto" draggable={false} />
               </button>
             </div>{/* end icon row */}
-
-            {/* Footer dock graphic — fills outer block including safe-area padding */}
-            <img src={img("CPanl_bar_btm.png")} alt=""
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ objectFit: "fill", zIndex: -1 }} draggable={false} />
+            </div>{/* end bar wrapper */}
           </div>
         </>
       )}

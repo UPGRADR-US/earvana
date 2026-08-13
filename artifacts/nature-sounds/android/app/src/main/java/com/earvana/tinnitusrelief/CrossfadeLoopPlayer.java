@@ -25,6 +25,16 @@ public class CrossfadeLoopPlayer {
     private static final String TAG = "CrossfadeLoopPlayer";
     private static final float[] EQ_FREQS = {100f, 330f, 1000f, 3300f, 10000f};
 
+    // Brickwall ceiling — iOS AVAudioEngine stays in float through the HAL, so
+    // EQ boosts don't hard-clip. MediaPlayer + integer effects on Android will.
+    private static final float LIMITER_ATTACK_MS = 1f;
+    private static final float LIMITER_RELEASE_MS = 60f;
+    private static final float LIMITER_RATIO = 50f;
+    private static final float LIMITER_THRESHOLD_DB = -1f;
+    private static final float LIMITER_POST_GAIN_DB = 0f;
+    private static final float THERAPY_NOTCH_DB = -24f;
+    private static final float THERAPY_BOOST_DB = 12f;
+
     private final Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -64,7 +74,26 @@ public class CrossfadeLoopPlayer {
     }
 
     private float outputLevel() {
-        return Math.max(0f, Math.min(1f, trackVolume * masterVolume * fadeMultiplier * timerFadeLevel));
+        return Math.max(0f, Math.min(1f,
+                trackVolume * masterVolume * fadeMultiplier * timerFadeLevel * fallbackHeadroom()));
+    }
+
+    /**
+     * When DynamicsProcessing is unavailable (API &lt; 28 or the OEM rejected it),
+     * the graphic Equalizer has no limiter. Drop MediaPlayer gain by the largest
+     * EQ/therapy boost so peaks stay under 0 dBFS.
+     */
+    private float fallbackHeadroom() {
+        if (dynamics != null) return 1f;
+        float maxBoostDb = 0f;
+        for (float g : eqGains) {
+            if (g > maxBoostDb) maxBoostDb = g;
+        }
+        if (boostFreq != null && THERAPY_BOOST_DB > maxBoostDb) {
+            maxBoostDb = THERAPY_BOOST_DB;
+        }
+        if (maxBoostDb <= 0f) return 1f;
+        return (float) Math.pow(10.0, -maxBoostDb / 20.0);
     }
 
     private MediaPlayer activePlayer() {
@@ -122,14 +151,14 @@ public class CrossfadeLoopPlayer {
                 sourcePath = file.getAbsolutePath();
 
                 // Prepare both players off the main thread (local file — usually fast)
-                MediaPlayer a = createPlayer();
-                MediaPlayer b = createPlayer();
+                MediaPlayer a = createPlayer(0);
                 a.prepare();
                 if (released) {
                     releasePlayer(a);
-                    releasePlayer(b);
                     return;
                 }
+                // Same session so EQ + limiter cover the idle player during crossfade.
+                MediaPlayer b = createPlayer(a.getAudioSessionId());
                 b.prepare();
                 if (released) {
                     releasePlayer(a);
@@ -195,12 +224,19 @@ public class CrossfadeLoopPlayer {
         }, "Crossfade-Prepare").start();
     }
 
-    private MediaPlayer createPlayer() throws IOException {
+    private MediaPlayer createPlayer(int sessionId) throws IOException {
         MediaPlayer mp = new MediaPlayer();
         mp.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build());
+        if (sessionId != 0) {
+            try {
+                mp.setAudioSessionId(sessionId);
+            } catch (Exception e) {
+                Log.w(TAG, "setAudioSessionId failed", e);
+            }
+        }
         mp.setDataSource(sourcePath);
         mp.setLooping(false);
         return mp;
@@ -468,23 +504,35 @@ public class CrossfadeLoopPlayer {
         if (audioSessionId == 0) return;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                // 5 parametric-ish bands + room for therapy peak
-                DynamicsProcessing.Config.Builder cfg = new DynamicsProcessing.Config.Builder(
-                        0 /*variant*/,
-                        1 /*channels*/,
-                        true, 5,  // preEq
-                        true, 5,  // mbc
-                        true, 5,  // postEq
-                        true      // limiter
-                );
-                dynamics = new DynamicsProcessing(0, audioSessionId, cfg.build());
-                dynamics.setEnabled(true);
-                applyEqToEffects();
-                return;
-            } catch (Throwable t) {
-                Log.w(TAG, "DynamicsProcessing unavailable, falling back to Equalizer", t);
-                dynamics = null;
+            // Prefer stereo + dedicated therapy band. Some OEMs reject that
+            // shape — retry a simpler 5-band mono graph before giving up.
+            int[][] shapes = {
+                    {2, 6},
+                    {1, 5},
+            };
+            for (int[] shape : shapes) {
+                try {
+                    DynamicsProcessing.Config.Builder cfg = new DynamicsProcessing.Config.Builder(
+                            DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                            shape[0],
+                            true, shape[1], // preEq only
+                            false, 1,       // mbc unused (defaults colour/distort on some Motos)
+                            false, 1,       // postEq unused — applying EQ twice doubled every boost
+                            true            // limiter
+                    );
+                    dynamics = new DynamicsProcessing(0, audioSessionId, cfg.build());
+                    dynamics.setEnabled(true);
+                    applyLimiter();
+                    applyEqToEffects();
+                    return;
+                } catch (Throwable t) {
+                    Log.w(TAG, "DynamicsProcessing config " + shape[0] + "ch/" + shape[1]
+                            + "band failed", t);
+                    if (dynamics != null) {
+                        try { dynamics.release(); } catch (Exception ignored) {}
+                        dynamics = null;
+                    }
+                }
             }
         }
 
@@ -498,35 +546,59 @@ public class CrossfadeLoopPlayer {
         }
     }
 
+    private void applyLimiter() {
+        if (dynamics == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return;
+        try {
+            DynamicsProcessing.Limiter limiter = new DynamicsProcessing.Limiter(
+                    true,  // inUse
+                    true,  // enabled
+                    0,     // linkGroup — stereo channels duck together
+                    LIMITER_ATTACK_MS,
+                    LIMITER_RELEASE_MS,
+                    LIMITER_RATIO,
+                    LIMITER_THRESHOLD_DB,
+                    LIMITER_POST_GAIN_DB
+            );
+            dynamics.setLimiterAllChannelsTo(limiter);
+        } catch (Throwable t) {
+            Log.w(TAG, "apply limiter failed", t);
+        }
+    }
+
     private void applyEqToEffects() {
         if (dynamics != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             try {
-                for (int i = 0; i < 5; i++) {
+                int preBands = 5;
+                try {
+                    preBands = dynamics.getPreEqByChannelIndex(0).getBandCount();
+                } catch (Throwable ignored) {}
+                int eqCount = Math.min(5, preBands);
+                for (int i = 0; i < eqCount; i++) {
                     DynamicsProcessing.EqBand band = new DynamicsProcessing.EqBand(
                             true, EQ_FREQS[i], eqGains[i]);
                     dynamics.setPreEqBandAllChannelsTo(i, band);
-                    dynamics.setPostEqBandAllChannelsTo(i, band);
                 }
-                // Use band 0 post as therapy if notch/boost — coarse but works on more OEMs
-                // Prefer dedicated gain on nearest band
-                if (notchFreq != null) {
-                    int idx = nearestBand(notchFreq);
-                    DynamicsProcessing.EqBand cut = new DynamicsProcessing.EqBand(
-                            true, notchFreq, -24f);
-                    dynamics.setPostEqBandAllChannelsTo(idx, cut);
-                } else if (boostFreq != null) {
-                    int idx = nearestBand(boostFreq);
-                    DynamicsProcessing.EqBand boost = new DynamicsProcessing.EqBand(
-                            true, boostFreq, 12f);
-                    dynamics.setPostEqBandAllChannelsTo(idx, boost);
+                if (preBands > 5) {
+                    DynamicsProcessing.EqBand therapy;
+                    if (notchFreq != null) {
+                        therapy = new DynamicsProcessing.EqBand(true, notchFreq, THERAPY_NOTCH_DB);
+                    } else if (boostFreq != null) {
+                        therapy = new DynamicsProcessing.EqBand(true, boostFreq, THERAPY_BOOST_DB);
+                    } else {
+                        therapy = new DynamicsProcessing.EqBand(false, 1000f, 0f);
+                    }
+                    dynamics.setPreEqBandAllChannelsTo(5, therapy);
+                } else if (notchFreq != null || boostFreq != null) {
+                    int idx = nearestEqBand(notchFreq != null ? notchFreq : boostFreq);
+                    float gain = notchFreq != null ? THERAPY_NOTCH_DB : THERAPY_BOOST_DB;
+                    float freq = notchFreq != null ? notchFreq : boostFreq;
+                    dynamics.setPreEqBandAllChannelsTo(idx,
+                            new DynamicsProcessing.EqBand(true, freq, gain));
                 }
             } catch (Throwable t) {
                 Log.w(TAG, "apply DynamicsProcessing EQ failed", t);
             }
-            return;
-        }
-
-        if (equalizer != null) {
+        } else if (equalizer != null) {
             try {
                 short bands = equalizer.getNumberOfBands();
                 short[] range = equalizer.getBandLevelRange(); // milliBel
@@ -554,14 +626,18 @@ public class CrossfadeLoopPlayer {
                 Log.w(TAG, "apply Equalizer failed", t);
             }
         }
+        applyOutputVolumeToActive();
     }
 
-    private int nearestBand(float freq) {
+    private int nearestEqBand(float freq) {
         int nearest = 0;
         float best = Float.MAX_VALUE;
         for (int i = 0; i < 5; i++) {
             float d = Math.abs(EQ_FREQS[i] - freq);
-            if (d < best) { best = d; nearest = i; }
+            if (d < best) {
+                best = d;
+                nearest = i;
+            }
         }
         return nearest;
     }

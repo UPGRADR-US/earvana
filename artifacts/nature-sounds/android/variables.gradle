@@ -1,4 +1,6 @@
 ext {
+    // Google Play requires targetSdk 36 (Android 16) for new apps / updates.
+    // Build 17 ships with these levels. minSdk 24 keeps existing device coverage.
     minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36

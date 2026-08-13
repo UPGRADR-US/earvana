@@ -1,7 +1,7 @@
 {
-  "name": "earvana: tinnitus relief",
-  "short_name": "earvana",
-  "description": "Ambient nature sound mixer for tinnitus relief by Earvana.",
+  "name": "earphoria™ — tinnitus relief",
+  "short_name": "earphoria",
+  "description": "Immersive nature soundscapes for tinnitus relief — powered by RingMatch™ frequency-matching technology.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,7 +9,7 @@
   "theme_color": "#0a1f1a",
   "icons": [
     {
-      "src": "/EV-LOGO-tn-1d_1784222692182.jpg",
+      "src": "/icon-ringmatch.jpg",
       "sizes": "1024x1024",
       "type": "image/jpeg",
       "purpose": "any maskable"

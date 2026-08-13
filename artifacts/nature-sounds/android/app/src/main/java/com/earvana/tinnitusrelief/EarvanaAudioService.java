@@ -23,9 +23,11 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -33,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Foreground media service — mirrors iOS EarvanaAudioPlugin + CrossfadeLoopPlayer.
  * Streams audio (no full-file PCM decode) so track switches / stop are responsive.
  */
-@SuppressWarnings({"deprecation", "unchecked"})
 public class EarvanaAudioService extends Service {
     private static final String TAG = "EarvanaAudioService";
     private static final String CHANNEL_ID = "earvana_audio_channel";
@@ -79,9 +80,9 @@ public class EarvanaAudioService extends Service {
     }
 
     private final AudioManager.OnAudioFocusChangeListener afChangeListener = focusChange -> {
-        if (focusChange == AudioManager.AUDIOFOCUS_LOSS
-                || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-            pauseActiveTrack();
+        switch (focusChange) {
+            case AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseActiveTrack();
+            default -> {}
         }
     };
 
@@ -90,9 +91,11 @@ public class EarvanaAudioService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action == null) return;
-            if (ACTION_PAUSE.equals(action)) pauseActiveTrack();
-            else if (ACTION_PLAY.equals(action)) resumeActiveTrack();
-            else if (ACTION_STOP.equals(action)) stopAllTracks();
+            switch (action) {
+                case ACTION_PAUSE -> pauseActiveTrack();
+                case ACTION_PLAY -> resumeActiveTrack();
+                case ACTION_STOP -> stopAllTracks();
+            }
         }
     };
 
@@ -109,11 +112,7 @@ public class EarvanaAudioService extends Service {
         filter.addAction(ACTION_PLAY);
         filter.addAction(ACTION_PAUSE);
         filter.addAction(ACTION_STOP);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(receiver, filter);
-        }
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -322,7 +321,7 @@ public class EarvanaAudioService extends Service {
 
     public void setVolume(String trackId, float volume) {
         activeTrackVolume = volume;
-        if (loopPlayer != null && trackId != null && trackId.equals(activeTrackId)) {
+        if (loopPlayer != null && trackId != null && Objects.equals(trackId, activeTrackId)) {
             loopPlayer.setVolume(volume);
         }
     }
@@ -369,8 +368,7 @@ public class EarvanaAudioService extends Service {
         }
         durationThread = new Thread(() -> {
             try {
-                float fadeDuration = Math.min(60.0f, durationSeconds * 0.1f);
-                if (durationSeconds > 600) fadeDuration = 60.0f;
+                float fadeDuration = (durationSeconds > 600) ? 60.0f : Math.min(60.0f, durationSeconds * 0.1f);
                 float delay = Math.max(0.0f, durationSeconds - fadeDuration);
                 Thread.sleep((long) (delay * 1000));
                 if (loopPlayer != null && loopPlayer.isPlaying()) startFadeOut(fadeDuration);
@@ -409,7 +407,7 @@ public class EarvanaAudioService extends Service {
 
     public boolean isTrackPlaying(String trackId) {
         return trackId != null
-                && trackId.equals(activeTrackId)
+                && Objects.equals(trackId, activeTrackId)
                 && loopPlayer != null
                 && loopPlayer.isPlaying();
     }
@@ -482,7 +480,7 @@ public class EarvanaAudioService extends Service {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        String title = rawTitle != null ? rawTitle : "Earvana Relief";
+        String title = (rawTitle != null) ? rawTitle : "Earvana Relief";
         String subtitle = isPlaying ? "Tinnitus Relief" : "Loading…";
         if (title.contains(": ")) {
             String[] parts = title.split(": ", 2);

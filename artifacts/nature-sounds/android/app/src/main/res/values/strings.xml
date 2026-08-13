@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">earvana</string>
-    <string name="title_activity_main">earvana</string>
+    <string name="app_name">earphoria</string>
+    <string name="title_activity_main">earphoria</string>
     <string name="package_name">com.earvana.tinnitusrelief</string>
     <string name="custom_url_scheme">com.earvana.tinnitusrelief</string>
 </resources>

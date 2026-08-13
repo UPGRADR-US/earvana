@@ -1,14 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { EarvanaAudio, isNativeAudio } from "./plugins/EarvanaAudio";
-import freqTestP1Img from "@assets/freqtest_p1_1784147052188.png";
-import freqTestP2Img from "@assets/freqtest_p2_1784147052188.png";
-import freqTestPane  from "@assets/freqtest_emptypane_1784147052188.png";
+import freqTestPane from "@assets/freqtest_emptypane_1784147052188.png";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
 
-// Eagerly decode all panel images so they're cached before the user navigates to each page
-const _PRELOAD_IMGS = [freqTestP1Img, freqTestP2Img, freqTestPane].map(src => {
+// Eagerly decode pane image used by confirm/stat popups
+const _PRELOAD_IMGS = [freqTestPane].map(src => {
   const im = new window.Image();
   im.src = src;
   return im;
@@ -17,6 +15,26 @@ const _PRELOAD_IMGS = [freqTestP1Img, freqTestP2Img, freqTestPane].map(src => {
 const KALLISTO: React.CSSProperties = { fontFamily: "'Figtree', sans-serif", transform: "scaleY(0.9)", transformOrigin: "center center" };
 const WIPE_MS    = 340;
 const TONE_MAX_GAIN = 0.120;
+
+// ─── Card background shared between p1 and p2 ─────────────────────────────────
+
+const CARD_BG: React.CSSProperties = {
+  position: "absolute", inset: 0,
+  borderRadius: 22,
+  background: "linear-gradient(180deg, rgba(31,45,41,0.30) 0%, rgba(25,34,32,0.30) 55%, rgba(21,30,28,0.30) 100%)",
+  boxShadow: "inset 0 0 0 1.5px rgba(0,165,140,0.38), 0 0 38px rgba(0,130,110,0.55), 0 0 90px rgba(0,100,85,0.28)",
+};
+
+// ─── Golden divider line ───────────────────────────────────────────────────────
+
+function GoldenDivider({ style }: { style?: React.CSSProperties }) {
+  return (
+    <div style={{ width: "100%", flexShrink: 0, ...style }}>
+      <img src={img("yellow_divider.png")} alt="" draggable={false}
+        style={{ display: "block", width: "100%", height: "auto" }} />
+    </div>
+  );
+}
 
 // ─── Frequency bands ──────────────────────────────────────────────────────────
 
@@ -297,12 +315,12 @@ export function DiagnosticsPanel({
   const [expandedBand,   setExpandedBand]   = useState<string | null>(null);
   const [toneVolume,     setToneVolume]     = useState(0.25);
   const [startPressed,   setStartPressed]   = useState(false);
-  const [p1ImgLoaded,    setP1ImgLoaded]    = useState(false);
-  const [p2ImgLoaded,    setP2ImgLoaded]    = useState(false);
   const [backPressed,    setBackPressed]    = useState(false);
   const [p2Anchored,     setP2Anchored]     = useState(false);
   const [blinkingBand,   setBlinkingBand]   = useState<string | null>(null);
   const [statDismissing, setStatDismissing] = useState(false);
+  // Caution overlay: shows once when entering page 2 via START TEST
+  const [showCaution,    setShowCaution]    = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -325,7 +343,7 @@ export function DiagnosticsPanel({
   const gRef   = useRef<GainNode | null>(null);
 
   const killOsc = useCallback(() => {
-    // Native iOS: sine tones via DiagnosticTonePlayer (AVAudioEngine), not WKWebView Web Audio.
+    // Native iOS/Android: sine tones via DiagnosticTonePlayer / native engine, not WKWebView Web Audio.
     // Web Audio here would fail silently / fight the therapy engine and stop nature playback.
     if (isNativeAudio) {
       EarvanaAudio.stopTestTone().catch(() => {});
@@ -411,7 +429,7 @@ export function DiagnosticsPanel({
     else { onBoost(freq); onNotch(null); }
   };
 
-  // "repeat test >>" → go back to p2 (pause nature audio again for pure-tone listening)
+  // "repeat test >>" → go back to p2 (stop nature audio again for pure-tone listening)
   const handleRepeatTest = () => {
     setStatDismissing(true);
     setTimeout(() => {
@@ -479,6 +497,11 @@ export function DiagnosticsPanel({
           0%   { transform: scale(1);    opacity: 1; }
           100% { transform: scale(0.05); opacity: 0; }
         }
+        @keyframes cautionIn {
+          0%   { transform: scale(0.77); opacity: 0.0; }
+          52%  { transform: scale(0.79); opacity: 0.4; }
+          100% { transform: scale(1.00); opacity: 1.0; }
+        }
       `}</style>
 
       {/* Blurred background */}
@@ -494,6 +517,7 @@ export function DiagnosticsPanel({
         bottom: "clamp(48px,7vh,70px)",
         filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
         animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
+        display: page === "confirm" ? "none" : undefined,
       }}>
 
         {/* Carousel container */}
@@ -512,22 +536,92 @@ export function DiagnosticsPanel({
           }}>✕</button>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE 1 — freqtest_p1 instructions + START TEST button
+              PAGE 1 — "Find Your Tinnitus Pitch" instructions (code-rendered)
           ════════════════════════════════════════════════════════════════════ */}
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p1X})`, transition: wipeTx, willChange: "transform" }}>
-            <img src={freqTestP1Img} alt=""
-              style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false}
-              onLoad={() => setP1ImgLoaded(true)} />
 
+            {/* Card background */}
+            <div style={CARD_BG} />
+
+            {/* Content */}
+            <div style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column",
+              padding: "clamp(44px,9svh,62px) clamp(22px,5.5cqw,32px) clamp(32px,7svh,50px)",
+              overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none",
+            }}>
+
+              {/* Header */}
+              <div style={{ textAlign: "center", marginBottom: "clamp(14px,3.5svh,22px)", flexShrink: 0 }}>
+                <div style={{
+                  ...KALLISTO, fontWeight: 400,
+                  fontSize: "clamp(10px,2.6cqw,13px)",
+                  letterSpacing: "0.22em",
+                  color: "#ffcc00",
+                  textTransform: "uppercase",
+                  marginBottom: 2,
+                }}>Find/Match Your</div>
+                <div style={{
+                  ...KALLISTO, fontWeight: 800,
+                  fontSize: "clamp(20px,5.2cqw,26px)",
+                  letterSpacing: "0.06em",
+                  color: "#ffcc00",
+                  textTransform: "uppercase",
+                }}>Tinnitus Pitch</div>
+              </div>
+
+              {/* Note */}
+              <p style={{
+                ...KALLISTO, fontWeight: 300, fontStyle: "italic",
+                fontSize: "clamp(10px,2.5cqw,12px)",
+                color: "rgba(255,255,255,0.62)",
+                textAlign: "center",
+                lineHeight: 1.5,
+                marginBottom: "clamp(16px,3.8svh,24px)",
+                flexShrink: 0,
+              }}>
+                NOTE: this is provided as a self-guided personalization tool—not a hearing test or medical diagnosis.
+              </p>
+
+              {/* Numbered steps */}
+              <ol style={{ listStyle: "none", padding: 0, margin: 0, flex: 1, display: "flex", flexDirection: "column", gap: "clamp(8px,2svh,13px)" }}>
+                {[
+                  { n: 1, text: <>Use earbuds or headphones in a quiet space.</> },
+                  { n: 2, text: <>Start with <u>very low volume</u> and adjust to match the level of your internal ringing.</> },
+                  { n: 3, text: <>Audition each frequency band, clicking the arrow to expand and fine-tune.</> },
+                  { n: 4, text: <>Start with short bursts, and notice which one(s) exhibit a change in your internal ringing. When you hit your precise frequency, you may notice a temporary relief.</> },
+                  { n: 5, text: <>Once you feel you've matched your ringing frequency, experiment with longer tones, as this may help extend the temporary relief period.</> },
+                  { n: 6, text: <>Optional:&nbsp; Click "<strong style={{ color: "#ffcc00", fontWeight: 700 }}>PROCESS</strong>" and follow the prompts for a possible long-term&nbsp; solution.<br /><span style={{ color: "#ffcc00", fontStyle: "italic", fontWeight: 300, fontSize: "clamp(9px,2.2cqw,11px)" }}>• (see FAQ) for details.</span></> },
+                ].map(({ n, text }) => (
+                  <li key={n} style={{ display: "flex", alignItems: "flex-start", gap: "clamp(10px,2.5cqw,14px)" }}>
+                    <span style={{
+                      ...KALLISTO, fontWeight: 800,
+                      fontSize: "clamp(15px,3.8cqw,18px)",
+                      color: "rgba(255,255,255,0.92)",
+                      lineHeight: 1.35,
+                      minWidth: "clamp(16px,4cqw,20px)",
+                      flexShrink: 0,
+                    }}>{n}.</span>
+                    <span style={{
+                      ...KALLISTO, fontWeight: 400,
+                      fontSize: "clamp(13px,3.2cqw,15px)",
+                      color: "rgba(255,255,255,0.85)",
+                      lineHeight: 1.55,
+                    }}>{text}</span>
+                  </li>
+                ))}
+              </ol>
+
+            </div>
+
+            {/* START TEST button */}
             <button
               onPointerDown={() => setStartPressed(true)}
               onPointerUp={() => setStartPressed(false)}
               onPointerLeave={() => setStartPressed(false)}
-              onClick={() => { onStartTest?.(); setPage(2); }}
+              onClick={() => { onStartTest?.(); setPage(2); setTimeout(() => setShowCaution(true), 380); }}
               style={{
-                position: "absolute", bottom: "5%", left: "50%", transform: "translateX(-50%)",
-                visibility: p1ImgLoaded ? "visible" : "hidden",
+                position: "absolute", bottom: "4%", left: "50%", transform: "translateX(-50%)",
                 display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
                 background: "none", border: "none", cursor: "pointer",
                 ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
@@ -548,15 +642,73 @@ export function DiagnosticsPanel({
           </div>
 
           {/* ════════════════════════════════════════════════════════════════════
-              PAGE 2 — freqtest_p2 base art + interactive list
+              PAGE 2 — RingMatch™ Tool (code-rendered background + interactive list)
           ════════════════════════════════════════════════════════════════════ */}
           <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: wipeTx, willChange: "transform" }}>
-            <img src={freqTestP2Img} alt=""
-              style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-              draggable={false}
-              onLoad={() => setP2ImgLoaded(true)} />
 
-            <div style={{ visibility: p2ImgLoaded ? "visible" : "hidden" }}>
+            {/* Card background */}
+            <div style={CARD_BG} />
+
+            {/* Header area */}
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0,
+              display: "flex", flexDirection: "column", alignItems: "center",
+              paddingTop: "clamp(32px,8svh,52px)",
+              paddingBottom: 0,
+              gap: "clamp(8px,1.8svh,12px)",
+            }}>
+              {/* Title */}
+              <div style={{
+                ...KALLISTO, fontWeight: 800,
+                fontSize: "clamp(19px,4.8cqw,23px)",
+                lineHeight: 0.8,
+                color: "#ffcc00",
+                letterSpacing: "0.04em",
+              }}>
+                RingMatch<sup style={{
+                  fontSize: "0.46em",
+                  fontWeight: 300,
+                  verticalAlign: "0.38em",
+                  letterSpacing: 0,
+                  color: "rgba(255,204,0,0.62)",
+                }}>™</sup> Tool
+              </div>
+
+              {/* Note */}
+              <p style={{
+                ...KALLISTO, fontWeight: 300, fontStyle: "italic",
+                fontSize: "clamp(9.5px,2.3cqw,11.5px)",
+                color: "rgba(255,255,255,0.58)",
+                textAlign: "center",
+                lineHeight: 1.45,
+                margin: "0 clamp(18px,5cqw,28px)",
+              }}>
+                NOTE: this is provided as a self-guided personalization<br />tool—not a hearing test or medical diagnosis.
+              </p>
+
+            </div>
+
+            {/* Top golden divider */}
+            <div style={{
+              position: "absolute",
+              top: "calc(24% + 10px - 3svh)",
+              left: "22%", right: "22%",
+              pointerEvents: "none",
+            }}>
+              <GoldenDivider />
+            </div>
+
+            {/* Bottom golden divider */}
+            <div style={{
+              position: "absolute",
+              bottom: "calc(17% - 3svh)",
+              left: "22%", right: "22%",
+              pointerEvents: "none",
+            }}>
+              <GoldenDivider />
+            </div>
+
+            {/* Band list scrollable area — padded so rows clear both dividers */}
             <div style={{
               position: "absolute",
               top: "calc(24% + 10px)", bottom: "17%",
@@ -568,27 +720,27 @@ export function DiagnosticsPanel({
               flexDirection: "column",
               justifyContent: p2Anchored ? "flex-start" : "center",
             }}>
-              <div style={{ padding: "4px 0" }}>
+              <div style={{ padding: "clamp(28px,4.5svh,42px) 0" }}>
                 {BANDS.map(band => (
-                <BandRow
-                  key={band.label}
-                  band={band}
-                  expandedBand={expandedBand}
-                  blinkingBand={blinkingBand}
-                  playingFreq={playingFreq}
-                  activeBandLabel={activeBandLabel}
-                  currentNotch={currentNotch}
-                  currentBoost={currentBoost}
-                  onStopTone={stopTone}
-                  onSetExpandedBand={handleSetExpandedBand}
-                  onBandExpand={handleBandExpand}
-                  onBandPlay={handleBandPlay}
-                  onSubPlay={handleSubPlay}
-                  onSelectClick={handleSelectClick}
-                  onNotch={onNotch}
-                  onBoost={onBoost}
-                />
-              ))}
+                  <BandRow
+                    key={band.label}
+                    band={band}
+                    expandedBand={expandedBand}
+                    blinkingBand={blinkingBand}
+                    playingFreq={playingFreq}
+                    activeBandLabel={activeBandLabel}
+                    currentNotch={currentNotch}
+                    currentBoost={currentBoost}
+                    onStopTone={stopTone}
+                    onSetExpandedBand={handleSetExpandedBand}
+                    onBandExpand={handleBandExpand}
+                    onBandPlay={handleBandPlay}
+                    onSubPlay={handleSubPlay}
+                    onSelectClick={handleSelectClick}
+                    onNotch={onNotch}
+                    onBoost={onBoost}
+                  />
+                ))}
               </div>
             </div>
 
@@ -618,7 +770,112 @@ export function DiagnosticsPanel({
                 transition: "color 0.08s, text-shadow 0.08s",
               }}>«« back</button>
 
-            </div>
+            {/* ── CAUTION overlay ─────────────────────────────────────────── */}
+            {showCaution && (
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 80,
+                display: "flex", alignItems: "flex-start", justifyContent: "center",
+                paddingTop: "clamp(80px,16svh,110px)",
+                paddingLeft: "clamp(14px,4cqw,22px)",
+                paddingRight: "clamp(30px,8cqw,48px)", // leave room for vol slider
+                pointerEvents: "auto",
+              }}>
+                <div style={{
+                  width: "100%",
+                  background: "linear-gradient(160deg, rgba(14,28,24,0.90) 0%, rgba(10,22,18,0.90) 100%)",
+                  borderRadius: 14,
+                  border: "1.5px solid rgba(0,160,130,0.35)",
+                  boxShadow: "0 8px 40px rgba(0,0,0,0.82), inset 0 0 0 1px rgba(0,200,160,0.06)",
+                  padding: "clamp(18px,4.5svh,26px) clamp(18px,4.5cqw,24px) clamp(14px,3.5svh,20px)",
+                  animation: "cautionIn 0.55s cubic-bezier(0.95,0,1,1) both",
+                  display: "flex", flexDirection: "column",
+                }}>
+
+                  {/* CAUTION heading */}
+                  <div style={{
+                    ...KALLISTO, fontWeight: 800,
+                    fontSize: "clamp(17px,4.2cqw,20px)",
+                    color: "#ffcc00",
+                    textAlign: "center",
+                    letterSpacing: "0.08em",
+                    marginBottom: 4,
+                  }}>CAUTION:</div>
+
+                  {/* Sub-heading */}
+                  <div style={{
+                    ...KALLISTO, fontWeight: 500,
+                    fontSize: "clamp(14px,3.5cqw,16px)",
+                    color: "#4adf5a",
+                    textAlign: "center",
+                    marginBottom: "clamp(10px,2.5svh,14px)",
+                  }}>If you have sensitive ears,</div>
+
+                  {/* LOW volume line */}
+                  <div style={{
+                    ...KALLISTO, fontWeight: 400,
+                    fontSize: "clamp(13px,3.2cqw,15px)",
+                    color: "rgba(255,255,255,0.9)",
+                    textAlign: "center",
+                    marginBottom: "clamp(8px,2svh,12px)",
+                  }}>
+                    Start with <strong style={{ fontWeight: 800 }}>LOW</strong> volume.
+                  </div>
+
+                  {/* Body text — full width so it centres correctly */}
+                  <div style={{ position: "relative", marginBottom: "clamp(14px,3.5svh,20px)" }}>
+                    <p style={{
+                      ...KALLISTO, fontWeight: 400,
+                      fontSize: "clamp(12px,3cqw,13.5px)",
+                      color: "rgba(255,255,255,0.82)",
+                      lineHeight: 1.55,
+                      textAlign: "center",
+                      margin: 0,
+                    }}>
+                      Then slowly increase<br />
+                      to match the level<br />
+                      of your ringing<br />
+                      at your comfort level.
+                    </p>
+                    {/* Diagonal arrow — floated above on its own layer */}
+                    <div style={{
+                      position: "absolute", top: 0, right: 0,
+                      zIndex: 2, pointerEvents: "none",
+                    }}>
+                      <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
+                        <line x1="4" y1="4" x2="30" y2="30" stroke="#ffcc00" strokeWidth="2.5" strokeLinecap="round" />
+                        <polygon points="30,18 30,30 18,30" fill="#ffcc00" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Got it button */}
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setShowCaution(false)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 7,
+                        background: "linear-gradient(135deg, rgba(0,60,20,0.97) 0%, rgba(0,90,30,0.93) 100%)",
+                        border: "1.5px solid rgba(74,223,90,0.55)",
+                        borderRadius: 8,
+                        padding: "8px 16px 8px 18px",
+                        cursor: "pointer",
+                        ...KALLISTO, fontWeight: 600,
+                        fontSize: "clamp(13px,3.2cqw,15px)",
+                        color: "#4adf5a",
+                        letterSpacing: "0.04em",
+                        boxShadow: "0 0 12px rgba(74,223,90,0.18)",
+                      }}>
+                      Got it!
+                      <svg width={12} height={12} viewBox="0 0 20 20" fill="#4adf5a" style={{ flexShrink: 0 }}>
+                        <polygon points="4,2 4,18 17,10" />
+                      </svg>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
           </div>
 
         </div>
@@ -653,36 +910,39 @@ export function DiagnosticsPanel({
             <div style={{
               position: "relative", zIndex: 1,
               display: "flex", flexDirection: "column",
-              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,5svh,30px) clamp(28px,7cqw,38px)",
+              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(22px,5svh,30px) clamp(24px,6cqw,34px)",
             }}>
 
-              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12.5px,3.1cqw,14.5px)", color: "rgba(255,255,255,0.82)", letterSpacing: "0.01em", marginBottom: 10, lineHeight: 1.4 }}>
-                Your dominant tinnitus frequency:
+              {/* Title — "Your RingMatch™ / frequency selection:" */}
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(13px,3.2cqw,15px)", color: "rgba(255,255,255,0.90)", lineHeight: 1.35, marginBottom: 14 }}>
+                Your <strong style={{ fontWeight: 800 }}>RingMatch</strong><sup style={{ fontSize: "0.52em", fontWeight: 300, verticalAlign: "0.38em", color: "rgba(255,255,255,0.6)" }}>™</sup><br />
+                frequency selection:
               </p>
 
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1.5px solid #4adf5a", borderRadius: 7, padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start" }}>
+              {/* Frequency pill */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1.5px solid #4adf5a", borderRadius: 7, padding: "5px 14px", marginBottom: 16, alignSelf: "flex-start" }}>
                 <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(15px,3.8cqw,17px)", color: "#fff", letterSpacing: "0.05em" }}>{fmtSub(statFreq)}</span>
                 <span style={{ color: "#4adf5a", fontSize: "clamp(16px,4cqw,18px)", lineHeight: 1 }}>✓</span>
               </div>
 
-              <p style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10.5px,2.6cqw,12px)", color: "#ffcc00", letterSpacing: "0.12em", marginBottom: 11 }}>
-                FREQUENCY-NOTCHING THERAPY
+              {/* Section heading — "FREQUENCY-NOTCHING (optional)" */}
+              <p style={{ ...KALLISTO, fontSize: "clamp(11px,2.7cqw,12.5px)", letterSpacing: "0.06em", marginBottom: 10, lineHeight: 1.3 }}>
+                <strong style={{ fontWeight: 800, color: "#ffcc00" }}>FREQUENCY-NOTCHING</strong>
+                <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.70)" }}> (optional)</span>
               </p>
 
-              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
-                Recent clinical studies have shown positive results with the use of frequency-notching therapy for suppression of tinnitus as well as reducing levels of stress and anxiety.
+              {/* Body paragraphs */}
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11px,2.75cqw,12.5px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.60, marginBottom: 9 }}>
+                <strong style={{ fontWeight: 700, color: "#fff" }}>earphoria</strong><sup style={{ fontSize: "0.52em", fontWeight: 300, verticalAlign: "0.38em", color: "rgba(255,255,255,0.6)" }}>™</sup> can personalize your soundscapes by reducing—or “notching”—a narrow range around your selected frequency.
               </p>
-              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
-                With the <strong style={{ color: "#fff", fontWeight: 700 }}>earvana</strong><sup style={{ fontSize: "0.65em", color: "rgba(255,255,255,0.5)", fontWeight: 300, fontStyle: "normal" }}>™</sup> app (in buds or headphones), this therapy is possible.
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11px,2.75cqw,12.5px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.60, marginBottom: 9 }}>
+                Notched audio is a developing, research-informed approach that some people with tonal tinnitus choose to explore. Individual experiences vary, and benefits are not guaranteed.
               </p>
-              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 9 }}>
-                The listening period is suggested for a minimum of 1-hour per day for 2-3 weeks.
-              </p>
-              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11.5px,2.85cqw,13px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.62, marginBottom: 16 }}>
-                Choose any soundscape.<br />
-                This process will stay engaged until you come back to the &quot;Ring Match&quot; section of the app and reset the process.
-              </p>
+              <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11px,2.75cqw,12.5px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.60, marginBottom: 16 }}>
+                 <strong style={{ fontWeight: 700, color: "#fff" }}>Select the option below</strong> to apply your personalized notch. This notch will apply to all soundscapes within this app, and will remain active until you return to the RingMatch<sup style={{ fontSize: "0.52em", fontWeight: 300, verticalAlign: "0.38em", color: "rgba(255,255,255,0.6)" }}>™</sup> section and change or reset it.
+               </p>
 
+              {/* CTA button */}
               <button
                 onClick={() => { onBoost(null); onNotch(statFreq!); setStatIsReturning(false); onClose(); }}
                 style={{
@@ -690,7 +950,7 @@ export function DiagnosticsPanel({
                   background: "linear-gradient(135deg, rgba(0,55,18,0.97) 0%, rgba(0,90,35,0.93) 100%)",
                   border: "1.5px solid rgba(74,223,90,0.45)",
                   borderRadius: 28, padding: "10px 14px 10px 12px",
-                  cursor: "pointer", marginBottom: 14, width: "100%",
+                  cursor: "pointer", width: "100%",
                 }}
               >
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -700,15 +960,11 @@ export function DiagnosticsPanel({
                   <rect x="13.5" y="0" width="3.5" height="14" rx="1"/>
                 </svg>
                 <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3cqw,13.5px)", color: "#fff", letterSpacing: "0.04em", flexShrink: 0 }}>Notch</span>
-                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12px,3cqw,13.5px)", color: "rgba(255,255,255,0.85)", flex: 1, textAlign: "left" }}>{fmtSub(statFreq)} from my playback</span>
+                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12px,3cqw,13.5px)", color: "rgba(255,255,255,0.85)", flex: 1, textAlign: "left" }}>&nbsp;{fmtSub(statFreq)} from my playback</span>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               </button>
-
-              <p style={{ ...KALLISTO, fontWeight: 400, fontStyle: "italic", fontSize: "clamp(9.5px,2.3cqw,11px)", color: "rgba(255,255,255,0.35)", lineHeight: 1.65 }}>
-                IMPORTANT:&nbsp; This is an experimental process and should not be used as a substitute for professional medical advice or treatment.
-              </p>
 
             </div>
           </div>
@@ -751,92 +1007,84 @@ export function DiagnosticsPanel({
             {/* Content — determines card height */}
             <div style={{
               position: "relative", zIndex: 1,
-              display: "flex", flexDirection: "column",
-              padding: "clamp(20px,6svh,32px) clamp(20px,5cqw,28px) clamp(28px,7svh,38px) clamp(28px,7cqw,38px)",
+              display: "flex", flexDirection: "column", alignItems: "center",
+              padding: "clamp(24px,6svh,36px) clamp(20px,5cqw,28px) clamp(32px,8svh,44px)",
+              textAlign: "center",
             }}>
 
-              {/* Header */}
-              <div style={{ marginBottom: "clamp(14px,4svh,20px)" }}>
-                <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(18px,4.5cqw,21px)", color: "#7adf6a", letterSpacing: "0.06em" }}>
-                  your earvana profile:
-                </div>
+              {/* Title */}
+              <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(13px,3.2cqw,15px)", color: "rgba(255,255,255,0.90)", letterSpacing: "0.02em", marginBottom: "clamp(16px,4svh,22px)" }}>
+                Your selected tinnitus frequency:
               </div>
 
-              {/* Dominant frequency */}
-              <div style={{ marginBottom: "clamp(16px,4.5svh,22px)" }}>
-                <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(17px,4.2cqw,19px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 5 }}>
-                  dominant frequency:
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(21px,5.3cqw,25px)", color: "#ffcc00", letterSpacing: "0.04em" }}>
-                    {statFreq !== null ? fmtSub(statFreq) : "—"}
-                  </span>
-                  {statFreq !== null && (
-                    <span style={{ color: "#7adf6a", fontSize: "clamp(20px,5cqw,23px)", lineHeight: 1 }}>✓</span>
-                  )}
-                </div>
+              {/* Frequency + checkmark — ✓ is absolute so text stays centred */}
+              <div style={{ position: "relative", display: "inline-block", marginBottom: "clamp(28px,6svh,38px)" }}>
+                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,18px)", color: "#7adf6a", letterSpacing: "0.05em" }}>
+                  {statFreq !== null ? fmtSub(statFreq) : "—"}
+                </span>
+                {statFreq !== null && (
+                  <span style={{ position: "absolute", left: "100%", paddingLeft: 10, top: "50%", transform: "translateY(-50%)", color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,20px)", lineHeight: 1 }}>✓</span>
+                )}
               </div>
 
-              {/* Listening mode */}
-              <div style={{ flex: 1, borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "clamp(10px,2.5svh,14px)", marginTop: 2 }}>
-                <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(17px,4.2cqw,19px)", color: "#ffffff", letterSpacing: "0.07em", marginBottom: 8 }}>
-                  listening mode:
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "clamp(6px,1.8svh,10px)", paddingLeft: 8 }}>
-                  {(["normal", "notch", "boost"] as const).map(mode => {
-                    const active = currentMode === mode;
-                    return (
-                      <button key={mode}
-                        onClick={() => handleModeChange(mode)}
-                        style={{
-                          background: "none", border: "none", cursor: "pointer", padding: 0,
-                          display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                        }}>
-                        <span style={{
-                          ...KALLISTO,
-                          fontWeight: active ? 700 : 300,
-                          fontSize: "clamp(16px,4cqw,18px)",
-                          color: active ? "#ffffff" : "rgba(255,255,255,0.62)",
-                          letterSpacing: "0.05em",
-                          transition: "color 0.12s",
-                        }}>
-                          {modeLabel(mode)}
-                        </span>
-                        {active && (
-                          <span style={{ color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,19px)", lineHeight: 1 }}>✓</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Listening mode label */}
+              <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(14px,3.5cqw,16px)", color: "rgba(255,255,255,0.92)", letterSpacing: "0.04em", marginBottom: "clamp(8px,2svh,12px)" }}>
+                listening mode:
               </div>
 
-              {/* Action buttons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "clamp(8px,2.2svh,12px)", marginTop: "clamp(16px,4svh,22px)", borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "clamp(10px,2.5svh,14px)" }}>
-
-                <button onClick={handleRepeatTest}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: 0,
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(17px,4.2cqw,20px)", color: "#ffcc00", letterSpacing: "0.09em" }}>
-                    repeat test
-                  </span>
-                  <DblChevron color="#ffcc00" />
-                </button>
-
-                <button onClick={handleReset}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer", padding: 0,
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
-                  <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "#ffffff", letterSpacing: "0.09em" }}>
-                    reset
-                  </span>
-                  <DblChevron color="#ffffff" />
-                </button>
-
+              {/* Mode options */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "clamp(4px,1.2svh,8px)", marginBottom: "clamp(24px,6svh,34px)" }}>
+                {(["normal", "notch"] as const).map(mode => {
+                  const active = currentMode === mode;
+                  return (
+                    <button key={mode}
+                      onClick={() => handleModeChange(mode)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        position: "relative", display: "inline-block",
+                      }}>
+                      <span style={{
+                        ...KALLISTO,
+                        fontWeight: active ? 700 : 300,
+                        fontSize: "clamp(14px,3.5cqw,16px)",
+                        color: active ? "#7adf6a" : "rgba(255,255,255,0.42)",
+                        letterSpacing: "0.04em",
+                        transition: "color 0.12s",
+                      }}>
+                        {modeLabel(mode)}
+                      </span>
+                      {active && (
+                        <span style={{ position: "absolute", left: "100%", paddingLeft: 8, top: "50%", transform: "translateY(-50%)", color: "#7adf6a", fontSize: "clamp(15px,3.8cqw,17px)", lineHeight: 1 }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* repeat test */}
+              <button onClick={handleRepeatTest}
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 0,
+                  position: "relative", display: "inline-block",
+                  marginBottom: "clamp(12px,3svh,18px)",
+                }}>
+                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "rgba(255,255,255,0.80)", letterSpacing: "0.06em" }}>
+                  repeat test
+                </span>
+                <span style={{ position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 6, fontSize: "clamp(15px,3.75cqw,16.5px)", fontWeight: 100, color: "rgba(255,255,255,0.80)", lineHeight: 1 }}>›</span>
+              </button>
+
+              {/* reset */}
+              <button onClick={handleReset}
+                style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 0,
+                  position: "relative", display: "inline-block",
+                }}>
+                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "rgba(255,255,255,0.80)", letterSpacing: "0.06em" }}>
+                  reset
+                </span>
+                <span style={{ position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 6, fontSize: "clamp(15px,3.75cqw,16.5px)", fontWeight: 100, color: "rgba(255,255,255,0.80)", lineHeight: 1 }}>›</span>
+              </button>
 
             </div>
           </div>

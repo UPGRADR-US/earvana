@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 /**
@@ -159,7 +160,7 @@ public class AudioDecoder {
             }
         }
 
-        if (trackIndex < 0 || format == null) {
+        if (trackIndex < 0) {
             throw new IOException("No audio track found");
         }
 
@@ -312,7 +313,7 @@ public class AudioDecoder {
         try (DataInputStream in = new DataInputStream(new FileInputStream(file))) {
             byte[] magicBytes = new byte[8];
             in.readFully(magicBytes);
-            if (!CACHE_MAGIC.equals(new String(magicBytes, "US-ASCII"))) return null;
+            if (!CACHE_MAGIC.equals(new String(magicBytes, StandardCharsets.US_ASCII))) return null;
             int version = in.readInt();
             if (version != CACHE_VERSION) return null;
             int sampleRate = in.readInt();

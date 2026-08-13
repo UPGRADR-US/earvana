@@ -10,6 +10,7 @@
         android:largeHeap="true"
         android:theme="@style/AppTheme">
 
+        <!-- exported=true required: activity has a launcher intent-filter -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -33,9 +34,11 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"></meta-data>
+                android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Continuous ambient / tinnitus relief audio — mediaPlayback FGS type required
+             for Android 14+ background constraints when targetSdk is 34+. -->
         <service
             android:name=".EarvanaAudioService"
             android:enabled="true"
@@ -49,5 +52,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Runtime on API 33+; denial is handled without crashing playback. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required by Google Play Console to create / manage subscriptions (Play Billing). -->
+    <uses-permission android:name="com.android.vending.BILLING" />
 </manifest>
+

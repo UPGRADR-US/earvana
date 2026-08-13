@@ -19,8 +19,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    /// Global hard lock: portrait only on every device / window (iPhone + iPad).
-    /// UI is not designed for landscape until a future layout pass.
+    /// Global hard lock: portrait only (iPhone-only app; TARGETED_DEVICE_FAMILY = 1).
     func application(_ application: UIApplication,
                      supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
         return .portrait

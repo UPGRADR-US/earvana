@@ -1,4 +1,16 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+// Optional release signing: create android/key.properties (gitignored) with:
+//   storeFile=/absolute/path/to/EARVANA.jks
+//   storePassword=...
+//   keyAlias=...
+//   keyPassword=...
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
 
 android {
     namespace = "com.earvana.tinnitusrelief"
@@ -7,8 +19,8 @@ android {
         applicationId "com.earvana.tinnitusrelief"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "2.0"
+        versionCode 17
+        versionName "2.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +28,31 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlinOptions {
+        jvmTarget = '21'
     }
 }
 
@@ -40,6 +72,10 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Google Play Billing (Kotlin extensions) — monthly subscription earphoria499 / monthly-plan
+    implementation "com.android.billingclient:billing-ktx:7.1.1"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
 }
 
 apply from: 'capacitor.build.gradle'

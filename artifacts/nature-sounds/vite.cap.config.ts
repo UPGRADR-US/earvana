@@ -11,8 +11,8 @@ function buildNumber(): number {
   // Fall back to git rev-count only if env override is unset.
   const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
   if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
-  // Default for this release train
-  return 12;
+  // Default for this release train (developer-approved ship build)
+  return 16;
 }
 
 export default defineConfig({

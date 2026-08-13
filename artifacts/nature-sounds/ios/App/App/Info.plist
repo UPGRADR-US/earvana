@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>earvana</string>
+	<string>earphoria</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -38,15 +38,10 @@
 	<array>
 		<string>armv7</string>
 	</array>
-	<!-- Portrait-only (no landscape, no upside-down). UIRequiresFullScreen opts out of
-	     iPad multitasking so we are not forced to declare landscape for App Store validation. -->
+	<!-- Portrait-only iPhone app (TARGETED_DEVICE_FAMILY = 1). No iPad orientations. -->
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>

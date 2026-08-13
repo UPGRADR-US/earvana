@@ -49,6 +49,17 @@ img, video {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
 }
+@keyframes carouselLaunch {
+  0%     { transform: scale(0.10); opacity: 0.0; }
+  12.5%  { transform: scale(0.30); opacity: 0.8; }
+  25%    { transform: scale(0.60); opacity: 1.0; }
+  37.5%  { transform: scale(0.80); opacity: 1.0; }
+  50%    { transform: scale(0.90); opacity: 1.0; }
+  62.5%  { transform: scale(0.95); opacity: 1.0; }
+  75%    { transform: scale(0.97); opacity: 1.0; }
+  87.5%  { transform: scale(0.99); opacity: 1.0; }
+  100%   { transform: scale(1.00); opacity: 1.0; }
+}
 @keyframes settingsPop {
   from { transform: scale(0.06); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }
