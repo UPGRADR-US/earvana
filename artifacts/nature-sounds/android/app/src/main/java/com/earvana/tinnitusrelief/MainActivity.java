@@ -26,7 +26,10 @@ public class MainActivity extends BridgeActivity {
         boolean isTablet = smallestWidth >= 600;
 
         if (isTablet) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+            // Tablets: both orientations. Landscape keeps the 430px phone column
+            // (CSS); portrait is full-screen. SENSOR_LANDSCAPE letterboxed the
+            // activity with black bars when the tablet was held in portrait.
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
@@ -38,7 +41,7 @@ public class MainActivity extends BridgeActivity {
         StoreReviewHelper.incrementLaunch(this);
         StoreReviewHelper.requestIfAppropriate(this);
         // Edge-to-edge: WebView extends behind status bar and navigation bar so
-        // the #bg-blur letterbox layer fills the full screen on tablets.
+        // the #bg-blur layer fills landscape letterbox sides on tablets.
         // Capacitor SystemBars plugin injects --safe-area-inset-* CSS variables
         // so the UI content is padded correctly inside the system bars.
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
