@@ -7,12 +7,11 @@ import path from "path";
 import { execSync } from "child_process";
 
 function buildNumber(): number {
-  // Keep in sync with ios CURRENT_PROJECT_VERSION (Xcode build).
-  // Fall back to git rev-count only if env override is unset.
+  // Keep in sync with src/version.ts APP_BUILD, iOS CURRENT_PROJECT_VERSION,
+  // and Android versionCode.
   const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
   if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
-  // Default for this release train (developer-approved ship build)
-  return 16;
+  return 23;
 }
 
 export default defineConfig({

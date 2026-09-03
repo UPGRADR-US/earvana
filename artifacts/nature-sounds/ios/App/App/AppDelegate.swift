@@ -12,6 +12,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            if #available(iOS 15.0, *) {
+                try session.setSupportsMultichannelContent(false)
+            }
             try session.setActive(true)
         } catch {
             print("[AppDelegate] audio session activation failed: \(error)")

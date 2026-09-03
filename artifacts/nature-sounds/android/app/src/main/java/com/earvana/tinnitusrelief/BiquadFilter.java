@@ -74,7 +74,8 @@ public class BiquadFilter {
         a2 = a2_raw / a0_raw;
     }
 
-    public synchronized float process(float x) {
+    /** Audio thread only — not synchronized (per-sample locks caused glitches). */
+    public float process(float x) {
         if (!active) {
             return x;
         }

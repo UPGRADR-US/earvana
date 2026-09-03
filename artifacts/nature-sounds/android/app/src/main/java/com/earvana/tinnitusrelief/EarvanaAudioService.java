@@ -32,8 +32,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Foreground media service — mirrors iOS EarvanaAudioPlugin + CrossfadeLoopPlayer.
- * Streams audio (no full-file PCM decode) so track switches / stop are responsive.
+ * Foreground media service — PCMPlayer (sample-accurate stereo loop), matching
+ * iOS AVAudioEngine quality. Not MediaPlayer (OEM Dolby / spatial path).
  */
 public class EarvanaAudioService extends Service {
     private static final String TAG = "EarvanaAudioService";
@@ -50,9 +50,9 @@ public class EarvanaAudioService extends Service {
     private final Set<String> errorTracks = new HashSet<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private CrossfadeLoopPlayer loopPlayer;
+    private PCMPlayer loopPlayer;
     private String activeTrackId = null;
-    private String activeTrackName = "Earvana Relief";
+    private String activeTrackName = "earphoria";
     private float activeTrackVolume = 0.5f;
 
     private PowerManager.WakeLock wakeLock;
@@ -189,11 +189,10 @@ public class EarvanaAudioService extends Service {
 
     public void playTrack(String trackId, String filePath, String trackName,
                           float loopStart, Float loopEnd, float crossfade, float volume) {
-        Log.d(TAG, "PlayTrack (stream): " + trackId);
+        Log.d(TAG, "PlayTrack (PCM stereo): " + trackId);
 
         final int gen = loadGeneration.incrementAndGet();
 
-        // Instant stop of previous stream — matches iOS loopPlayer?.stop(immediate: true)
         releasePlayer();
 
         synchronized (loadingTracks) {
@@ -212,39 +211,61 @@ public class EarvanaAudioService extends Service {
 
         requestFocusAndWakeLock();
 
-        CrossfadeLoopPlayer player = new CrossfadeLoopPlayer(this);
-        loopPlayer = player;
-
         final float[] gainsCopy = eqGains.clone();
         final Float notch = notchFreq;
         final Float boost = boostFreq;
         final float master = masterVolume;
+        final Context app = getApplicationContext();
 
         long t0 = System.currentTimeMillis();
-        player.play(
-                filePath,
-                loopStart,
-                loopEnd,
-                crossfade,
-                volume,
-                master,
-                false,
-                gainsCopy,
-                notch,
-                boost,
-                () -> {
-                    if (gen != loadGeneration.get()) {
-                        player.stopImmediate();
-                        return;
-                    }
-                    synchronized (loadingTracks) {
-                        loadingTracks.remove(trackId);
-                    }
-                    Log.d(TAG, "Play ready in " + (System.currentTimeMillis() - t0) + "ms: " + trackId);
-                    enterForeground(true, activeTrackName);
-                    notifyStatus();
-                },
-                () -> {
+        new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
+            try {
+                AudioDecoder.decodeStreaming(
+                        app,
+                        filePath,
+                        () -> gen != loadGeneration.get(),
+                        new AudioDecoder.StreamListener() {
+                            @Override
+                            public void onPlayable(AudioDecoder.DecodedAudio audio) {
+                                if (gen != loadGeneration.get()) return;
+                                PCMPlayer player = new PCMPlayer(
+                                        audio, loopStart, loopEnd, crossfade, volume, master);
+                                player.setEq(gainsCopy);
+                                player.setNotch(notch);
+                                player.setBoost(boost);
+                                mainHandler.post(() -> {
+                                    if (gen != loadGeneration.get()) {
+                                        player.stopImmediate();
+                                        return;
+                                    }
+                                    loopPlayer = player;
+                                    player.play(false);
+                                    synchronized (loadingTracks) {
+                                        loadingTracks.remove(trackId);
+                                    }
+                                    Log.d(TAG, "Play started in " + (System.currentTimeMillis() - t0)
+                                            + "ms: " + trackId);
+                                    enterForeground(true, activeTrackName);
+                                    notifyStatus();
+                                });
+                            }
+
+                            @Override
+                            public void onComplete(AudioDecoder.DecodedAudio audio) {
+                                Log.d(TAG, "Decode complete in " + (System.currentTimeMillis() - t0)
+                                        + "ms: " + trackId);
+                                mainHandler.post(() -> {
+                                    PCMPlayer player = loopPlayer;
+                                    if (player != null && gen == loadGeneration.get()) {
+                                        player.markDecodeComplete(audio.framesReady.get());
+                                    }
+                                });
+                            }
+                        });
+            } catch (Exception e) {
+                Log.e(TAG, "PCM decode/play failed: " + filePath, e);
+                mainHandler.post(() -> {
                     if (gen != loadGeneration.get()) return;
                     synchronized (loadingTracks) {
                         loadingTracks.remove(trackId);
@@ -252,19 +273,16 @@ public class EarvanaAudioService extends Service {
                     synchronized (errorTracks) {
                         errorTracks.add(trackId);
                     }
-                    if (loopPlayer == player) loopPlayer = null;
                     notifyStatus();
-                }
-        );
+                });
+            }
+        }, "PCM-Decode").start();
     }
 
     private void requestFocusAndWakeLock() {
         if (audioManager == null) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            AudioAttributes playbackAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build();
+            AudioAttributes playbackAttributes = PCMPlayer.stereoPlaybackAttributes();
             audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                     .setAudioAttributes(playbackAttributes)
                     .setAcceptsDelayedFocusGain(true)
@@ -287,7 +305,7 @@ public class EarvanaAudioService extends Service {
             loadingTracks.clear();
         }
 
-        CrossfadeLoopPlayer player = loopPlayer;
+        PCMPlayer player = loopPlayer;
         if (player == null) {
             activeTrackId = null;
             updateNotification(false);
@@ -453,7 +471,7 @@ public class EarvanaAudioService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Earvana Tinnitus Therapy",
+                    "earphoria",
                     NotificationManager.IMPORTANCE_LOW
             );
             serviceChannel.setDescription("Persistent controls for background sound therapy");
@@ -480,8 +498,8 @@ public class EarvanaAudioService extends Service {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        String title = (rawTitle != null) ? rawTitle : "Earvana Relief";
-        String subtitle = isPlaying ? "Tinnitus Relief" : "Loading…";
+        String title = (rawTitle != null) ? rawTitle : "earphoria";
+        String subtitle = isPlaying ? "earphoria" : "Loading…";
         if (title.contains(": ")) {
             String[] parts = title.split(": ", 2);
             subtitle = parts[0].substring(0, 1).toUpperCase() + parts[0].substring(1);

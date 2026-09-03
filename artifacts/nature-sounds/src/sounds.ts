@@ -23,6 +23,9 @@ export type SoundCategory = {
   tracks: SoundTrack[];
 };
 
+/** The single free-tier sound. All other tracks require Premium Earphoria on iOS. */
+export const FREE_TRACK_ID = "ocean_high_tide_beach";
+
 export const CATEGORIES: SoundCategory[] = [
   {
     id: "oceans",

@@ -141,7 +141,11 @@ export function useNativeAudioEngine(): AudioEngineState {
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
     } catch (e) {
       console.error("[NativeAudio] play failed", e);
-      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
+      const premiumBlocked = /PREMIUM_REQUIRED/i.test(String(e));
+      setTracksState(s => ({
+        ...s,
+        [trackId]: { ...s[trackId], isLoading: false, hasError: !premiumBlocked, isPlaying: false },
+      }));
     }
   }, [tracksState]);
 

@@ -19,8 +19,8 @@ android {
         applicationId "com.earvana.tinnitusrelief"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "2.0.1"
+        versionCode 23;;;
+        versionName "2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -74,6 +74,8 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     // Google Play Billing (Kotlin extensions) — monthly subscription earphoria499 / monthly-plan
     implementation "com.android.billingclient:billing-ktx:7.1.1"
+    // Google Play In-App Review
+    implementation "com.google.android.play:review-ktx:2.0.2"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.10"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
 }

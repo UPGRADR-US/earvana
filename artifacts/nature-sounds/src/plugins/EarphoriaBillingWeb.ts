@@ -2,6 +2,7 @@
 import type {
   EarphoriaBillingPlugin,
   InitializeResult,
+  PaywallResult,
   ProductDetailsResult,
   PurchaseResult,
   SubscriptionStatus,
@@ -28,11 +29,17 @@ export const EarphoriaBillingWeb: EarphoriaBillingPlugin = {
   async purchase(): Promise<PurchaseResult> {
     return unavailable("purchase");
   },
+  async presentPaywall(): Promise<PaywallResult> {
+    return { presented: false, isSubscribed: false };
+  },
   async restore(): Promise<SubscriptionStatus> {
     return { isSubscribed: false, productId: BILLING_PRODUCT_ID, basePlanId: BILLING_BASE_PLAN_ID, purchases: [] };
   },
   async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     return { isSubscribed: false, productId: BILLING_PRODUCT_ID, basePlanId: BILLING_BASE_PLAN_ID, purchases: [] };
+  },
+  async debugSetSubscribed(options: { subscribed: boolean }): Promise<SubscriptionStatus> {
+    return { isSubscribed: options.subscribed, productId: BILLING_PRODUCT_ID, basePlanId: BILLING_BASE_PLAN_ID, purchases: [] };
   },
   async addListener() {
     return { remove: () => {} };

@@ -497,7 +497,7 @@ export function useAudioEngine(): AudioEngineState {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: track.name,
-          artist: 'Tinnitus Relief by Earvana',
+          artist: 'earphoria',
           album: 'Nature Sounds',
         });
         navigator.mediaSession.playbackState = 'playing';

@@ -175,7 +175,7 @@ public class EarvanaAudioPlugin extends Plugin {
         if (call.getData().has("loopEnd")) {
             loopEnd = call.getFloat("loopEnd");
         }
-        float crossfade = call.getFloat("crossfadeDuration", 15.0f);
+        float crossfade = call.getFloat("crossfadeDuration", 40.0f);
 
         final Float loopEndFinal = loopEnd;
         withService(call, service -> {

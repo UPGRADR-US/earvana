@@ -17,7 +17,6 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"
             android:exported="true">
 
             <intent-filter>
@@ -57,4 +56,3 @@
     <!-- Required by Google Play Console to create / manage subscriptions (Play Billing). -->
     <uses-permission android:name="com.android.vending.BILLING" />
 </manifest>
-

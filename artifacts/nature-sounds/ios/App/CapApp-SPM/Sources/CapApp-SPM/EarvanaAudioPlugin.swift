@@ -58,6 +58,9 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            if #available(iOS 15.0, *) {
+                try session.setSupportsMultichannelContent(false)
+            }
             try session.setActive(true)
         } catch {
             print("[EarvanaAudioPlugin] session activation failed: \(error)")
@@ -137,8 +140,12 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let loopStart = call.getDouble("loopStart") ?? 0
         let loopEnd = call.getDouble("loopEnd")
 
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
+            if SubscriptionManager.shared.isTrackLocked(trackId) {
+                call.reject("This sound requires Premium Earphoria", "PREMIUM_REQUIRED")
+                return
+            }
             do {
                 self.loopPlayer?.stop(immediate: true)
                 let player = CrossfadeLoopPlayer()

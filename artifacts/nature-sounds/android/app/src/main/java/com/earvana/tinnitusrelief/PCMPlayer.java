@@ -6,6 +6,8 @@ import android.media.AudioTrack;
 import android.os.Build;
 import android.util.Log;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class PCMPlayer {
     private static final String TAG = "PCMPlayer";
 
@@ -41,33 +43,75 @@ public class PCMPlayer {
 
     private static final double[] EQ_FREQUENCIES = {100.0, 330.0, 1000.0, 3300.0, 10000.0};
     private static final double[] EQ_Q_VALUES = {0.9, 1.0, 1.0, 1.0, 0.9};
+    private static final float LIMITER_THRESHOLD = 0.89f; // -1 dBFS
+    private static final float LIMITER_RELEASE_SEC = 0.06f;
 
     private int currentPlaySampleIndex = 0;
+    private float limiterEnv = 0f;
+    private final float limiterReleaseCoef;
+    private final AtomicInteger framesReady;
+    private volatile boolean decodeComplete;
+    private volatile int endFrame;
+    private volatile int xfadeStartFrame;
+    private final int startFrame;
+    private final int xfadeFrames;
 
     public PCMPlayer(AudioDecoder.DecodedAudio audio, float loopStart, Float loopEnd, float crossfade, float volume, float masterVolume) {
+        AudioDecoder.ensureStereo(audio);
         this.sampleRate = audio.sampleRate;
-        this.channels = audio.channels;
+        this.channels = 2;
         this.samples = audio.samples;
+        this.framesReady = audio.framesReady;
+        this.decodeComplete = audio.complete;
         this.trackVolume = volume;
         this.masterVolume = masterVolume;
+        this.limiterReleaseCoef = (float) Math.exp(-1.0 / (LIMITER_RELEASE_SEC * sampleRate));
 
         for (int i = 0; i < 5; i++) {
             eqLeft[i] = new BiquadFilter();
             eqRight[i] = new BiquadFilter();
         }
 
-        float duration = audio.duration;
-        float effectiveCrossfade = Math.min(crossfade, duration / 3.0f);
+        int estimatedFrames = Math.max(audio.framesReady.get(), 1);
+        if (audio.duration > 0) {
+            estimatedFrames = Math.max(estimatedFrames, (int) Math.floor(audio.duration * sampleRate));
+        }
+        estimatedFrames = Math.min(estimatedFrames, audio.samples.length / 2);
 
-        this.loopStartSample = (int) (loopStart * sampleRate) * channels;
-        float endSec = (loopEnd != null && loopEnd > loopStart && loopEnd <= duration) ? loopEnd : duration;
-        this.loopEndSample = (int) (endSec * sampleRate) * channels;
-        this.crossfadeSamples = Math.max(1, (int) (effectiveCrossfade * sampleRate));
+        this.startFrame = Math.max(0, (int) Math.floor(loopStart * sampleRate));
+        int end = estimatedFrames;
+        if (loopEnd != null && loopEnd > loopStart) {
+            end = Math.min(estimatedFrames, (int) Math.floor(loopEnd * sampleRate));
+        }
+        if (end <= startFrame) end = estimatedFrames;
 
-        float[] zeroGains = new float[]{0, 0, 0, 0, 0};
-        setEq(zeroGains);
+        int regionFrames = Math.max(1, end - startFrame);
+        float xfadeSec = Math.min(crossfade, (regionFrames / (float) sampleRate) / 2.2f);
+        int xf = Math.max(1, (int) Math.floor(xfadeSec * sampleRate));
+        this.xfadeFrames = Math.min(xf, Math.max(1, regionFrames / 2));
+        this.endFrame = end;
+        this.xfadeStartFrame = Math.max(startFrame, end - this.xfadeFrames);
+        this.loopStartSample = startFrame * 2;
+        this.loopEndSample = end * 2;
+        this.crossfadeSamples = this.xfadeFrames;
+
+        Log.d(TAG, "loop region~=" + (regionFrames / (float) sampleRate)
+                + "s xfade=" + (this.xfadeFrames / (float) sampleRate)
+                + "s ready=" + audio.framesReady.get() + " complete=" + audio.complete);
+
+        setEq(new float[]{0, 0, 0, 0, 0});
         setNotch(null);
         setBoost(null);
+    }
+
+    public void markDecodeComplete(int actualFrames) {
+        int end = Math.max(startFrame + 2, actualFrames);
+        endFrame = end;
+        xfadeStartFrame = Math.max(startFrame, end - xfadeFrames);
+        decodeComplete = true;
+        framesReady.set(actualFrames);
+        Log.d(TAG, "decode complete actualFrames=" + actualFrames
+                + " xfadeStart=" + (xfadeStartFrame / (float) sampleRate) + "s");
     }
 
     public synchronized void play(boolean skipFadeIn) {
@@ -87,42 +131,32 @@ public class PCMPlayer {
         targetTimerFadeLevel = 1.0f;
         timerFadeLevelStep = 0.0f;
 
-        int channelConfig = (channels == 2) ? AudioFormat.CHANNEL_OUT_STEREO : AudioFormat.CHANNEL_OUT_MONO;
+        // Always 2ch PCM into the mixer — never offload (that's the OEM Dolby path).
+        int channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
         int minBuf = AudioTrack.getMinBufferSize(sampleRate, channelConfig, AudioFormat.ENCODING_PCM_16BIT);
         int bufferSize = Math.max(minBuf, 4096) * 2;
+        AudioAttributes attrs = stereoPlaybackAttributes();
+        AudioFormat format = new AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(sampleRate)
+                .setChannelMask(channelConfig)
+                .build();
 
         AudioTrack.Builder builder = new AudioTrack.Builder()
-                .setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build())
-                .setAudioFormat(new AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(channelConfig)
-                        .build())
+                .setAudioAttributes(attrs)
+                .setAudioFormat(format)
                 .setBufferSizeInBytes(bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Prefer low latency when available; fall back if the device rejects it.
-            try {
-                builder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY);
-            } catch (Exception ignored) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            builder.setOffloadedPlayback(false);
         }
         try {
             audioTrack = builder.build();
         } catch (Exception e) {
-            // Some OEMs reject LOW_LATENCY; rebuild without it.
+            Log.w(TAG, "AudioTrack build failed, retrying defaults", e);
             audioTrack = new AudioTrack.Builder()
-                    .setAudioAttributes(new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build())
-                    .setAudioFormat(new AudioFormat.Builder()
-                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(sampleRate)
-                            .setChannelMask(channelConfig)
-                            .build())
+                    .setAudioAttributes(attrs)
+                    .setAudioFormat(format)
                     .setBufferSizeInBytes(bufferSize)
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build();
@@ -249,30 +283,36 @@ public class PCMPlayer {
     }
 
     public boolean isPlaying() { return isPlaying && !isPaused; }
+
+    /** 2ch PCM, never spatialized / virtualized (API 32+). */
+    static AudioAttributes stereoPlaybackAttributes() {
+        AudioAttributes.Builder b = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC);
+        if (Build.VERSION.SDK_INT >= 32) {
+            b.setSpatializationBehavior(AudioAttributes.SPATIALIZATION_BEHAVIOR_NEVER);
+            b.setIsContentSpatialized(false);
+        }
+        return b.build();
+    }
     public float getPosition() { return (float) currentPlaySampleIndex / (sampleRate * channels); }
 
     private void audioLoop() {
-        int pos = 0;
-        final short[] localSamples = samples;
-        if (localSamples == null) {
+        short[] pcm = samples;
+        if (pcm == null || pcm.length < 4) {
             isPlaying = false;
             return;
         }
 
-        int crossfadeStartSample = loopEndSample - (crossfadeSamples * channels);
-        if (crossfadeStartSample < loopStartSample) {
-            crossfadeStartSample = loopStartSample;
-        }
-
+        int frame = startFrame;
         int writeFrameSize = 1024;
-        int writeBufferSize = writeFrameSize * channels;
-        short[] outputBuffer = new short[writeBufferSize];
+        short[] outputBuffer = new short[writeFrameSize * 2];
+        float env = limiterEnv;
 
         while (isPlaying) {
-            short[] pcm = samples;
+            pcm = samples;
             if (pcm == null) break;
 
-            int writeSamplesCount = 0;
             float currentTrackVol, currentMasterVol, currentFadeMult, currentTimerFade;
             float fadeStep, timerStep, targetFade, targetTimer;
 
@@ -287,6 +327,7 @@ public class PCMPlayer {
                 targetTimer = targetTimerFadeLevel;
             }
 
+            int writtenFrames = 0;
             for (int f = 0; f < writeFrameSize; f++) {
                 if (fadeStep != 0.0f) {
                     currentFadeMult += fadeStep;
@@ -303,49 +344,78 @@ public class PCMPlayer {
                     }
                 }
 
-                float volScale = currentTrackVol * currentMasterVol * currentFadeMult * currentTimerFade;
-
-                for (int c = 0; c < channels; c++) {
-                    int sampleIndex = pos + c;
-                    float outSample = 0.0f;
-
-                    if (sampleIndex < pcm.length) {
-                        if (sampleIndex < crossfadeStartSample) {
-                            outSample = pcm[sampleIndex] / 32768.0f;
-                        } else {
-                            int currentFrame = (sampleIndex - crossfadeStartSample) / channels;
-                            float progress = Math.min(1.0f, (float) currentFrame / crossfadeSamples);
-                            double theta = progress * Math.PI / 2.0;
-
-                            float endSample = pcm[sampleIndex] / 32768.0f;
-                            int startTargetIndex = loopStartSample + (currentFrame * channels) + c;
-                            float startSample = (startTargetIndex < pcm.length) ? pcm[startTargetIndex] / 32768.0f : 0.0f;
-
-                            outSample = (float) (endSample * Math.cos(theta) + startSample * Math.sin(theta));
-                        }
-
-                        if (c == 0) {
-                            for (int i = 0; i < 5; i++) outSample = eqLeft[i].process(outSample);
-                            outSample = notchLeft.process(outSample);
-                            outSample = boostLeft.process(outSample);
-                        } else {
-                            for (int i = 0; i < 5; i++) outSample = eqRight[i].process(outSample);
-                            outSample = notchRight.process(outSample);
-                            outSample = boostRight.process(outSample);
-                        }
-                        outSample *= volScale;
+                int ready = framesReady.get();
+                int xStart = xfadeStartFrame;
+                int need = frame + 1;
+                if (frame >= xStart) need = Math.max(need, endFrame);
+                while (isPlaying && ready < need && !decodeComplete) {
+                    try {
+                        Thread.sleep(4);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
                     }
+                    ready = framesReady.get();
+                }
+                if (!isPlaying) break;
 
-                    if (outSample > 1.0f) outSample = 1.0f;
-                    else if (outSample < -1.0f) outSample = -1.0f;
+                float volScale = currentTrackVol * currentMasterVol * currentFadeMult * currentTimerFade;
+                float l;
+                float r;
+                int xStartNow = xfadeStartFrame;
 
-                    outputBuffer[f * channels + c] = (short) (outSample * 32767.0f);
-                    writeSamplesCount++;
+                if (frame < xStartNow) {
+                    int i = frame * 2;
+                    l = pcm[i] / 32768.0f;
+                    r = pcm[i + 1] / 32768.0f;
+                } else {
+                    int fadeI = frame - xStartNow;
+                    float t = fadeI / (float) xfadeFrames;
+                    if (t > 1f) t = 1f;
+                    double theta = t * Math.PI / 2.0;
+                    float fadeOut = (float) Math.cos(theta);
+                    float fadeIn = (float) Math.sin(theta);
+                    int endI = frame * 2;
+                    int startI = (startFrame + fadeI) * 2;
+                    float endL = (endI + 1 < pcm.length) ? pcm[endI] / 32768.0f : 0f;
+                    float endR = (endI + 1 < pcm.length) ? pcm[endI + 1] / 32768.0f : 0f;
+                    float startL = (startI + 1 < pcm.length) ? pcm[startI] / 32768.0f : 0f;
+                    float startR = (startI + 1 < pcm.length) ? pcm[startI + 1] / 32768.0f : 0f;
+                    l = endL * fadeOut + startL * fadeIn;
+                    r = endR * fadeOut + startR * fadeIn;
                 }
 
-                pos += channels;
-                if (pos >= loopEndSample) {
-                    pos = loopStartSample + (crossfadeSamples * channels);
+                for (int i = 0; i < 5; i++) l = eqLeft[i].process(l);
+                l = notchLeft.process(l);
+                l = boostLeft.process(l);
+                for (int i = 0; i < 5; i++) r = eqRight[i].process(r);
+                r = notchRight.process(r);
+                r = boostRight.process(r);
+
+                l *= volScale;
+                r *= volScale;
+
+                float peak = Math.max(Math.abs(l), Math.abs(r));
+                if (peak > env) env = peak;
+                else env = peak + limiterReleaseCoef * (env - peak);
+                if (env > LIMITER_THRESHOLD) {
+                    float g = LIMITER_THRESHOLD / env;
+                    l *= g;
+                    r *= g;
+                }
+
+                if (l > 1f) l = 1f; else if (l < -1f) l = -1f;
+                if (r > 1f) r = 1f; else if (r < -1f) r = -1f;
+
+                outputBuffer[f * 2] = (short) (l * 32767.0f);
+                outputBuffer[f * 2 + 1] = (short) (r * 32767.0f);
+                writtenFrames++;
+
+                frame++;
+                int endNow = endFrame;
+                if (frame >= endNow) {
+                    frame = startFrame + xfadeFrames;
+                    if (frame >= endNow) frame = startFrame;
                 }
             }
 
@@ -356,11 +426,12 @@ public class PCMPlayer {
                 timerFadeLevelStep = timerStep;
             }
 
-            currentPlaySampleIndex = pos;
+            limiterEnv = env;
+            currentPlaySampleIndex = frame * 2;
 
             AudioTrack track = audioTrack;
             if (isPlaying && track != null) {
-                int written = track.write(outputBuffer, 0, writeSamplesCount);
+                int written = track.write(outputBuffer, 0, writtenFrames * 2);
                 if (written < 0) break;
             }
         }

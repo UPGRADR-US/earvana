@@ -4,7 +4,6 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { execSync } from "child_process";
 
 const rawPort = process.env.PORT;
 
@@ -35,11 +34,10 @@ export default defineConfig({
     // build is running — lets you confirm the latest deploy is live.
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     __BUILD_NUMBER__: (() => {
-      try {
-        return Number(execSync("git rev-list --count HEAD", { encoding: "utf8" }).trim());
-      } catch {
-        return 0;
-      }
+      const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
+      if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
+      // Same store build as iOS / Android About (not git rev-count).
+      return 23;
     })(),
   },
   plugins: [

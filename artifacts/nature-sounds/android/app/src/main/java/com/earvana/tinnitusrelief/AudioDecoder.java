@@ -5,6 +5,7 @@ import android.content.res.AssetFileDescriptor;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.os.Build;
 import android.util.Log;
 
 import java.io.DataInputStream;
@@ -18,6 +19,7 @@ import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Decodes MP3/AAC assets to 16-bit PCM for the custom loop/DSP player.
@@ -26,14 +28,21 @@ import java.util.ArrayList;
 public class AudioDecoder {
     private static final String TAG = "AudioDecoder";
     private static final long TIMEOUT_US = 10_000;
-    private static final int CACHE_VERSION = 1;
+    private static final int CACHE_VERSION = 2; // always 2-channel stereo PCM
     private static final String CACHE_MAGIC = "EVPCM001";
 
     public static class DecodedAudio {
         public short[] samples;
         public int sampleRate;
-        public int channels;
+        public int channels = 2;
         public float duration;
+        public final AtomicInteger framesReady = new AtomicInteger(0);
+        public volatile boolean complete;
+    }
+
+    public interface StreamListener {
+        void onPlayable(DecodedAudio audio);
+        void onComplete(DecodedAudio audio);
     }
 
     public static DecodedAudio decodeAsset(Context context, String path) throws IOException {
@@ -44,7 +53,28 @@ public class AudioDecoder {
      * @param cancelCheck optional; return true to abort (throws IOException "cancelled")
      */
     public static DecodedAudio decodeAsset(Context context, String path, CancelCheck cancelCheck) throws IOException {
-        Log.d(TAG, "decodeAsset: " + path);
+        final DecodedAudio[] holder = new DecodedAudio[1];
+        final IOException[] error = new IOException[1];
+        decodeStreaming(context, path, cancelCheck, new StreamListener() {
+            @Override public void onPlayable(DecodedAudio audio) {}
+            @Override public void onComplete(DecodedAudio audio) { holder[0] = audio; }
+        });
+        if (error[0] != null) throw error[0];
+        if (holder[0] == null) throw new IOException("Decode produced no audio");
+        return holder[0];
+    }
+
+    /**
+     * Decode to stereo PCM. {@link StreamListener#onPlayable} fires as soon as ~0.6s
+     * is in memory so playback can start while the rest of the file decodes.
+     */
+    public static void decodeStreaming(
+            Context context,
+            String path,
+            CancelCheck cancelCheck,
+            StreamListener listener
+    ) throws IOException {
+        Log.d(TAG, "decodeStreaming: " + path);
         checkCancelled(cancelCheck);
 
         ResolvedSource source = resolveSource(context, path);
@@ -52,15 +82,20 @@ public class AudioDecoder {
             File cacheFile = cacheFileFor(context, source.cacheKey);
             DecodedAudio cached = readCache(cacheFile);
             if (cached != null) {
+                cached.framesReady.set(cached.samples.length / 2);
+                cached.complete = true;
                 Log.d(TAG, "Cache hit: " + cacheFile.getName()
-                        + " (" + cached.samples.length + " samples, " + cached.duration + "s)");
-                return cached;
+                        + " (" + cached.duration + "s)");
+                listener.onPlayable(cached);
+                listener.onComplete(cached);
+                return;
             }
 
             checkCancelled(cancelCheck);
-            DecodedAudio decoded = decodeFromExtractor(source, cancelCheck);
+            DecodedAudio decoded = decodeFromExtractor(source, cancelCheck, listener);
+            listener.onComplete(decoded);
 
-            // Write cache off the critical path so first play starts immediately.
+            evictOtherCaches(cacheFile);
             final File outFile = cacheFile;
             final DecodedAudio toCache = decoded;
             new Thread(() -> {
@@ -71,7 +106,6 @@ public class AudioDecoder {
                     Log.w(TAG, "Cache write failed (non-fatal)", e);
                 }
             }, "PCM-CacheWriter").start();
-            return decoded;
         } finally {
             source.close();
         }
@@ -145,7 +179,11 @@ public class AudioDecoder {
         throw new IOException("Failed to load file or asset: " + path, last);
     }
 
-    private static DecodedAudio decodeFromExtractor(ResolvedSource source, CancelCheck cancelCheck) throws IOException {
+    private static DecodedAudio decodeFromExtractor(
+            ResolvedSource source,
+            CancelCheck cancelCheck,
+            StreamListener listener
+    ) throws IOException {
         MediaExtractor extractor = source.extractor;
 
         int trackIndex = -1;
@@ -167,30 +205,39 @@ public class AudioDecoder {
         extractor.selectTrack(trackIndex);
 
         int sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-        int channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+        int channels = Math.max(1, format.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
         long durationUs = format.containsKey(MediaFormat.KEY_DURATION)
                 ? format.getLong(MediaFormat.KEY_DURATION) : 0;
 
         String mime = format.getString(MediaFormat.KEY_MIME);
         if (mime == null) throw new IOException("Missing audio mime type");
 
+        if (Build.VERSION.SDK_INT >= 32) {
+            format.setInteger(MediaFormat.KEY_MAX_OUTPUT_CHANNEL_COUNT, 2);
+        }
+
         MediaCodec decoder = MediaCodec.createDecoderByType(mime);
         decoder.configure(format, null, null, 0);
         decoder.start();
 
-        short[] allSamples = null;
-        int totalSamples = 0;
-        ArrayList<short[]> chunkList = null;
+        // Always store stereo. Pre-size from duration so we never copy 80MB at the end.
+        long estimatedFrames = durationUs > 0
+                ? (durationUs * (long) sampleRate / 1_000_000L)
+                : (2 * 60 * (long) sampleRate);
+        int capacity = (int) Math.min(Integer.MAX_VALUE / 2 - 8, (estimatedFrames + estimatedFrames / 10 + 8192) * 2);
+        short[] stereo = new short[Math.max(capacity, 44100 * 2)];
+        Log.d(TAG, "Pre-allocated stereo buffer shorts=" + stereo.length);
 
-        if (durationUs > 0) {
-            // 2% headroom — nature loops often decode slightly past declared duration
-            long estimated = (durationUs * (long) sampleRate / 1_000_000L) * channels;
-            int capacity = (int) Math.min(Integer.MAX_VALUE - 8, estimated + estimated / 50 + 4096);
-            allSamples = new short[capacity];
-            Log.d(TAG, "Pre-allocated ~" + capacity + " samples");
-        } else {
-            chunkList = new ArrayList<>();
-        }
+        DecodedAudio decoded = new DecodedAudio();
+        decoded.samples = stereo;
+        decoded.sampleRate = sampleRate;
+        decoded.channels = 2;
+        decoded.duration = durationUs > 0 ? durationUs / 1_000_000f : 0f;
+
+        int stereoShorts = 0;
+        boolean playableFired = false;
+        int playableAt = Math.max(sampleRate / 2, 8000); // ~0.5s of frames
+        short[] scratch = new short[8192];
 
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean sawInputEOS = false;
@@ -231,21 +278,19 @@ public class AudioDecoder {
                             outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
                             ShortBuffer shortBuffer = outputBuffer.asShortBuffer();
                             int numShorts = shortBuffer.remaining();
-
-                            if (allSamples != null) {
-                                if (totalSamples + numShorts > allSamples.length) {
-                                    int newLen = Math.max(allSamples.length * 2, totalSamples + numShorts);
-                                    short[] grown = new short[newLen];
-                                    System.arraycopy(allSamples, 0, grown, 0, totalSamples);
-                                    allSamples = grown;
-                                }
-                                shortBuffer.get(allSamples, totalSamples, numShorts);
-                            } else {
-                                short[] chunk = new short[numShorts];
-                                shortBuffer.get(chunk);
-                                chunkList.add(chunk);
+                            if (numShorts > scratch.length) {
+                                scratch = new short[numShorts];
                             }
-                            totalSamples += numShorts;
+                            shortBuffer.get(scratch, 0, numShorts);
+                            stereoShorts = appendStereo(stereo, stereoShorts, scratch, numShorts, channels);
+                            int frames = stereoShorts / 2;
+                            decoded.framesReady.set(frames);
+                            if (!playableFired && frames >= playableAt) {
+                                playableFired = true;
+                                Log.d(TAG, "Playable after " + (System.currentTimeMillis() - t0)
+                                        + "ms (" + frames + " frames)");
+                                listener.onPlayable(decoded);
+                            }
                         }
                     }
                     decoder.releaseOutputBuffer(outputBufferIndex, false);
@@ -256,9 +301,10 @@ public class AudioDecoder {
                     MediaFormat newFormat = decoder.getOutputFormat();
                     if (newFormat.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
                         sampleRate = newFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                        decoded.sampleRate = sampleRate;
                     }
                     if (newFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
-                        channels = newFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                        channels = Math.max(1, newFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
                     }
                 }
             }
@@ -271,31 +317,112 @@ public class AudioDecoder {
             } catch (Exception ignored) {}
         }
 
-        if (allSamples == null) {
-            allSamples = new short[totalSamples];
-            int offset = 0;
-            for (short[] chunk : chunkList) {
-                System.arraycopy(chunk, 0, allSamples, offset, chunk.length);
-                offset += chunk.length;
-            }
-        } else if (totalSamples < allSamples.length) {
-            short[] trimmed = new short[totalSamples];
-            System.arraycopy(allSamples, 0, trimmed, 0, totalSamples);
-            allSamples = trimmed;
+        int frames = stereoShorts / 2;
+        decoded.framesReady.set(frames);
+        decoded.complete = true;
+        decoded.duration = sampleRate > 0 ? (float) frames / sampleRate : 0f;
+        if (!playableFired) {
+            listener.onPlayable(decoded);
         }
 
-        DecodedAudio decoded = new DecodedAudio();
-        decoded.samples = allSamples;
-        decoded.sampleRate = sampleRate;
-        decoded.channels = Math.max(1, channels);
-        decoded.duration = decoded.channels > 0
-                ? (float) totalSamples / (sampleRate * decoded.channels)
-                : 0f;
-
         Log.d(TAG, "Decode finished in " + (System.currentTimeMillis() - t0) + "ms: "
-                + totalSamples + " samples (" + decoded.duration + "s) @ "
-                + sampleRate + "Hz ch=" + decoded.channels);
+                + frames + " frames (" + decoded.duration + "s) @ "
+                + sampleRate + "Hz stereo");
         return decoded;
+    }
+
+    /** Append a decoded buffer, folding to L/R interleaved stereo. */
+    private static int appendStereo(short[] dest, int destShorts, short[] src, int srcShorts, int inCh) {
+        inCh = Math.max(1, inCh);
+        int frames = srcShorts / inCh;
+        int roomFrames = Math.max(0, (dest.length - destShorts) / 2);
+        if (frames > roomFrames) frames = roomFrames;
+        if (frames <= 0) return destShorts;
+        int o = destShorts;
+        if (inCh == 2) {
+            int n = frames * 2;
+            System.arraycopy(src, 0, dest, o, n);
+            return o + n;
+        }
+        if (inCh == 1) {
+            for (int f = 0; f < frames && o + 1 < dest.length; f++) {
+                dest[o++] = src[f];
+                dest[o++] = src[f];
+            }
+            return o;
+        }
+        for (int f = 0; f < frames && o + 1 < dest.length; f++) {
+            int i = f * inCh;
+            float l = src[i];
+            float r = src[i + 1];
+            if (inCh >= 3) {
+                float c = src[i + 2] * 0.707f;
+                l += c;
+                r += c;
+            }
+            if (inCh >= 5) {
+                l += src[i + 4] * 0.707f;
+                r += src[i + Math.min(5, inCh - 1)] * 0.707f;
+            }
+            dest[o++] = clampShort(l);
+            dest[o++] = clampShort(r);
+        }
+        return o;
+    }
+
+    private static void evictOtherCaches(File keep) {
+        File dir = keep.getParentFile();
+        if (dir == null) return;
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (f.isFile() && !f.getName().equals(keep.getName())) {
+                //noinspection ResultOfMethodCallIgnored
+                f.delete();
+            }
+        }
+    }
+
+    /** Fold any layout down to L/R interleaved 16-bit stereo. */
+    static void ensureStereo(DecodedAudio audio) {
+        if (audio == null || audio.samples == null || audio.channels == 2) return;
+        int ch = Math.max(1, audio.channels);
+        int frames = audio.samples.length / ch;
+        short[] stereo = new short[frames * 2];
+        short[] in = audio.samples;
+        if (ch == 1) {
+            for (int f = 0; f < frames; f++) {
+                stereo[f * 2] = in[f];
+                stereo[f * 2 + 1] = in[f];
+            }
+        } else {
+            for (int f = 0; f < frames; f++) {
+                int i = f * ch;
+                float l = in[i];
+                float r = ch > 1 ? in[i + 1] : in[i];
+                if (ch >= 3) {
+                    float c = in[i + 2] * 0.707f; // center
+                    l += c;
+                    r += c;
+                }
+                if (ch >= 5) {
+                    l += in[i + 4] * 0.707f; // surround L
+                    r += in[i + Math.min(5, ch - 1)] * 0.707f;
+                }
+                stereo[f * 2] = clampShort(l);
+                stereo[f * 2 + 1] = clampShort(r);
+            }
+        }
+        audio.samples = stereo;
+        audio.channels = 2;
+        audio.duration = audio.sampleRate > 0 ? (float) frames / audio.sampleRate : 0f;
+        Log.d(TAG, "Downmixed to stereo from " + ch + " ch (" + frames + " frames)");
+    }
+
+    private static short clampShort(float v) {
+        if (v > 32767f) return 32767;
+        if (v < -32768f) return -32768;
+        return (short) v;
     }
 
     private static File cacheFileFor(Context context, String cacheKey) {
@@ -338,6 +465,9 @@ public class AudioDecoder {
             audio.sampleRate = sampleRate;
             audio.channels = channels;
             audio.duration = (float) totalSamples / (sampleRate * channels);
+            ensureStereo(audio);
+            audio.framesReady.set(audio.samples.length / 2);
+            audio.complete = true;
             return audio;
         } catch (Exception e) {
             Log.w(TAG, "Cache read failed, re-decoding", e);
@@ -348,18 +478,21 @@ public class AudioDecoder {
     }
 
     private static void writeCache(File file, DecodedAudio audio) throws IOException {
+        int totalSamples = audio.framesReady.get() * Math.max(1, audio.channels);
+        if (totalSamples <= 0) totalSamples = audio.samples.length;
+        totalSamples = Math.min(totalSamples, audio.samples.length);
         File tmp = new File(file.getAbsolutePath() + ".tmp");
         try (DataOutputStream out = new DataOutputStream(new FileOutputStream(tmp))) {
             out.writeBytes(CACHE_MAGIC);
             out.writeInt(CACHE_VERSION);
             out.writeInt(audio.sampleRate);
             out.writeInt(audio.channels);
-            out.writeInt(audio.samples.length);
+            out.writeInt(totalSamples);
 
-            byte[] buf = new byte[Math.min(audio.samples.length * 2, 256 * 1024)];
+            byte[] buf = new byte[Math.min(totalSamples * 2, 256 * 1024)];
             int offset = 0;
-            while (offset < audio.samples.length) {
-                int count = Math.min(audio.samples.length - offset, buf.length / 2);
+            while (offset < totalSamples) {
+                int count = Math.min(totalSamples - offset, buf.length / 2);
                 ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                         .put(audio.samples, offset, count);
                 out.write(buf, 0, count * 2);

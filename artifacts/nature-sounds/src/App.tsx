@@ -3,21 +3,22 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Lock } from "lucide-react";
 
-import { CATEGORIES, SoundCategory, SoundTrack } from "./sounds";
+import { CATEGORIES, FREE_TRACK_ID, SoundCategory, SoundTrack } from "./sounds";
 import { useAudioEngine } from "./hooks/useAudioEngine";
+import { useSubscription } from "./hooks/useSubscription";
+import { isFreemiumLockingEnabled, isTrackLocked } from "./lib/freemium";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
-import {
-  EarphoriaBilling,
-  isPlayBillingAvailable,
-} from "./plugins/EarphoriaBilling";
+import { APP_BUILD, APP_VERSION } from "./version";
+import { isPlayBillingAvailable } from "./plugins/EarphoriaBilling";
+import { StoreReview, isStoreReviewAvailable } from "./plugins/StoreReview";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
-const BUILD_NUMBER = __BUILD_NUMBER__;
+const BUILD_NUMBER = APP_BUILD;
 const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /**
@@ -27,6 +28,8 @@ const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month:
  */
 const SAFE_TOP = "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))";
 const SAFE_BOTTOM = "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
+// Minimum 44px so Android's smaller status bar aligns with iOS's notch/Dynamic Island.
+const BANNER_TOP_PAD = "max(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)), 44px)";
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
@@ -512,12 +515,14 @@ const CylinderCarousel = forwardRef<CarouselHandle, {
 // ─── Track List ───────────────────────────────────────────────────────────────
 
 function TrackList({
-  category, engine, selectedTrackId, onSelectTrack,
+  category, engine, selectedTrackId, onSelectTrack, isSubscribed, catalogAvailable,
 }: {
   category: SoundCategory;
   engine: ReturnType<typeof useAudioEngine>;
   selectedTrackId: string | null;
   onSelectTrack: (id: string) => void;
+  isSubscribed: boolean;
+  catalogAvailable: boolean;
 }) {
   return (
     <div className="w-full overflow-y-auto thin-scrollbar"
@@ -531,10 +536,11 @@ function TrackList({
         const isLoading  = state?.isLoading ?? false;
         const hasError   = state?.hasError  ?? false;
         const isSelected = track.id === selectedTrackId;
+        const locked     = isTrackLocked(track.id, isSubscribed, catalogAvailable);
 
         // Green = actively playing. Yellow = selected but paused / not yet started.
         const showGreen  = isPlaying;
-        const showYellow = isSelected && !isPlaying;
+        const showYellow = isSelected && !isPlaying && !locked;
 
         return (
           <button key={track.id}
@@ -567,7 +573,7 @@ function TrackList({
             )}
 
             {/* Track name — "prefix: label" split: prefix → Kallisto Heavy (700), label → Kallisto Light (300) */}
-            <span className="relative leading-none" style={{
+            <span className="relative leading-none flex items-center" style={{
               fontSize: "clamp(15px,4.0cqw,20px)",
               color: hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.92)",
               letterSpacing: "0.03em",
@@ -582,6 +588,22 @@ function TrackList({
                   </>
                 );
               })()}
+              {locked && (
+                <Lock
+                  aria-label="Premium — locked"
+                  fill="currentColor"
+                  strokeWidth={1.25}
+                  data-testid={`track-lock-${track.id}`}
+                  style={{
+                    width: "0.85em",
+                    height: "0.85em",
+                    marginLeft: "0.45em",
+                    color: "rgba(255,204,0,0.95)",
+                    flexShrink: 0,
+                    filter: "drop-shadow(0 0 6px rgba(255,200,0,0.45))",
+                  }}
+                />
+              )}
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
 
@@ -717,7 +739,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   { q: "Can I play this through my TV system?",
     a: "Yes. The method depends on your device’s settings as well as your TV setup.\n\nIn general, the following may help:\n\n1) on iOS (iPhone/iPad): use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n\n2) on Android: use Chromecast or bluetooth to your TV’s audio system." },
   { q: "How can I cancel my subscription?",
-    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find Tinnitus Relief and tap Cancel. Access continues through the end of your current billing period." },
+    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find earphoria and tap Cancel. Access continues through the end of your current billing period." },
   { q: "Will there be new tracks added in the future?",
     a: "Yes — new categories and soundscapes are in production and will be delivered automatically to subscribers at no additional charge." },
 ];
@@ -794,26 +816,33 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
   );
 }
 
-function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }: {
+function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, subscription }: {
   onClose: () => void;
   eqMode: EqModeId;
   eqBands: number[];
   onEqChange: (m: EqModeId, bands: number[]) => void;
   onEqBandsChange: (bands: number[]) => void;
+  subscription: ReturnType<typeof useSubscription>;
 }) {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [openSub,     setOpenSub]     = useState<string | null>(null);
   const [reviewText,  setReviewText]  = useState("");
   const [reviewSent,  setReviewSent]  = useState(false);
   const [xFlash,      setXFlash]      = useState(false);
-  const [subStatus,   setSubStatus]   = useState<string | null>(null);
-  const [subBusy,     setSubBusy]     = useState(false);
+  const subStatus = subscription.statusLabel;
+  const subBusy = subscription.busy;
 
   const handleClose = () => { setXFlash(true); setTimeout(() => { setXFlash(false); onClose(); }, 200); };
 
   const toggleSection = (s: string) => {
     setOpenSub(null);
-    setOpenSection(o => o === s ? null : s);
+    setOpenSection(o => {
+      const next = o === s ? null : s;
+      if (next === "review" && isStoreReviewAvailable) {
+        StoreReview.requestReview().catch(() => {});
+      }
+      return next;
+    });
   };
   const toggleSub = (key: string) => setOpenSub(o => o === key ? null : key);
 
@@ -823,64 +852,8 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
     setTimeout(() => setReviewSent(false), 3500);
   };
 
-  // Google Play Billing — monthly subscription (earphoria499 / monthly-plan)
-  useEffect(() => {
-    if (!isPlayBillingAvailable) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        await EarphoriaBilling.initialize();
-        const status = await EarphoriaBilling.getSubscriptionStatus();
-        if (!cancelled) {
-          setSubStatus(status.isSubscribed ? "active" : "inactive");
-        }
-      } catch {
-        /* billing optional at UI layer */
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const handleSubscribe = async () => {
-    if (!isPlayBillingAvailable || subBusy) return;
-    setSubBusy(true);
-    try {
-      await EarphoriaBilling.getProductDetails();
-      const result = await EarphoriaBilling.purchase();
-      if (result.pending) {
-        setSubStatus("pending");
-        alert("Payment is pending. Access unlocks when Google Play confirms the purchase.");
-      } else {
-        setSubStatus("active");
-        alert("Subscription activated. Thank you!");
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!/cancel/i.test(msg)) alert(msg || "Purchase failed");
-    } finally {
-      setSubBusy(false);
-    }
-  };
-
-  const handleRestore = async () => {
-    if (isPlayBillingAvailable) {
-      if (subBusy) return;
-      setSubBusy(true);
-      try {
-        const status = await EarphoriaBilling.restore();
-        setSubStatus(status.isSubscribed ? "active" : "inactive");
-        alert(status.isSubscribed
-          ? "Subscription restored."
-          : "No active Google Play subscription found for this account.");
-      } catch (e: unknown) {
-        alert(e instanceof Error ? e.message : "Restore failed");
-      } finally {
-        setSubBusy(false);
-      }
-      return;
-    }
-    alert("Sign in to the App Store with the same Apple ID used when you subscribed, then re-download the app — your subscription will restore automatically.");
-  };
+  const handleSubscribe = () => { subscription.subscribe(); };
+  const handleRestore = () => { subscription.restore(); };
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center"
@@ -965,17 +938,23 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
             {/* Items — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
-              {isPlayBillingAvailable && subStatus && (
+              {subscription.billingAvailable && subStatus && (
                 <div style={{ padding: "4px 0 10px", fontSize: "13px",
                   color: subStatus === "active" ? "#00ee88" : "rgba(255,255,255,0.45)" }}>
                   status: {subStatus === "active" ? "active" : subStatus === "pending" ? "pending" : "not subscribed"}
                 </div>
               )}
               {([
-                ...(isPlayBillingAvailable
-                  ? [{ label: subBusy ? "please wait…" : "subscribe — monthly", action: handleSubscribe }]
+                ...(subscription.billingAvailable
+                  ? [{ label: subBusy ? "please wait…" : "subscribe — monthly $4.99", action: handleSubscribe }]
                   : []),
-                { label: "restore on a new device", action: handleRestore },
+                ...(subscription.debugUnlockAvailable
+                  ? [{
+                      label: subscription.isSubscribed ? "lock again (test)" : "simulate purchase (test)",
+                      action: () => { subscription.debugSetSubscribed(!subscription.isSubscribed); },
+                    }]
+                  : []),
+                { label: "restore purchases", action: handleRestore },
                 { label: "cancel my subscription",
                   action: () => window.open(
                     isPlayBillingAvailable
@@ -999,6 +978,15 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
           <SettingsRow label="leave a review" isOpen={openSection === "review"} onToggle={() => toggleSection("review")}>
             {/* Content — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
+              {isStoreReviewAvailable && (
+                <button
+                  onClick={() => { StoreReview.requestReview().catch(() => {}); }}
+                  style={{ marginBottom: "10px", padding: "7px 20px", background: "rgba(0,180,90,0.18)",
+                    border: "1px solid rgba(0,255,100,0.35)", borderRadius: "6px",
+                    color: "#00ee88", fontSize: "14px", cursor: "pointer", letterSpacing: "0.04em" }}>
+                  Rate earphoria™
+                </button>
+              )}
               {reviewSent
                 ? <div style={{ color: "#00ff55", fontSize: "15px", padding: "4px 0" }}>Thank you for your feedback! ✓</div>
                 : <>
@@ -1076,7 +1064,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
                 earphoria™
               </div>
               <div style={{ color: "rgba(255,255,255,0.45)", fontSize: "13px", letterSpacing: "0.06em", marginBottom: "10px" }}>
-                v1.0&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
+                v{APP_VERSION}&nbsp;&nbsp;·&nbsp;&nbsp;build {BUILD_NUMBER}&nbsp;&nbsp;·&nbsp;&nbsp;{BUILD_DATE}
               </div>
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", letterSpacing: "0.04em", marginBottom: "3px" }}>
                 composed and produced by:&nbsp;&nbsp;jay oliver
@@ -1096,6 +1084,7 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange }
 
 function Home() {
   const engine = useAudioEngine();
+  const subscription = useSubscription();
   const [durationStep, setDurationStep] = useState<number>(10);
   // Always start on Oceans (index 0) regardless of last session.
   const [centerIdx,   setCenterIdx]   = useState<number>(0);
@@ -1280,12 +1269,17 @@ function Home() {
   // Tap a track name → play it immediately (no yellow-standby step).
   // Tapping the currently-playing track is a no-op; use PLAY to pause.
   // Tapping a different track while playing crossfades straight to that track.
+  // Locked premium tracks never start playback — they present the StoreKit paywall.
   const handleTrackSelect = useCallback((id: string) => {
+    if (isTrackLocked(id, subscription.isSubscribed, subscription.catalogAvailable)) {
+      subscription.subscribe();
+      return;
+    }
     if (id === playingTrackId) return; // tapping the currently-playing track is a no-op
     // Always start playing immediately — whether paused or mid-play (crossfade).
     engine.play(id);
     setSelectedTrackId(id);
-  }, [playingTrackId, engine]);
+  }, [playingTrackId, engine, subscription]);
 
   // PLAY button: start selected track, or pause the currently playing one.
   const handlePlayButton = useCallback(() => {
@@ -1293,6 +1287,8 @@ function Home() {
       setOptimisticPlaying(false);
       if (playingTrackId) engine.pause(playingTrackId);
       // selectedTrackId stays → reverts to yellow blink
+    } else if (selectedTrackId && isTrackLocked(selectedTrackId, subscription.isSubscribed, subscription.catalogAvailable)) {
+      subscription.subscribe();
     } else if (selectedTrackId) {
       setOptimisticPlaying(true);
       engine.play(selectedTrackId);
@@ -1304,7 +1300,7 @@ function Home() {
         carouselRef.current?.animateTo(targetCatIdx);
       }
     }
-  }, [isPlaying, playingTrackId, selectedTrackId, engine, centerIdx]);
+  }, [isPlaying, playingTrackId, selectedTrackId, engine, centerIdx, subscription]);
 
   const handleSprocketClick = useCallback(() => {
     setSprocketFlash(true);
@@ -1334,6 +1330,19 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // If a premium track is playing when the entitlement drops, stop it and
+  // fall back to the free sound so the UI matches the lock state.
+  useEffect(() => {
+    if (!isFreemiumLockingEnabled || subscription.isSubscribed || !subscription.catalogAvailable) return;
+    if (playingTrackId && isTrackLocked(playingTrackId, false, true)) {
+      engine.pause(playingTrackId);
+    }
+    setSelectedTrackId(prev =>
+      prev && isTrackLocked(prev, false, true) ? FREE_TRACK_ID : prev
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription.isSubscribed, subscription.catalogAvailable]);
+
   // Orientation is locked natively (Info.plist + AppDelegate + MyViewController)
   // and via "orientation":"portrait" in manifest.json. The JS screen.orientation.lock()
   // API is intentionally omitted — on iOS it can interfere with the compositor.
@@ -1341,7 +1350,7 @@ function Home() {
 
   return (
     <div className="relative flex flex-col w-full select-none"
-      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", touchAction: "none", overscrollBehavior: "none", overflow: "visible" }}>
+      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "transparent", touchAction: "none", overscrollBehavior: "none", overflow: "visible" }}>
 
       {/* Full-screen background — bleeds under status bar and home indicator
           so there is no black gap at the bottom of the iPhone / Android 16. */}
@@ -1367,6 +1376,7 @@ function Home() {
           eqBands={eqBands}
           onEqChange={handleEqChange}
           onEqBandsChange={handleEqBandsChange}
+          subscription={subscription}
         />
       )}
 
@@ -1386,7 +1396,7 @@ function Home() {
       {!settingsOpen && !diagOpen && (
         <>
           {/* Top Banner — pad under status bar; bg already bleeds behind it */}
-          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: SAFE_TOP }}>
+          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: BANNER_TOP_PAD }}>
             <img src={img("TopBanner20_1786146771580.png")} alt="earphoria tinnitus relief with RingMatch technology"
               className="w-full h-auto block" draggable={false} />
           </div>
@@ -1425,6 +1435,8 @@ function Home() {
                     engine={engine}
                     selectedTrackId={selectedTrackId}
                     onSelectTrack={handleTrackSelect}
+                    isSubscribed={subscription.isSubscribed}
+                    catalogAvailable={subscription.catalogAvailable}
                   />
                 ) : null;
               })()}

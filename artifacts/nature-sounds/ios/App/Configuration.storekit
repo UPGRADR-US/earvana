@@ -1,0 +1,50 @@
+{
+  "identifier" : "EarphoriaProducts",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "22273852",
+      "localizations" : [
+        {
+          "description" : "Unlock all sounds and future ambient additions.",
+          "displayName" : "earvana499",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "earvana499",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A1B2C3D4",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock all sounds for all-day focus. Includes access to new ambient sound additions with future app updates.",
+              "displayName" : "Premium Earphoria",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "Earvana",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "22273852",
+          "type" : "RecurringSubscription",
+          "winBackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

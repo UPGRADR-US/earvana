@@ -147,6 +147,11 @@ class BillingPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun presentPaywall(call: PluginCall) {
+        purchase(call)
+    }
+
+    @PluginMethod
     fun purchase(call: PluginCall) {
         val mgr = billing ?: run {
             call.reject("Billing manager not available")

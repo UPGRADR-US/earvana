@@ -1,6 +1,7 @@
 package com.earvana.tinnitusrelief;
 
 import android.Manifest;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,15 +20,28 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Tablet detection: smallest screen width >= 600dp is Google's official definition
+        // and works reliably in both emulators and real devices (unlike SCREENLAYOUT_SIZE_LARGE).
+        int smallestWidth = getResources().getConfiguration().smallestScreenWidthDp;
+        boolean isTablet = smallestWidth >= 600;
+
+        if (isTablet) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+
         registerPlugin(EarvanaAudioPlugin.class);
         registerPlugin(BillingPlugin.class);
+        registerPlugin(ReviewPlugin.class);
         super.onCreate(savedInstanceState);
-        // Pre-Android 15: keep content clear of system bars by default.
-        // Android 15+ (API 35) with targetSdk 35+ enforces edge-to-edge; this call
-        // becomes a no-op and Android 16 (API 36) removes the opt-out entirely.
-        // Capacitor 8.4 SystemBars injects --safe-area-inset-* CSS variables so
-        // the WebView UI (banner / bottom dock) pads correctly under system bars.
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+        StoreReviewHelper.incrementLaunch(this);
+        StoreReviewHelper.requestIfAppropriate(this);
+        // Edge-to-edge: WebView extends behind status bar and navigation bar so
+        // the #bg-blur letterbox layer fills the full screen on tablets.
+        // Capacitor SystemBars plugin injects --safe-area-inset-* CSS variables
+        // so the UI content is padded correctly inside the system bars.
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         requestNotificationPermissionIfNeeded();
     }
 
