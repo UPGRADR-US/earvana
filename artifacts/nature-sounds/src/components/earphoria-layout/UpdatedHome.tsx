@@ -116,7 +116,7 @@ export function UpdatedHome() {
     && category !== lastPlayingCategoryRef.current
       ? lastPlayingCategoryRef.current
       : -1;
-  return <main className="eh-app" data-testid="updated-home"><div className={`eh-bg home-jib${playing ? " is-playing" : ""}`}/>
+  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg home-jib" style={{ ["--eh-jib-state" as string]: playing ? "running" : "paused" }}/>
     <header className="eh-top-banner-separated" aria-label="earphoria tinnitus relief">
       <div className="eh-top-banner-pane">
         <img className="eh-top-banner-base" src={`${A}TopBannerBase24.png`} alt=""/>

@@ -1355,6 +1355,9 @@ function Home() {
     }
     if (id === playingTrackId) return; // tapping the currently-playing track is a no-op
     prepareTimerForPlayback();
+    // Keep the homepage camera running across the native load gap so a track
+    // change does not freeze/restart the background jib.
+    if (playingTrackId) setOptimisticPlaying(true);
     engine.play(id, playingTrackId ? { transition: "crossfade" } : undefined);
     setSelectedTrackId(id);
   }, [playingTrackId, prepareTimerForPlayback, engine, subscription]);

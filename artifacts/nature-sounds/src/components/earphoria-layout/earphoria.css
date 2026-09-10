@@ -4,18 +4,18 @@
 .eh-app:after{display:none}
 
 /* Subtle home-screen-only camera drift during active playback. Overscan keeps
-   every edge covered throughout the slow pan and zoom. */
+   every edge covered throughout the slow pan and zoom.
+   Play-state is a CSS variable (not a class toggle) so WebKit does not restart
+   the animation on pause or track change. Alternate ping-pong avoids the
+   infinite-loop hitch back to the first keyframe. */
 .eh-bg.home-jib {
   inset: -8%;
   will-change: transform;
-  animation: home-background-jib 52s cubic-bezier(.45, 0, .55, 1) infinite;
-  animation-play-state: paused;
-}
-.eh-bg.home-jib.is-playing {
-  animation-play-state: running;
+  animation: home-background-jib 52s cubic-bezier(.45, 0, .55, 1) infinite alternate;
+  animation-play-state: var(--eh-jib-state, paused);
 }
 @keyframes home-background-jib {
-  0%, 100% {
+  0% {
     transform: translate3d(-1.35%, -.9%, 0) scale(1.02);
   }
   14% {
@@ -33,10 +33,12 @@
   82% {
     transform: translate3d(-.55%, .15%, 0) scale(1.035);
   }
+  100% {
+    transform: translate3d(.4%, -1.2%, 0) scale(1.055);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eh-bg.home-jib,
-  .eh-bg.home-jib.is-playing {
+  .eh-bg.home-jib {
     animation: none;
     transform: translate3d(-1.35%, -.9%, 0) scale(1.02);
   }
