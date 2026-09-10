@@ -115,6 +115,10 @@ public class PCMPlayer {
     }
 
     public synchronized void play(boolean skipFadeIn) {
+        play(skipFadeIn ? 0f : 1.5f);
+    }
+
+    public synchronized void play(float fadeInSeconds) {
         if (isPlaying) return;
         if (samples == null) {
             Log.e(TAG, "play() called after samples released");
@@ -123,9 +127,10 @@ public class PCMPlayer {
         isPlaying = true;
         isPaused = false;
 
+        boolean skipFadeIn = fadeInSeconds <= 0f;
         fadeMultiplier = skipFadeIn ? 1.0f : 0.0f;
         targetFadeMultiplier = 1.0f;
-        fadeMultiplierStep = skipFadeIn ? 0.0f : (1.0f / (1.5f * sampleRate));
+        fadeMultiplierStep = skipFadeIn ? 0.0f : (1.0f / (fadeInSeconds * sampleRate));
 
         timerFadeLevel = 1.0f;
         targetTimerFadeLevel = 1.0f;

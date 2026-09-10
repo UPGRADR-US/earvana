@@ -176,10 +176,13 @@ public class EarvanaAudioPlugin extends Plugin {
             loopEnd = call.getFloat("loopEnd");
         }
         float crossfade = call.getFloat("crossfadeDuration", 40.0f);
+        boolean audition = "crossfade".equals(call.getString("transition"));
+        float auditionSeconds = call.getFloat("transitionDuration", 7.0f);
 
         final Float loopEndFinal = loopEnd;
         withService(call, service -> {
-            service.playTrack(trackId, filePath, trackName, loopStart, loopEndFinal, crossfade, volume);
+            service.playTrack(trackId, filePath, trackName, loopStart, loopEndFinal, crossfade, volume,
+                    audition, auditionSeconds);
             // Resolve immediately so the WebView stays responsive while decode runs
             call.resolve();
         });

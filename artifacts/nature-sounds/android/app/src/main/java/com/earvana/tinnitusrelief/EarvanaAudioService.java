@@ -51,6 +51,7 @@ public class EarvanaAudioService extends Service {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private PCMPlayer loopPlayer;
+    private PCMPlayer outgoingPlayer;
     private String activeTrackId = null;
     private String activeTrackName = "earphoria";
     private float activeTrackVolume = 0.5f;
@@ -151,6 +152,14 @@ public class EarvanaAudioService extends Service {
             loopPlayer.stopImmediate();
             loopPlayer = null;
         }
+        releaseOutgoing();
+    }
+
+    private void releaseOutgoing() {
+        if (outgoingPlayer != null) {
+            outgoingPlayer.stopImmediate();
+            outgoingPlayer = null;
+        }
     }
 
     private void enterForeground(boolean isPlaying, String title) {
@@ -189,11 +198,22 @@ public class EarvanaAudioService extends Service {
 
     public void playTrack(String trackId, String filePath, String trackName,
                           float loopStart, Float loopEnd, float crossfade, float volume) {
-        Log.d(TAG, "PlayTrack (PCM stereo): " + trackId);
+        playTrack(trackId, filePath, trackName, loopStart, loopEnd, crossfade, volume, false, 7f);
+    }
+
+    public void playTrack(String trackId, String filePath, String trackName,
+                          float loopStart, Float loopEnd, float crossfade, float volume,
+                          boolean auditionCrossfade, float auditionSeconds) {
+        Log.d(TAG, "PlayTrack (PCM stereo): " + trackId + " audition=" + auditionCrossfade);
 
         final int gen = loadGeneration.incrementAndGet();
+        final boolean keepOutgoing = auditionCrossfade && loopPlayer != null && loopPlayer.isPlaying();
 
-        releasePlayer();
+        if (!keepOutgoing) {
+            releasePlayer();
+        } else {
+            releaseOutgoing();
+        }
 
         synchronized (loadingTracks) {
             loadingTracks.clear();
@@ -206,7 +226,7 @@ public class EarvanaAudioService extends Service {
         activeTrackName = trackName != null ? trackName : trackId;
         activeTrackVolume = volume;
 
-        enterForeground(false, "Loading…");
+        enterForeground(keepOutgoing, keepOutgoing ? activeTrackName : "Loading…");
         notifyStatus();
 
         requestFocusAndWakeLock();
@@ -239,8 +259,17 @@ public class EarvanaAudioService extends Service {
                                         player.stopImmediate();
                                         return;
                                     }
+                                    PCMPlayer previous = loopPlayer;
                                     loopPlayer = player;
-                                    player.play(false);
+                                    player.play(keepOutgoing ? auditionSeconds : 1.5f);
+                                    if (keepOutgoing && previous != null) {
+                                        outgoingPlayer = previous;
+                                        previous.pause(auditionSeconds, () -> {
+                                            if (outgoingPlayer == previous) outgoingPlayer = null;
+                                        });
+                                    } else if (previous != null && previous != player) {
+                                        previous.stopImmediate();
+                                    }
                                     synchronized (loadingTracks) {
                                         loadingTracks.remove(trackId);
                                     }
@@ -305,6 +334,12 @@ public class EarvanaAudioService extends Service {
             loadingTracks.clear();
         }
 
+        PCMPlayer fadingOut = outgoingPlayer;
+        if (fadingOut != null) {
+            outgoingPlayer = null;
+            fadingOut.pause(0.35f, null);
+        }
+
         PCMPlayer player = loopPlayer;
         if (player == null) {
             activeTrackId = null;
@@ -347,6 +382,7 @@ public class EarvanaAudioService extends Service {
     public void setMasterVolume(float volume) {
         this.masterVolume = volume;
         if (loopPlayer != null) loopPlayer.setMasterVolume(volume);
+        if (outgoingPlayer != null) outgoingPlayer.setMasterVolume(volume);
     }
 
     public void setEq(float[] gains) {

@@ -8,7 +8,7 @@ const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
 const MANUAL_PAUSE_FADE_DURATION = 0.75; // manual pause only; independent of other ramps
 const LEGACY_TRACK_REPLACEMENT_FADE = 0.75; // preserve non-audition replacement behavior
-const TRACK_SWITCH_CROSSFADE = 3; // seconds — only when auditioning another track while playing
+const TRACK_SWITCH_CROSSFADE = 7; // seconds — only when auditioning another track while playing
 const PAUSE_EXPIRY_MS     = 10 * 60 * 1000;
 
 // 5-band parametric EQ: centre frequencies and Q values

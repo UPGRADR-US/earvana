@@ -32,6 +32,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private var loopPlayer: CrossfadeLoopPlayer?
+    private var outgoingPlayer: CrossfadeLoopPlayer?
     private var tonePlayer: DiagnosticTonePlayer?
     private var activeTrackId: String?
     private var trackVolumes: [String: Float] = [:]
@@ -139,6 +140,8 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let crossfade = call.getDouble("crossfadeDuration") ?? 40
         let loopStart = call.getDouble("loopStart") ?? 0
         let loopEnd = call.getDouble("loopEnd")
+        let audition = call.getString("transition") == "crossfade"
+        let auditionSeconds = call.getDouble("transitionDuration") ?? 7
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
@@ -147,7 +150,15 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             do {
-                self.loopPlayer?.stop(immediate: true)
+                let keepOutgoing = audition && (self.loopPlayer?.isPlaying == true)
+                let outgoing = keepOutgoing ? self.loopPlayer : nil
+                if !keepOutgoing {
+                    self.outgoingPlayer?.stop(immediate: true)
+                    self.outgoingPlayer = nil
+                    self.loopPlayer?.stop(immediate: true)
+                } else {
+                    self.outgoingPlayer?.stop(immediate: true)
+                }
                 let player = CrossfadeLoopPlayer()
                 try player.play(
                     url: url,
@@ -156,7 +167,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                     crossfade: crossfade,
                     volume: volume,
                     master: self.masterVolume,
-                    fadeIn: 1.5,
+                    fadeIn: keepOutgoing ? auditionSeconds : 1.5,
                     skipFadeIn: false,
                     eqGains: self.eqGains,
                     notchFreq: self.notchFreq,
@@ -165,6 +176,14 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 self.loopPlayer = player
                 self.activeTrackId = trackId
                 self.applyTherapyToPlayer()
+                if let outgoing {
+                    self.outgoingPlayer = outgoing
+                    outgoing.pause(fadeSeconds: auditionSeconds, immediate: false) { [weak self] in
+                        if self?.outgoingPlayer === outgoing {
+                            self?.outgoingPlayer = nil
+                        }
+                    }
+                }
                 self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
                 call.resolve()
             } catch {
@@ -183,6 +202,9 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             guard trackId == self.activeTrackId else {
                 call.resolve()
                 return
+            }
+            self.outgoingPlayer?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
+                self?.outgoingPlayer = nil
             }
             self.loopPlayer?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
                 self?.loopPlayer = nil
@@ -219,6 +241,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         masterVolume = volume
         loopPlayer?.setVolume(track: nil, master: volume)
+        outgoingPlayer?.setVolume(track: nil, master: volume)
         call.resolve()
     }
 
@@ -305,6 +328,8 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve()
                 return
             }
+            self.outgoingPlayer?.stop(immediate: true)
+            self.outgoingPlayer = nil
             self.loopPlayer?.stop(immediate: true)
             self.loopPlayer = nil
             self.activeTrackId = nil

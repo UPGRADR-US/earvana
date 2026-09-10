@@ -8,6 +8,8 @@ export interface EarvanaAudioPlugin {
     loopEnd?: number;
     crossfadeDuration?: number;
     volume?: number;
+    transition?: "crossfade";
+    transitionDuration?: number;
   }): Promise<void>;
   pause(options: { trackId: string }): Promise<void>;
   resume(): Promise<void>;

@@ -4,6 +4,7 @@ import { TRACKS } from "../sounds";
 import type { PlayOptions } from "./useWebAudioEngine";
 
 const PAUSE_EXPIRY_MS = 10 * 60 * 1000;
+const TRACK_SWITCH_CROSSFADE = 7;
 
 export type TrackState = {
   isPlaying: boolean;
@@ -115,25 +116,28 @@ export function useNativeAudioEngine(): AudioEngineState {
     }
   }, []);
 
-  const play = useCallback(async (trackId: string, _options?: PlayOptions) => {
+  const play = useCallback(async (trackId: string, options?: PlayOptions) => {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
+    const isCrossfade = options?.transition === "crossfade";
 
-    // Native still plays one graph at a time. Keep our 40s loop / 0.75s pause
-    // plugin contract; PlayOptions exists so the redesign host can call the
-    // same signature as web without swapping the iOS/Android engines.
-    Object.entries(tracksState).forEach(([id, st]) => {
-      if (id !== trackId && st.isPlaying) {
-        EarvanaAudio.pause({ trackId: id }).catch(() => {});
-      }
-    });
-    setTracksState(s => {
-      const ns = { ...s };
-      Object.keys(ns).forEach(id => {
-        if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+    // Auditioning another title must not create dead air. Leave the current
+    // native player running until the incoming file is ready and the engines
+    // can overlap. Regular play (from idle/pause) still stops others first.
+    if (!isCrossfade) {
+      Object.entries(tracksState).forEach(([id, st]) => {
+        if (id !== trackId && st.isPlaying) {
+          EarvanaAudio.pause({ trackId: id }).catch(() => {});
+        }
       });
-      return ns;
-    });
+      setTracksState(s => {
+        const ns = { ...s };
+        Object.keys(ns).forEach(id => {
+          if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+        });
+        return ns;
+      });
+    }
 
     lastPlayedIdRef.current = trackId;
     setLastPlayedId(trackId);
@@ -154,8 +158,17 @@ export function useNativeAudioEngine(): AudioEngineState {
         loopEnd: track.loopEnd,
         crossfadeDuration: track.crossfadeDuration ?? 40,
         volume,
+        ...(isCrossfade ? { transition: "crossfade" as const, transitionDuration: TRACK_SWITCH_CROSSFADE } : {}),
       });
-      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isPaused: false, pauseExpired: false, isLoading: false } }));
+      setTracksState(s => {
+        const ns = { ...s, [trackId]: { ...s[trackId], isPlaying: true, isPaused: false, pauseExpired: false, isLoading: false } };
+        if (isCrossfade) {
+          Object.keys(ns).forEach(id => {
+            if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+          });
+        }
+        return ns;
+      });
     } catch (e) {
       console.error("[NativeAudio] play failed", e);
       const premiumBlocked = /PREMIUM_REQUIRED/i.test(String(e));

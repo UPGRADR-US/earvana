@@ -1347,7 +1347,7 @@ function Home() {
   // Tap a track name → play it immediately (no yellow-standby step).
   // Tapping the currently-playing track is a no-op; use PLAY to pause.
   // Tapping a different track while playing opts into the dedicated
-  // three-second audition crossfade; PLAY/pause keeps its existing behavior.
+  // seven-second audition crossfade; PLAY/pause keeps its existing behavior.
   const handleTrackSelect = useCallback((id: string) => {
     if (isTrackLocked(id, subscription.isSubscribed, subscription.catalogAvailable)) {
       subscription.subscribe();
