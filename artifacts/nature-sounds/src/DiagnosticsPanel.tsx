@@ -292,6 +292,10 @@ const BandRow = memo(function BandRow({
 interface Props {
   onClose:      () => void;
   onStartTest?: () => void;
+  showInstructionsInitially?: boolean;
+  selectedFrequency?: number | null;
+  onSelectedFrequencyChange?: (freq: number | null) => void;
+  onResetRingMatch?: () => void;
   onNotch:      (freq: number | null) => void;
   currentNotch: number | null;
   onBoost:      (freq: number | null) => void;
@@ -301,16 +305,21 @@ interface Props {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DiagnosticsPanel({
-  onClose, onStartTest, onNotch, currentNotch, onBoost, currentBoost,
+  onClose, onStartTest, showInstructionsInitially = true, selectedFrequency = null, onSelectedFrequencyChange, onResetRingMatch,
+  onNotch, currentNotch, onBoost, currentBoost,
 }: Props) {
-  const hasActiveSetting = currentNotch !== null || currentBoost !== null;
+  const initialSelectedFrequency = selectedFrequency ?? currentNotch ?? currentBoost;
+  const hasActiveSetting = initialSelectedFrequency !== null;
 
-  // Page flow: 1 = instructions, 2 = pitch selector, "confirm" = process confirmation, "stat" = profile card
-  const [page,           setPage]           = useState<1 | 2 | "confirm" | "stat">(() => hasActiveSetting ? "stat" : 1);
+  // First open after launch starts with instructions. Any selected frequency
+  // starts on Status, regardless of whether notching is active.
+  const [page,           setPage]           = useState<1 | 2 | "confirm" | "stat">(() =>
+    initialSelectedFrequency !== null ? "stat" : showInstructionsInitially ? 1 : 2
+  );
   // true when stat window was opened because a setting was already engaged (vs. just processed)
   const [statIsReturning, setStatIsReturning] = useState(hasActiveSetting);
   // the frequency anchored in the stat window (persists across mode changes)
-  const [statFreq,       setStatFreq]       = useState<number | null>(() => currentNotch ?? currentBoost);
+  const [statFreq,       setStatFreq]       = useState<number | null>(initialSelectedFrequency);
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
   const [expandedBand,   setExpandedBand]   = useState<string | null>(null);
   const [toneVolume,     setToneVolume]     = useState(0.25);
@@ -411,10 +420,11 @@ export function DiagnosticsPanel({
     else playTone(sf, volToGain(toneVolume));
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
-  // PROCESS: anchor freq, open confirmation page (notch applied only when user confirms)
+  // SELECT: remember the frequency immediately; notching remains optional.
   const handleSelectClick = (freq: number) => {
     stopTone();
     setStatFreq(freq);
+    onSelectedFrequencyChange?.(freq);
     setStatIsReturning(false);
     setStatDismissing(false);
     setPage("confirm");
@@ -439,11 +449,12 @@ export function DiagnosticsPanel({
     }, 200);
   };
 
-  // "reset >>" → clear notch/boost, close panel
+  // "reset >>" → restore a true first-launch RingMatch state
   const handleReset = () => {
     onNotch(null); onBoost(null);
     setStatFreq(null);
     stopTone();
+    onResetRingMatch?.();
     onClose();
   };
 

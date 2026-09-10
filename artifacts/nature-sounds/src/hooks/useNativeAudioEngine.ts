@@ -1,9 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { EarvanaAudio } from "../plugins/EarvanaAudio";
-import { TRACKS, SoundTrack } from "../sounds";
+import { TRACKS } from "../sounds";
+import type { PlayOptions } from "./useWebAudioEngine";
+
+const PAUSE_EXPIRY_MS = 10 * 60 * 1000;
 
 export type TrackState = {
   isPlaying: boolean;
+  isPaused: boolean;
+  pauseExpired: boolean;
   isLoading: boolean;
   hasError: boolean;
   volume: number;
@@ -12,7 +17,7 @@ export type TrackState = {
 export type AudioEngineState = {
   tracks: Record<string, TrackState>;
   masterVolume: number;
-  play: (trackId: string) => Promise<void>;
+  play: (trackId: string, options?: PlayOptions) => Promise<void>;
   pause: (trackId: string) => void;
   resume: () => Promise<void>;
   setVolume: (trackId: string, volume: number) => void;
@@ -32,7 +37,7 @@ export function useNativeAudioEngine(): AudioEngineState {
   const [tracksState, setTracksState] = useState<Record<string, TrackState>>(
     TRACKS.reduce((acc, t) => ({
       ...acc,
-      [t.id]: { isPlaying: false, isLoading: false, hasError: false, volume: t.defaultVolume ?? 0.5 }
+      [t.id]: { isPlaying: false, isPaused: false, pauseExpired: false, isLoading: false, hasError: false, volume: t.defaultVolume ?? 0.5 }
     }), {})
   );
 
@@ -52,6 +57,7 @@ export function useNativeAudioEngine(): AudioEngineState {
   const lastPlayedIdRef = useRef<string | null>(null);
   const [lastPlayedId, setLastPlayedId] = useState<string | null>(null);
   const masterVolumeRef = useRef<number>(0.8);
+  const pauseExpiryTimersRef = useRef<Record<string, number>>({});
 
   // Listen for native status-change events from the plugin
   useEffect(() => {
@@ -64,6 +70,8 @@ export function useNativeAudioEngine(): AudioEngineState {
         for (const [id, st] of Object.entries(status)) {
           next[id] = {
             isPlaying: st["isPlaying"] as boolean,
+            isPaused: st["isPlaying"] ? false : (prev[id]?.isPaused ?? false),
+            pauseExpired: st["isPlaying"] ? false : (prev[id]?.pauseExpired ?? false),
             isLoading: st["isLoading"] as boolean,
             hasError: st["hasError"] as boolean,
             volume: st["volume"] as number,
@@ -107,11 +115,13 @@ export function useNativeAudioEngine(): AudioEngineState {
     }
   }, []);
 
-  const play = useCallback(async (trackId: string) => {
+  const play = useCallback(async (trackId: string, _options?: PlayOptions) => {
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Stop other tracks via plugin
+    // Native still plays one graph at a time. Keep our 40s loop / 0.75s pause
+    // plugin contract; PlayOptions exists so the redesign host can call the
+    // same signature as web without swapping the iOS/Android engines.
     Object.entries(tracksState).forEach(([id, st]) => {
       if (id !== trackId && st.isPlaying) {
         EarvanaAudio.pause({ trackId: id }).catch(() => {});
@@ -119,13 +129,20 @@ export function useNativeAudioEngine(): AudioEngineState {
     });
     setTracksState(s => {
       const ns = { ...s };
-      Object.keys(ns).forEach(id => { if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false }; });
+      Object.keys(ns).forEach(id => {
+        if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+      });
       return ns;
     });
 
     lastPlayedIdRef.current = trackId;
     setLastPlayedId(trackId);
-    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
+    const expiryTimer = pauseExpiryTimersRef.current[trackId];
+    if (expiryTimer !== undefined) {
+      clearTimeout(expiryTimer);
+      delete pauseExpiryTimersRef.current[trackId];
+    }
+    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPaused: false, pauseExpired: false, isLoading: true, hasError: false } }));
 
     try {
       // On native iOS this hits AVAudioEngine (EarvanaAudioPlugin), not Web Audio.
@@ -138,7 +155,7 @@ export function useNativeAudioEngine(): AudioEngineState {
         crossfadeDuration: track.crossfadeDuration ?? 40,
         volume,
       });
-      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
+      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isPaused: false, pauseExpired: false, isLoading: false } }));
     } catch (e) {
       console.error("[NativeAudio] play failed", e);
       const premiumBlocked = /PREMIUM_REQUIRED/i.test(String(e));
@@ -159,7 +176,16 @@ export function useNativeAudioEngine(): AudioEngineState {
 
   const pause = useCallback((trackId: string) => {
     EarvanaAudio.pause({ trackId }).catch(() => {});
-    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
+    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false, isPaused: true, pauseExpired: false } }));
+    const priorTimer = pauseExpiryTimersRef.current[trackId];
+    if (priorTimer !== undefined) clearTimeout(priorTimer);
+    pauseExpiryTimersRef.current[trackId] = window.setTimeout(() => {
+      setTracksState(s => ({
+        ...s,
+        [trackId]: { ...s[trackId], isPaused: false, pauseExpired: true },
+      }));
+      delete pauseExpiryTimersRef.current[trackId];
+    }, PAUSE_EXPIRY_MS);
   }, []);
 
   const setVolume = useCallback((trackId: string, volume: number) => {
@@ -178,11 +204,19 @@ export function useNativeAudioEngine(): AudioEngineState {
     EarvanaAudio.setEq({ gains: arr }).catch(() => {});
   }, []);
 
+  useEffect(() => () => {
+    Object.values(pauseExpiryTimersRef.current).forEach(clearTimeout);
+  }, []);
+
   const stopAll = useCallback(() => {
     EarvanaAudio.stopAll().catch(() => {});
+    Object.values(pauseExpiryTimersRef.current).forEach(clearTimeout);
+    pauseExpiryTimersRef.current = {};
     setTracksState(s => {
       const ns = { ...s };
-      Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
+      Object.keys(ns).forEach(id => {
+        ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+      });
       return ns;
     });
   }, []);

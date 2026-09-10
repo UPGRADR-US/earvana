@@ -6,7 +6,10 @@ import { TRACKS, SoundTrack } from "../sounds";
 const DEFAULT_CROSSFADE  = 40;  // seconds — seamless loop default (build-8 quality)
 const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
-const TRACK_SWITCH_FADE   = 0.75; // seconds — outgoing track fade when switching titles
+const MANUAL_PAUSE_FADE_DURATION = 0.75; // manual pause only; independent of other ramps
+const LEGACY_TRACK_REPLACEMENT_FADE = 0.75; // preserve non-audition replacement behavior
+const TRACK_SWITCH_CROSSFADE = 3; // seconds — only when auditioning another track while playing
+const PAUSE_EXPIRY_MS     = 10 * 60 * 1000;
 
 // 5-band parametric EQ: centre frequencies and Q values
 const EQ_FREQUENCIES = [100, 330, 1000, 3300, 10000] as const;
@@ -24,6 +27,8 @@ for (let i = 0; i < CURVE_N; i++) {
 
 export type TrackState = {
   isPlaying: boolean;
+  isPaused: boolean;
+  pauseExpired: boolean;
   isLoading: boolean;
   hasError: boolean;
   volume: number;
@@ -32,7 +37,7 @@ export type TrackState = {
 export type AudioEngineState = {
   tracks: Record<string, TrackState>;
   masterVolume: number;
-  play: (trackId: string) => Promise<void>;
+  play: (trackId: string, options?: PlayOptions) => Promise<void>;
   pause: (trackId: string) => void;
   resume: () => Promise<void>;
   setVolume: (trackId: string, volume: number) => void;
@@ -46,6 +51,10 @@ export type AudioEngineState = {
   setNotch: (freq: number | null) => void;
   boostedFreq: number | null;
   setBoost: (freq: number | null) => void;
+};
+
+export type PlayOptions = {
+  transition?: "crossfade";
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,10 +77,13 @@ class TrackEngine {
   gains: [GainNode | null, GainNode | null] = [null, null];
   currentSlot: 0 | 1 = 0;
   slotStartTime: [number, number] = [0, 0];
+  slotStartOffset: [number, number] = [0, 0];
 
   timeoutId: number | null = null;
   isPlaying: boolean = false;
   volume: number = 0.5;
+  private resumeOffset: number | null = null;
+  private pausedAtMs: number | null = null;
 
   // Intended steady-state gain; more reliable than reading .gain.value
   // mid-automation on Safari/iOS.
@@ -95,25 +107,53 @@ class TrackEngine {
     return end - this.loopStart;
   }
 
-  // Cap crossfade just under regionDuration/2 — hard limit for ping-pong safety:
+  // Cap crossfade at regionDuration/3 — prevents two pathological cases:
   //   (a) crossfade ≥ regionDuration → crossStart ≤ 0 → fires immediately
   //   (b) crossfade × 2 > regionDuration → in-curve still running when next
   //       loop calls cancelScheduledValues on the same GainNode (undefined behaviour)
-  // /2.2 leaves a small margin while still allowing 30–45s fades on medium clips.
   private effectiveXfade(): number {
-    return Math.min(this.crossfadeDuration, this.regionDuration() / 2.2);
+    return Math.min(this.crossfadeDuration, this.regionDuration() / 3);
   }
 
   async load(): Promise<void> {
     if (this.buffer) return;
-    const response = await fetch(import.meta.env.BASE_URL + this.url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const url = import.meta.env.BASE_URL + this.url;
+    console.log("[earvana] fetching audio:", url);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${url}`);
+    console.log("[earvana] decoding audio:", url, "content-type:", response.headers.get("content-type"));
     const arrayBuffer = await response.arrayBuffer();
     this.buffer = await this.context.decodeAudioData(arrayBuffer);
+    console.log("[earvana] audio ready:", url, "duration:", this.buffer.duration.toFixed(1) + "s");
   }
 
-  play() {
+  private regionEnd(): number {
+    return this.loopEnd ?? this.buffer!.duration;
+  }
+
+  private currentPlaybackOffset(): number {
+    const regionDuration = this.regionDuration();
+    const startOffset = this.slotStartOffset[this.currentSlot] || this.loopStart;
+    const elapsed = Math.max(0, this.context.currentTime - this.slotStartTime[this.currentSlot]);
+    return this.loopStart + ((startOffset - this.loopStart + elapsed) % regionDuration);
+  }
+
+  hasResumablePause(): boolean {
+    if (this.resumeOffset === null || this.pausedAtMs === null) return false;
+    if (Date.now() - this.pausedAtMs <= PAUSE_EXPIRY_MS) return true;
+    this.clearResumePosition();
+    return false;
+  }
+
+  clearResumePosition() {
+    this.resumeOffset = null;
+    this.pausedAtMs = null;
+  }
+
+  play(fadeInDuration = FADE_IN_DURATION) {
     if (this.isPlaying || !this.buffer) return;
+    const startOffset = this.hasResumablePause() ? this.resumeOffset! : this.loopStart;
+    this.clearResumePosition();
     this.isPlaying = true;
     this.currentSlot = 0;
 
@@ -124,26 +164,33 @@ class TrackEngine {
     source.connect(gain);
     gain.connect(this.trackGain);
 
-    const xfade = this.effectiveXfade();
-    const startTime = this.context.currentTime;
-    this.trackGain.gain.cancelScheduledValues(startTime);
-    const fadeIn = Math.min(FADE_IN_DURATION, this.regionDuration() / 3);
+    const now = this.context.currentTime;
+    // Force gain to 0 imperatively before any scheduling — prevents a blip if
+    // the render thread is slightly ahead of currentTime (one render-quantum gap).
+    this.trackGain.gain.cancelScheduledValues(now);
+    this.trackGain.gain.value = 0;
+    // 40 ms lookahead so the scheduled ramp is always in the future.
+    const startTime = now + 0.04;
+    const fadeIn = Math.min(fadeInDuration, this.regionDuration() / 3);
     this.trackGain.gain.setValueAtTime(0, startTime);
     this.trackGain.gain.linearRampToValueAtTime(this.volume, startTime + fadeIn);
 
-    source.start(startTime, this.loopStart, this.regionDuration());
+    const firstSegmentDuration = Math.max(this.regionEnd() - startOffset, 0.05);
+    const firstXfade = Math.min(this.effectiveXfade(), firstSegmentDuration / 3);
+    source.start(startTime, startOffset, firstSegmentDuration);
     this.slotStartTime[0] = startTime;
+    this.slotStartOffset[0] = startOffset;
     this.sources[0] = source;
     this.gains[0] = gain;
-    this.scheduleNextLoop(startTime + this.regionDuration() - xfade);
+    this.scheduleNextLoop(startTime + firstSegmentDuration - firstXfade, firstXfade);
   }
 
-  scheduleNextLoop(targetTime: number) {
+  scheduleNextLoop(targetTime: number, xfadeOverride?: number) {
     if (!this.isPlaying || !this.buffer) return;
     const timeUntilNext = targetTime - this.context.currentTime;
     if (timeUntilNext > 1) {
       this.timeoutId = window.setTimeout(
-        () => this.scheduleNextLoop(targetTime),
+        () => this.scheduleNextLoop(targetTime, xfadeOverride),
         Math.max((timeUntilNext - 1) * 1000, 0)
       );
       return;
@@ -151,7 +198,7 @@ class TrackEngine {
 
     const outSlot = this.currentSlot;
     const inSlot: 0 | 1 = outSlot === 0 ? 1 : 0;
-    const xfade = this.effectiveXfade();
+    const xfade = xfadeOverride ?? this.effectiveXfade();
 
     const inSource = this.context.createBufferSource();
     inSource.buffer = this.buffer;
@@ -168,6 +215,7 @@ class TrackEngine {
     inGain.connect(this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
     this.slotStartTime[inSlot] = crossStart;
+    this.slotStartOffset[inSlot] = this.loopStart;
 
     const outGain = this.gains[outSlot];
     const outSource = this.sources[outSlot];
@@ -197,9 +245,16 @@ class TrackEngine {
 
   // immediate = true        → hard cut (emergency stop / stopAll)
   // immediate = false       → gentle ramp; fadeDuration controls the ramp length:
-  //   STOP_FADE_DURATION    → PLAY button / timer auto-stop (0.75 s)
-  //   TRACK_SWITCH_FADE     → outgoing crossfade when user taps a new title (1.5 s)
-  pause(immediate = false, fadeDuration = STOP_FADE_DURATION) {
+  //   STOP_FADE_DURATION              → PLAY button / timer auto-stop
+  //   LEGACY_TRACK_REPLACEMENT_FADE   → non-audition track replacement
+  //   TRACK_SWITCH_CROSSFADE          → outgoing audition crossfade
+  pause(immediate = false, fadeDuration = STOP_FADE_DURATION, preservePosition = !immediate) {
+    if (preservePosition && this.isPlaying && this.buffer) {
+      this.resumeOffset = this.currentPlaybackOffset();
+      this.pausedAtMs = Date.now();
+    } else if (!preservePosition) {
+      this.clearResumePosition();
+    }
     this.isPlaying = false;
     if (this.timeoutId !== null) {
       clearTimeout(this.timeoutId);
@@ -209,7 +264,10 @@ class TrackEngine {
     const ctx = this.context;
     const now = ctx.currentTime;
     this.trackGain.gain.cancelScheduledValues(now);
-    const fromGain = this.trackGain.gain.value;
+    // Use stored volume, not .gain.value — browsers may snap .value to the last
+    // scheduled setValueAtTime (often 0) after cancelScheduledValues, making
+    // the gentle-ramp branch unreachable even when audio is at full volume.
+    const fromGain = this.currentGain;
 
     if (immediate || fromGain <= 0.001) {
       // Hard cut — stop sources immediately and clamp gain to 0.
@@ -269,7 +327,7 @@ export function useAudioEngine(): AudioEngineState {
   const [tracksState, setTracksState] = useState<Record<string, TrackState>>(
     TRACKS.reduce((acc, t) => ({
       ...acc,
-      [t.id]: { isPlaying: false, isLoading: false, hasError: false, volume: t.defaultVolume ?? 0.5 }
+      [t.id]: { isPlaying: false, isPaused: false, pauseExpired: false, isLoading: false, hasError: false, volume: t.defaultVolume ?? 0.5 }
     }), {})
   );
   const [masterVolume, setMasterVolumeState] = useState(0.8);
@@ -294,6 +352,7 @@ export function useAudioEngine(): AudioEngineState {
   const pendingEqRef    = useRef<number[]>([0, 0, 0, 0, 0]);
   const enginesRef      = useRef<Record<string, TrackEngine>>({});
   const lastPlayedIdRef = useRef<string | null>(null);
+  const cancelledRef    = useRef<Set<string>>(new Set()); // tracks cancelled mid-load
   const wakeLockRef     = useRef<WakeLockSentinel | null>(null);
   const keepAliveRef    = useRef<HTMLAudioElement | null>(null);
   const masterVolumeRef = useRef<number>(0.8);
@@ -301,6 +360,7 @@ export function useAudioEngine(): AudioEngineState {
   const playRef         = useRef<((id: string) => Promise<void>) | null>(null);
   const pauseRef        = useRef<((id: string) => void) | null>(null);
   const resumeRef       = useRef<(() => Promise<void>) | null>(null);
+  const pauseExpiryTimersRef = useRef<Record<string, number>>({});
 
   // ── Wake Lock (Android Chrome) ─────────────────────────────────────────
   const acquireWakeLock = useCallback(async () => {
@@ -377,6 +437,13 @@ export function useAudioEngine(): AudioEngineState {
     const loadNext = () => {
       if (i >= unloaded.length) return;
       const track = unloaded[i++];
+      // Re-check: the user may have played this track in the time since we
+      // computed `unloaded`. Never overwrite a live engine — that would orphan
+      // the playing AudioBufferSourceNodes and make stop impossible.
+      if (enginesRef.current[track.id]) {
+        setTimeout(loadNext, 0);
+        return;
+      }
       const engine = new TrackEngine(track, ctx, mg);
       engine.setVolume(track.defaultVolume ?? 0.5);
       enginesRef.current[track.id] = engine;
@@ -409,8 +476,6 @@ export function useAudioEngine(): AudioEngineState {
       const notch = contextRef.current.createBiquadFilter();
       notch.type = "notch";
       notch.frequency.value = notchedFreqRef.current ?? 22050;
-      // Q=1000 → bandwidth = 22050/1000 = 22 Hz — effectively bypassed when inactive.
-      // Q=30  → bandwidth = freq/30 — tight therapeutic notch when active.
       notch.Q.value = notchedFreqRef.current ? 30 : 1000;
       notchFilterRef.current = notch;
 
@@ -438,24 +503,34 @@ export function useAudioEngine(): AudioEngineState {
   }, [masterVolume, startKeepAlive, preloadInBackground]);
 
   // ── Playback controls ───────────────────────────────────────────────────
-  const play = useCallback(async (trackId: string) => {
+  const play = useCallback(async (trackId: string, options?: PlayOptions) => {
     initContext();
     const ctx = contextRef.current!;
     const mg  = masterGainRef.current!;
+    const isCrossfade = options?.transition === "crossfade";
+    // Await resume so audio is never scheduled into a suspended context
+    if (ctx.state === "suspended") await ctx.resume().catch(() => {});
 
     const track = TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
-    // Fade out all other engines so the outgoing track ramps down smoothly
-    // while the new track loads and fades in.
-    Object.entries(enginesRef.current).forEach(([id, eng]) => {
-      if (id !== trackId && eng.isPlaying) eng.pause(false, TRACK_SWITCH_FADE);
-    });
-    setTracksState(s => {
-      const ns = { ...s };
-      Object.keys(ns).forEach(id => { if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false }; });
-      return ns;
-    });
+    // The normal play path keeps its existing stop behavior. A track-list
+    // audition is different: leave the current track playing while the next
+    // file loads so the two tracks can overlap during the switch.
+    if (!isCrossfade) {
+      Object.entries(enginesRef.current).forEach(([id, eng]) => {
+        if (id !== trackId && eng.isPlaying) {
+          eng.pause(false, LEGACY_TRACK_REPLACEMENT_FADE, false);
+        }
+      });
+      setTracksState(s => {
+        const ns = { ...s };
+        Object.keys(ns).forEach(id => {
+          if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+        });
+        return ns;
+      });
+    }
 
     // If track previously errored, destroy stale engine for a clean fetch
     if (tracksState[trackId]?.hasError && enginesRef.current[trackId]) {
@@ -479,20 +554,40 @@ export function useAudioEngine(): AudioEngineState {
 
     const engine = enginesRef.current[trackId];
     lastPlayedIdRef.current = trackId;
-    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: true, hasError: false } }));
+    const expiryTimer = pauseExpiryTimersRef.current[trackId];
+    if (expiryTimer !== undefined) {
+      clearTimeout(expiryTimer);
+      delete pauseExpiryTimersRef.current[trackId];
+    }
+    cancelledRef.current.delete(trackId); // clear any prior cancellation for this track
+    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPaused: false, pauseExpired: false, isLoading: true, hasError: false } }));
     try {
       await engine.load();
-      // User may have tapped a different track while this was loading
-      if (lastPlayedIdRef.current !== trackId) {
+      // User may have tapped a different track, or pressed stop while loading
+      if (lastPlayedIdRef.current !== trackId || cancelledRef.current.has(trackId)) {
+        cancelledRef.current.delete(trackId);
         setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false } }));
         return;
       }
-      // Fade out any other playing track over TRACK_SWITCH_FADE for a smooth crossfade.
-      Object.entries(enginesRef.current).forEach(([id, eng]) => {
-        if (id !== trackId && eng.isPlaying) eng.pause(false, TRACK_SWITCH_FADE);
+      if (isCrossfade) {
+        // Start the outgoing ramp at the same moment the incoming track starts.
+        // This is intentionally separate from pause() and the timer stop path.
+        Object.entries(enginesRef.current).forEach(([id, eng]) => {
+          if (id !== trackId && eng.isPlaying) {
+            eng.pause(false, TRACK_SWITCH_CROSSFADE, false);
+          }
+        });
+      }
+      engine.play(isCrossfade ? TRACK_SWITCH_CROSSFADE : FADE_IN_DURATION);
+      setTracksState(s => {
+        const ns = { ...s, [trackId]: { ...s[trackId], isPlaying: true, isPaused: false, pauseExpired: false, isLoading: false } };
+        if (isCrossfade) {
+          Object.keys(ns).forEach(id => {
+            if (id !== trackId) ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+          });
+        }
+        return ns;
       });
-      engine.play();
-      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: true, isLoading: false } }));
       acquireWakeLock();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -503,7 +598,7 @@ export function useAudioEngine(): AudioEngineState {
         navigator.mediaSession.playbackState = 'playing';
       }
     } catch (e) {
-      console.error("Failed to play track", e);
+      console.error("[earvana] Failed to play track", trackId, e);
       setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
     }
   }, [initContext, tracksState, acquireWakeLock]);
@@ -513,9 +608,27 @@ export function useAudioEngine(): AudioEngineState {
   }, [play]);
 
   const pause = useCallback((trackId: string) => {
+    cancelledRef.current.add(trackId); // guard against mid-load play resuming after stop
     const engine = enginesRef.current[trackId];
-    if (engine) engine.pause(false); // gentle fade — this is the PLAY button stop
-    setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false } }));
+    if (engine) engine.pause(false, MANUAL_PAUSE_FADE_DURATION, true);
+    const hasResumablePause = !!engine?.hasResumablePause();
+    setTracksState(s => ({ ...s, [trackId]: {
+      ...s[trackId],
+      isPlaying: false,
+      isPaused: hasResumablePause,
+      pauseExpired: false,
+      isLoading: false,
+    } }));
+    const priorTimer = pauseExpiryTimersRef.current[trackId];
+    if (priorTimer !== undefined) clearTimeout(priorTimer);
+    pauseExpiryTimersRef.current[trackId] = window.setTimeout(() => {
+      enginesRef.current[trackId]?.clearResumePosition();
+      setTracksState(s => ({
+        ...s,
+        [trackId]: { ...s[trackId], isPaused: false, pauseExpired: true },
+      }));
+      delete pauseExpiryTimersRef.current[trackId];
+    }, PAUSE_EXPIRY_MS);
     releaseWakeLock();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, [releaseWakeLock]);
@@ -548,9 +661,14 @@ export function useAudioEngine(): AudioEngineState {
 
   const stopAll = useCallback(() => {
     Object.keys(enginesRef.current).forEach(id => enginesRef.current[id].pause(true));
+    Object.values(pauseExpiryTimersRef.current).forEach(clearTimeout);
+    pauseExpiryTimersRef.current = {};
+    lastPlayedIdRef.current = null;
     setTracksState(s => {
       const ns = { ...s };
-      Object.keys(ns).forEach(id => { ns[id] = { ...ns[id], isPlaying: false }; });
+      Object.keys(ns).forEach(id => {
+        ns[id] = { ...ns[id], isPlaying: false, isPaused: false, pauseExpired: false };
+      });
       return ns;
     });
     releaseWakeLock();
@@ -621,6 +739,9 @@ export function useAudioEngine(): AudioEngineState {
   useEffect(() => { playRef.current   = play;   }, [play]);
   useEffect(() => { pauseRef.current  = pause;  }, [pause]);
   useEffect(() => { resumeRef.current = resume; }, [resume]);
+  useEffect(() => () => {
+    Object.values(pauseExpiryTimersRef.current).forEach(clearTimeout);
+  }, []);
 
   // MediaSession lock-screen controls
   useEffect(() => {

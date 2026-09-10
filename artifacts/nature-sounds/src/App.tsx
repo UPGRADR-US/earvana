@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from "react";
-import { Loader2, AlertTriangle, Lock } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, FREE_TRACK_ID, SoundCategory, SoundTrack } from "./sounds";
 import { useAudioEngine } from "./hooks/useAudioEngine";
@@ -13,6 +14,8 @@ import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { APP_BUILD, APP_VERSION } from "./version";
 import { isPlayBillingAvailable } from "./plugins/EarphoriaBilling";
 import { StoreReview, isStoreReviewAvailable } from "./plugins/StoreReview";
+import { getRecommendedTrackIds } from "./frequencyRecommendations";
+import UpdatedHome from "./components/earphoria-layout/UpdatedHome";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
@@ -20,16 +23,6 @@ const img = (name: string) => `${BASE}${name}`;
 
 const BUILD_NUMBER = APP_BUILD;
 const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
-/**
- * Safe-area insets for edge-to-edge (iOS + Android 15/16).
- * Prefer Capacitor SystemBars-injected --safe-area-inset-* (fixes Android WebView
- * env() bugs); fall back to standard env() then 0px.
- */
-const SAFE_TOP = "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))";
-const SAFE_BOTTOM = "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
-// Minimum 44px so Android's smaller status bar aligns with iOS's notch/Dynamic Island.
-const BANNER_TOP_PAD = "max(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)), 44px)";
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────
 
@@ -93,8 +86,10 @@ const DURATION_STEPS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "♋"
 
 /* step 0 = "1" hr … step 9 = "10" hrs; step 10 = loop (no countdown) */
 function stepToSeconds(step: number): number { return (step + 1) * 3600; }
+function stepToStartSeconds(step: number): number { return Math.max(0, stepToSeconds(step) - 1); }
 
 function formatTime(seconds: number): string {
+  if (seconds < 60) return `:${String(Math.max(0, seconds)).padStart(2, "0")}`;
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return `${h}:${String(m).padStart(2, "0")}`;
@@ -144,22 +139,21 @@ function DurationSlider({
       onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       data-testid="duration-slider">
 
-      {/* Timer readout — floats above the bar, horizontally aligned with the knob.
-          Hidden in loop mode. While playing it slides left continuously in sync
-          with timeRemaining — position = (timeRemaining/3600 - 1) / (N-1) * 100%. */}
+      {/* Timer readout — floats above the bar and follows the remaining time.
+          Its position is independent of playback state, so pausing does not
+          snap it back to the user-set knob while the countdown continues. */}
       {step < loopStep && !slotActive && (
         <div className="absolute pointer-events-none"
+          data-testid="duration-readout"
           style={{
             bottom: "calc(100% + 10px)",
-            left: isPlaying
-              ? `${Math.max(0, (timeRemaining / 3600 - 1) / (N - 1)) * 100}%`
-              : pct(step),
+            left: `${Math.max(0, Math.min(step, timeRemaining / 3600 - 1)) / (N - 1) * 100}%`,
             transform: "translateX(-50%)",
             whiteSpace: "nowrap",
-            transition: isPlaying ? "left 1s linear" : "none",
+            transition: "left 1s linear",
           }}>
           <span style={{
-            color: isPlaying && timeRemaining <= 300
+            color: isPlaying && timeRemaining > 0 && timeRemaining <= 59
               ? "#ff2020"
               : isPlaying
                 ? "#00ff55"
@@ -168,12 +162,12 @@ function DurationSlider({
             fontWeight: 700,
             letterSpacing: "0.05em",
             fontVariantNumeric: "tabular-nums",
-            textShadow: isPlaying && timeRemaining <= 300
+            textShadow: isPlaying && timeRemaining > 0 && timeRemaining <= 59
               ? "0 0 12px #ff2020, 0 0 28px #cc0000"
               : isPlaying
                 ? "0 0 12px #00ff55, 0 0 28px #00ff33"
                 : "0 0 8px rgba(0,255,85,0.3)",
-            animation: isPlaying && timeRemaining <= 300
+            animation: isPlaying && timeRemaining > 0 && timeRemaining <= 59
               ? "timerFlash 1.8s ease-in-out infinite"
               : "none",
             transition: "text-shadow 0.5s",
@@ -185,17 +179,18 @@ function DurationSlider({
 
       {/* Labels — centred at i/(N-1)*100% of trackRef width */}
       {(() => {
-        // A marker at step i (label = i+1 hours) lights up once the countdown
-        // reaches that exact hour mark — i.e. timeRemaining ≤ (i+1)*3600 —
-        // and stays lit for the remainder of the countdown. Markers only light
-        // up to the left of the knob (i < step); the knob itself stays green
-        // via knobActive regardless.
-        const counting = isPlaying && step < loopStep;
+        // The hour-number highlight follows the same continuous position as the
+        // clock. Between two hours, glow is blended between the two neighboring
+        // numbers. The physical knob remains fixed at the user-selected step.
+        const counting = step < loopStep;
+        const countdownPosition = Math.max(0, Math.min(step, timeRemaining / 3600 - 1));
 
         return DURATION_STEPS.map((label, i) => {
-          const knobActive     = step === i;
-          const countdownActive = counting && i < step && timeRemaining <= (i + 1) * 3600;
-          const highlighted    = knobActive || countdownActive;
+          const knobActive = step === i;
+          const markerIntensity = counting
+            ? Math.max(0, 1 - Math.abs(i - countdownPosition))
+            : (knobActive ? 1 : 0);
+          const highlighted = markerIntensity > 0.001;
 
           if (i === loopStep) {
             return (
@@ -215,10 +210,15 @@ function DurationSlider({
               className="absolute leading-none transition-all duration-300 pointer-events-auto"
               style={{
                 top: 0, left: pct(i), transform: "translateX(-50%)", padding: 0,
-                color: highlighted ? "#00ff55" : "rgba(200,220,255,0.45)",
-                textShadow: highlighted ? "0 0 10px #00ff55, 0 0 20px #00ff33" : "none",
-                fontWeight: highlighted ? 600 : 300,
+                 color: highlighted
+                   ? `rgba(0,255,85,${0.55 + markerIntensity * 0.45})`
+                   : "rgba(200,220,255,0.45)",
+                 textShadow: highlighted
+                   ? `0 0 10px rgba(0,255,85,${markerIntensity}), 0 0 20px rgba(0,255,51,${markerIntensity})`
+                   : "none",
+                 fontWeight: Math.round(300 + markerIntensity * 300),
                 fontSize: "clamp(15px,3.4cqw,21px)",
+                 transition: "color 1s linear, text-shadow 1s linear, font-weight 1s linear",
               }}
               data-testid={`duration-step-${i}`}>{label}</button>
           );
@@ -248,6 +248,7 @@ function DurationSlider({
       {/* Knob — centred at step/(N-1)*100%, same formula as labels, perfect alignment.
           Drop shadow added in code since the PNG is exported without one. */}
       <div className="absolute pointer-events-none"
+        data-testid="duration-knob"
         style={{
           top: "55%",
           left: pct(step),
@@ -373,8 +374,8 @@ const CylinderCarousel = forwardRef<CarouselHandle, {
   const launchSpin = () => {
     if (!cylinderRef.current) return;
     const target = rotRef.current;
-    // Jump ahead with no transition so the browser sees a real FROM value,
-    // then animate back — forcing a visible launch rotation (visual only).
+    // Jump 360° ahead with no transition so the browser sees a real FROM value,
+    // then immediately animate back to the correct position — forcing a full rotation.
     cylinderRef.current.style.transition = "none";
     cylinderRef.current.style.transform  = `rotateY(${-(target - 120)}deg)`;
     void cylinderRef.current.offsetHeight; // flush reflow so the jump registers
@@ -480,7 +481,7 @@ const CylinderCarousel = forwardRef<CarouselHandle, {
                   opacity: faceOpacity,
                   border: isCentered || isSelected
                     ? "2px solid rgba(0,255,100,0.8)"
-                    : "2px solid rgba(255,255,255,0.20)",
+                    : "2px solid rgba(255,255,255,0.24)",
                   boxShadow: isCentered || isSelected
                     ? `${frontShadow}, inset 0 0 0 1px rgba(0,255,80,0.25)`
                     : frontShadow,
@@ -515,14 +516,13 @@ const CylinderCarousel = forwardRef<CarouselHandle, {
 // ─── Track List ───────────────────────────────────────────────────────────────
 
 function TrackList({
-  category, engine, selectedTrackId, onSelectTrack, isSubscribed, catalogAvailable,
+  category, engine, selectedTrackId, recommendedTrackIds, onSelectTrack,
 }: {
   category: SoundCategory;
   engine: ReturnType<typeof useAudioEngine>;
   selectedTrackId: string | null;
+  recommendedTrackIds: ReadonlySet<string>;
   onSelectTrack: (id: string) => void;
-  isSubscribed: boolean;
-  catalogAvailable: boolean;
 }) {
   return (
     <div className="w-full overflow-y-auto thin-scrollbar"
@@ -536,11 +536,10 @@ function TrackList({
         const isLoading  = state?.isLoading ?? false;
         const hasError   = state?.hasError  ?? false;
         const isSelected = track.id === selectedTrackId;
-        const locked     = isTrackLocked(track.id, isSubscribed, catalogAvailable);
 
         // Green = actively playing. Yellow = selected but paused / not yet started.
         const showGreen  = isPlaying;
-        const showYellow = isSelected && !isPlaying && !locked;
+        const showYellow = isSelected && !isPlaying;
 
         return (
           <button key={track.id}
@@ -553,7 +552,6 @@ function TrackList({
               animationDelay: `${i * 0.07}s`,
             }}
             data-testid={`track-btn-${track.id}`}>
-
             {/* Highlight bar — left edge pinned to 52px, matching the duration
                 slider's paddingLeft so it aligns with the "1" label.
                 right ≈ 19% clears the volume-meter column.            */}
@@ -573,7 +571,7 @@ function TrackList({
             )}
 
             {/* Track name — "prefix: label" split: prefix → Kallisto Heavy (700), label → Kallisto Light (300) */}
-            <span className="relative leading-none flex items-center" style={{
+            <span className="relative leading-none" style={{
               fontSize: "clamp(15px,4.0cqw,20px)",
               color: hasError ? "rgba(255,180,0,0.6)" : "rgba(220,240,255,0.92)",
               letterSpacing: "0.03em",
@@ -588,21 +586,11 @@ function TrackList({
                   </>
                 );
               })()}
-              {locked && (
-                <Lock
-                  aria-label="Premium — locked"
-                  fill="currentColor"
-                  strokeWidth={1.25}
-                  data-testid={`track-lock-${track.id}`}
-                  style={{
-                    width: "0.85em",
-                    height: "0.85em",
-                    marginLeft: "0.45em",
-                    color: "rgba(255,204,0,0.95)",
-                    flexShrink: 0,
-                    filter: "drop-shadow(0 0 6px rgba(255,200,0,0.45))",
-                  }}
-                />
+              {recommendedTrackIds.has(track.id) && (
+                <span aria-label="Recommended for your RingMatch frequency"
+                  style={{ display: "inline-block", marginLeft: 5, color: "#ffcc00", fontSize: "1.05em", fontWeight: 700, lineHeight: 1, textShadow: "0 0 8px rgba(255,204,0,.8)" }}>
+                  *
+                </span>
               )}
               {hasError && <span style={{ fontSize: "0.8em", opacity: 0.65 }}> — file not found</span>}
             </span>
@@ -721,25 +709,25 @@ function EqBandSlider({ label, value, onChange }: {
 
 const FAQ_ITEMS: { q: string; a: string }[] = [
   { q: "How can earphoria™ help relieve my tinnitus ringing?",
-    a: "The easiest and quickest way to get tinnitus relief is by ‘masking’, which is to apply an EXTERNAL sound to overshadow (mask) the INTERNAL ringing.\n\nTraditional approaches often use WHITE NOISE, which is a blast of all sound frequencies simultaneously. While this can be effective in tinnitus masking, the sound of white noise itself can increase stress and agitation, and is not particularly pleasant.\n\nThe earphoria™ method aims to replace your internal ringing with audio that is not only pleasing to the ear, but calming to the mind; the experience of being outdoors, in nature, while achieving the same tinnitus masking effect.\n\nBut these are not just nature recordings.\n\nThe earphoria™ audio suite features rich soundscapes, digitally mastered with an unprecedented spatial realism. The result is an audio ‘experience’ that so closely mimics the real thing, your brain may release the same neurotransmitters as if you are — in fact — standing on the coastal rocks as the waves lap beneath you, or at the edge of a mountain spring.\n\nThese soundscapes are selected and tailored for optimum tinnitus masking, with a unique added layer of treated audio targeting the most common tinnitus frequency bands." },
+    a: "The easiest and quickest way to get tinnitus relief is by ‘masking’, which is to apply an EXTERNAL sound to overshadow (mask) the INTERNAL ringing.\n\nTraditional approaches often use WHITE NOISE, which is a blast of all sound frequencies simultaneously. While this can be effective in tinnitus masking, the sound of white noise itself can increase stress and agitation, and is not particularly pleasant.\n\nThe earphoria™ method aims to replace your internal ringing with audio that is not only pleasing to the ear, but calming to the mind; the experience of being outdoors, in nature, while achieving the same tinnitus masking effect.\n\nBut these are not just nature recordings.\n\nThe euphoria™ audio suite features rich soundscapes, digitally mastered with an unprecedented spatial realism. The result is an audio ‘experience’ that so closely mimics the real thing, your brain may release the same neurotransmitters as if you are — in fact — standing on the coastal rocks as the waves lap beneath you, or at the edge of a mountain spring.\n\nThese soundscapes are selected and tailored for optimum tinnitus masking, with a unique added layer of treated audio targeting the most common tinnitus frequency bands." },
   { q: "My ringing is a constant high-pitch squeal. Which soundscapes will work best?",
     a: "The short answer: all of them can be effective.\n\nIf your tinnitus is in the high-frequency range (the most common), the ocean, rain, streams and winds are a great fit because they naturally carry sound energy at those frequencies. Also the sound of crickets carry specific high frequencies that can be effective.\n\nThe best advice is to go through all the categories and soundscapes and note which ones serve you the best." },
   { q: "What is RingMatch™?",
     a: "For your convenience, the on-board frequency-matching tool is a simple and quick way to help you pinpoint your specific tinnitus frequency.\n\nThis is not meant to replace a proper diagnosis by a qualified medical professional, but it is provided for your exploration, experimentation, and understanding.\n\nThe RingMatch tool can be invoked from the bottom control bar.\n\nClicking ‘START TEST’ will load the test tone page, where you can preview the most common tinnitus frequencies. Once you’ve identified the general ‘range’, then you can click the yellow blinking arrow to expand the list to narrow down your search. Continue auditioning until you find the one you feel is closest to matching the pitch of your internal ringing.\n\nTIP: Experiment with different tone durations and volumes. Playing shorter bursts can often help to identify the correct pitch frequency.\n\nWhen the correct frequency is played, you may experience a short term/momentary relief of your ringing. This is a common occurrence, and can be helpful in pinpointing your specific frequency. Letting the player continue for a minute or more may extend the relief period." },
   { q: "What is frequency-notching?",
     a: "This is when the audio you are listening to (in this case, the nature recordings) is digitally processed to ‘remove’ or ‘notch’ a thin band of frequencies. This is EQ, but with an ultra narrow frequency band, and mostly unnoticeable.\n\nSome people report a longer-term or even permanent relief after explorations with frequency-notching.\n\nHeadphones/earbuds recommended.\nWe suggest that you Google ‘frequency notching, tinnitus’ for more detail on this process.\n\nThis is not - in any way - a guaranteed fix. Reports vary and there is not sufficient medical substantiation. Further research is needed and this is not intended to replace professional medical consultation or treatment.\n\nIf you choose to notch any frequency band, you can reset at any time by going back to the RingMatch™ section." },
-  { q: "How do I set the timer?",
+  { q: "How do i set the timer?",
     a: "Tap the duration bar at the bottom of the screen to select 1–10 hours, or tap the ∞ icon at the far right for continuous playback. A countdown timer appears above the bar while a track is playing." },
   { q: "What are the recommended speakers?",
     a: "The earphoria™ soundscapes sound great on any playback system. If you are a tinnitus sufferer, you will find that using earbuds/airpods/headphones will provide the most effective experience.\n\nWhen playing through external speakers, the most immersive realism happens when your stereo speakers can be physically separated; the wider the better.\n\nFor example: When playing this directly from your smartphone, (and assuming your device is not set to MONO playback), you will notice a big difference in the stereo field by simply rotating your phone 90 degrees to landscape mode.\n\nThe closer the speakers are to your ears, the more immersive and effective." },
   { q: "Will this work over bluetooth wireless?",
-    a: "Yes. The soundscapes play back in both wired and wireless mode.\n\nConnect your AirPods or wireless buds/headphones before pressing play. Audio routes automatically through your device’s active output." },
-  { q: "I press PLAY, the button turns green, but I don’t hear any audio.",
+    a: "Yes. The soundscapes playback in both wired and wireless mode.\n\nConnect your airpods or wireless buds/phones before pressing play. audio routes automatically through your device’s active output." },
+  { q: "I press PLAY, the button turns green, but i don’t hear any audio.",
     a: "All devices are different, and sometimes it can be a challenge to get audio to the right place.\n\n1) Stop the playback, and then start again.\n\n2) On the right side of the screen, make sure the LED volume slider is up (showing green LEDs).\n\n3) Make sure your device’s physical volume is up (i.e., on the side edge of your device).\n\n4) It’s likely that your device’s audio output is going to a nearby bluetooth speaker or device. To change this, stop playback and manage your output routing through your device’s settings pages. Then restart the playback.\n\n5) When all else fails, quit the app and relaunch." },
   { q: "Can I play this through my TV system?",
-    a: "Yes. The method depends on your device’s settings as well as your TV setup.\n\nIn general, the following may help:\n\n1) on iOS (iPhone/iPad): use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n\n2) on Android: use Chromecast or bluetooth to your TV’s audio system." },
+    a: "Yes. The method depends on your device’s settings as well as your TV setup.\n\nIn general, the following may help:\n1) on iOS, (iPhone/iPad): use AirPlay (control center) to stream to an Apple TV or compatible soundbar.\n2) on Android: use Chromecast or bluetooth to your TV’s audio system." },
   { q: "How can I cancel my subscription?",
-    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find earphoria and tap Cancel. Access continues through the end of your current billing period." },
+    a: "Go to Settings → your name → Subscriptions on iPhone/iPad, or Google Play → Account → Subscriptions on Android. Find “Tinnitus Relief” and tap Cancel. Access continues through the end of your current billing period." },
   { q: "Will there be new tracks added in the future?",
     a: "Yes — new categories and soundscapes are in production and will be delivered automatically to subscribers at no additional charge." },
 ];
@@ -828,11 +816,11 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
   const [openSub,     setOpenSub]     = useState<string | null>(null);
   const [reviewText,  setReviewText]  = useState("");
   const [reviewSent,  setReviewSent]  = useState(false);
-  const [xFlash,      setXFlash]      = useState(false);
+  const handleClose = onClose;
   const subStatus = subscription.statusLabel;
   const subBusy = subscription.busy;
-
-  const handleClose = () => { setXFlash(true); setTimeout(() => { setXFlash(false); onClose(); }, 200); };
+  const handleSubscribe = () => { subscription.subscribe(); };
+  const handleRestore = () => { subscription.restore(); };
 
   const toggleSection = (s: string) => {
     setOpenSub(null);
@@ -852,27 +840,39 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
     setTimeout(() => setReviewSent(false), 3500);
   };
 
-  const handleSubscribe = () => { subscription.subscribe(); };
-  const handleRestore = () => { subscription.restore(); };
+  const flashClickable = (target: EventTarget | null) => {
+    const button = target instanceof Element ? target.closest<HTMLButtonElement>("button:not([aria-label^='Close'])") : null;
+    if (!button) return;
+    button.classList.add("on-click");
+    window.setTimeout(() => button.classList.remove("on-click"), 110);
+  };
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center"
+    <div className="settings-click-glow absolute inset-0 z-50 flex items-center justify-center" onClick={handleClose}
+      onPointerDownCapture={event => flashClickable(event.target)}
+      onClickCapture={event => { if (event.detail === 0) flashClickable(event.target); }}
       style={{ animation: "settingsPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both" }}>
-
-      {/* X close button — top-left of screen */}
-      <button onClick={handleClose}
-        style={{
-          position: "absolute", top: "4.5%", left: "5%", zIndex: 10,
-          background: "none", border: "none", cursor: "pointer", padding: "10px", lineHeight: 1,
-          color: xFlash ? "#00ffcc" : "rgba(255,255,255,0.82)", fontSize: "25px",
-          textShadow: xFlash ? "0 0 16px #00ffcc, 0 0 36px #00ffaa, 0 0 60px #00ff88" : "0 2px 8px rgba(0,0,0,0.9)",
-          transition: "color 0.12s, text-shadow 0.12s",
-        }}>✕</button>
+      <img src={img("homepage_BLUR_1784150009315.png")} alt=""
+        className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
       {/* Panel */}
-      <div className="relative" style={{ width: "88%", maxWidth: "88cqw", height: "min(88svh, calc(88cqw * 2.01))" }}>
-        <img src={img("settings-pane.png")} alt=""
+      <div className="relative" onClick={(event) => event.stopPropagation()}
+        style={{ width: "88%", maxWidth: "88cqw", height: "min(88svh, calc(88cqw * 2.01))" }}>
+        <img src={img("PopupBGpane.png")} alt=""
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
+
+        {/* X close button — inside the pane's rounded upper-left corner */}
+        <button onClick={handleClose} aria-label="Close settings"
+          style={{
+            position: "absolute", top: 0, left: 0, zIndex: 10,
+            width: 34, height: 34, borderRadius: "50%",
+            background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
+            cursor: "pointer", padding: 0, lineHeight: 1,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "rgba(255,255,255,0.90)", fontSize: "17px", fontWeight: 700,
+            textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+            transform: "translate(-45%, -45%)",
+          }}>✕</button>
 
         <div className="absolute overflow-y-auto thin-scrollbar"
           style={{ top: "calc(12% + 15px)", bottom: "15px", left: "5%", right: "5%", paddingLeft: "0", paddingRight: "0" }}>
@@ -936,7 +936,6 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
 
           {/* MY SUBSCRIPTION */}
           <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
-            {/* Items — 1 tab indent */}
             <div style={{ paddingLeft: "14px" }}>
               {subscription.billingAvailable && subStatus && (
                 <div style={{ padding: "4px 0 10px", fontSize: "13px",
@@ -1006,32 +1005,6 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
             </div>
           </SettingsRow>
 
-          {/* FAQ */}
-          <SettingsRow label="FAQ" isOpen={openSection === "faq"} onToggle={() => toggleSection("faq")}>
-            {/* Questions — 1 tab indent; answers — 2 tab indent */}
-            <div style={{ paddingLeft: "14px" }}>
-              {FAQ_ITEMS.map((item, i) => (
-                <div key={i}>
-                  <button onClick={() => toggleSub(`faq-${i}`)} className="w-full text-left flex items-start"
-                    style={{ gap: "8px", padding: "8px 0", background: "none", border: "none", cursor: "pointer",
-                      borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                    <span style={{ color: openSub === `faq-${i}` ? "#ffcc00" : "#00c8ff", fontSize: "12px", lineHeight: "18px", flexShrink: 0, transition: "color 0.15s" }}>
-                      {openSub === `faq-${i}` ? "∨" : ">"}
-                    </span>
-                    <span style={{ color: openSub === `faq-${i}` ? "#ffcc00" : "rgba(255,255,255,0.78)", fontSize: "13px", lineHeight: 1.45, textAlign: "left", transition: "color 0.15s" }}>
-                      {item.q}
-                    </span>
-                  </button>
-                  {openSub === `faq-${i}` && (
-                    <div style={{ padding: "7px 4px 9px 14px", color: "rgba(255,255,255,0.55)", fontSize: "13px", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                      {item.a}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </SettingsRow>
-
           {/* LEGAL */}
           <SettingsRow label="legal" isOpen={openSection === "legal"} onToggle={() => toggleSection("legal")}>
             {/* Doc rows — 1 tab indent; expanded text — 2 tab indent */}
@@ -1091,31 +1064,33 @@ function Home() {
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[0]?.id ?? null);
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
+  const [diagHasOpened, setDiagHasOpened] = useState(false);
+  const [diagShowInstructions, setDiagShowInstructions] = useState(true);
+  const [ringMatchFrequency, setRingMatchFrequency] = useState<number | null>(null);
+  const diagPausedRef  = useRef(false);  // true when we auto-paused on diag open
   const carouselRef    = useRef<CarouselHandle>(null);
-  // true when we auto-stopped nature audio so pure-tone calibration is audible
-  const diagPausedRef  = useRef(false);
-  // Always read latest engine from a ref so START TEST can't close over stale tracks state
-  const engineRef = useRef(engine);
-  engineRef.current = engine;
 
-  // Fire the launch spin shortly after mount — matches the carouselLaunch CSS delay (visual only)
+  // Fire the launch spin 300ms after mount — matches the carouselLaunch CSS delay
   useEffect(() => {
     const t = setTimeout(() => carouselRef.current?.launchSpin(), 350);
     return () => clearTimeout(t);
   }, []);
 
   const openDiag = useCallback(() => {
+    setDiagShowInstructions(!diagHasOpened);
+    setDiagHasOpened(true);
     setDiagOpen(true);
-  }, []);
+  }, [diagHasOpened]);
 
+  // Called when user clicks START TEST / REPEAT TEST — pause here, not on panel open
   // START TEST / REPEAT TEST — hard-stop nature sounds so pure tones are clear.
   // stopAll() hits native AVAudioEngine immediately (React isPlaying can lag).
-  // Music resumes when the diagnostics panel is closed (if we stopped it).
-  const onStartDiagTest = useCallback(() => {
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
+  const pauseForDiagTest = useCallback(() => {
     const e = engineRef.current;
     const wasPlaying = Object.values(e.tracks).some((s) => s.isPlaying);
     if (wasPlaying) diagPausedRef.current = true;
-    // Always stop — even if UI state says nothing is playing, native may still be
     e.stopAll();
   }, []);
 
@@ -1123,9 +1098,17 @@ function Home() {
     setDiagOpen(false);
     if (diagPausedRef.current) {
       diagPausedRef.current = false;
-      engineRef.current.resume();
+      engine.resume();
     }
-  }, []);  const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
+  }, [engine]);
+
+  const resetRingMatch = useCallback(() => {
+    setRingMatchFrequency(null);
+    setDiagHasOpened(false);
+    setDiagShowInstructions(true);
+  }, []);
+
+  const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
   const [diagFlash,       setDiagFlash]       = useState<boolean>(false);
 
   const [eqMode,  setEqMode]  = useState<EqModeId>(
@@ -1142,29 +1125,64 @@ function Home() {
     const mode = (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal";
     return EQ_PRESETS[mode] ?? [0, 0, 0, 0, 0];
   });
-  // selectedTrackId — the track the user has tapped (yellow blink), independent
-  // of whether audio is actually playing. Goes green once PLAY is pressed.
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
-    () => CATEGORIES[0]?.tracks[0]?.id ?? null
-  );
+  // No track is selected on app launch. A track becomes selected only after
+  // the user starts one, and remains selected while that track is paused.
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
   const LOOP_STEP = DURATION_STEPS.length - 1;
   const [timeRemaining, setTimeRemaining] = useState<number>(
-    durationStep < LOOP_STEP ? stepToSeconds(durationStep) : 0,
+    durationStep < LOOP_STEP ? stepToStartSeconds(durationStep) : 0,
   );
+  const [timerResetSeconds, setTimerResetSeconds] = useState<number>(
+    durationStep < LOOP_STEP ? stepToStartSeconds(durationStep) : 0,
+  );
+  const timerResetSecondsRef = useRef(timerResetSeconds);
+  const [timerCompletionHold, setTimerCompletionHold] = useState(false);
+  const [timerCompletionSignal, setTimerCompletionSignal] = useState(0);
 
   /* Tracks whether the 1-min fade-out has already been armed for this countdown cycle */
   const fadeOutStartedRef = useRef(false);
+  const timerCompletedRef = useRef(false);
+  const fadeResetTimeoutRef = useRef<number | null>(null);
 
   /* Reset to full duration whenever the user moves the slider */
   const handleDurationChange = useCallback((s: number) => {
+    if (fadeResetTimeoutRef.current !== null) {
+      clearTimeout(fadeResetTimeoutRef.current);
+      fadeResetTimeoutRef.current = null;
+    }
+    timerCompletedRef.current = false;
+    fadeOutStartedRef.current = false;
+    setTimerCompletionHold(false);
+    engine.cancelFade();
     setDurationStep(s);
     if (s < LOOP_STEP) {
-      setTimeRemaining(stepToSeconds(s));
+      const nextStartSeconds = stepToStartSeconds(s);
+      timerResetSecondsRef.current = nextStartSeconds;
+      setTimerResetSeconds(nextStartSeconds);
+      setTimeRemaining(nextStartSeconds);
+    }
+  }, [engine, LOOP_STEP]);
+
+  const handleTimerAdjustment = useCallback((deltaSeconds: number) => {
+    if (durationStep >= LOOP_STEP || !Number.isFinite(deltaSeconds)) return;
+    if (fadeResetTimeoutRef.current !== null) {
+      clearTimeout(fadeResetTimeoutRef.current);
+      fadeResetTimeoutRef.current = null;
+    }
+    if (!timerCompletionHold) {
+      timerCompletedRef.current = false;
       fadeOutStartedRef.current = false;
     }
-  }, [LOOP_STEP]);
+    engine.cancelFade();
+    setTimerResetSeconds(current => {
+      const nextResetSeconds = Math.max(0, current + deltaSeconds);
+      timerResetSecondsRef.current = nextResetSeconds;
+      return nextResetSeconds;
+    });
+    setTimeRemaining(current => Math.max(0, current + deltaSeconds));
+  }, [durationStep, engine, LOOP_STEP, timerCompletionHold]);
 
   const isPlaying      = Object.values(engine.tracks).some((t) => t.isPlaying);
   const playingTrackId = Object.entries(engine.tracks).find(([, s]) => s.isPlaying)?.[0] ?? null;
@@ -1180,6 +1198,13 @@ function Home() {
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null);
   useEffect(() => { setOptimisticPlaying(null); }, [isPlaying]);
   const btnPlaying = optimisticPlaying ?? isPlaying;
+  const isPaused = selectedTrackId
+    ? (engine.tracks[selectedTrackId]?.isPaused ?? false)
+    : false;
+  const recommendedTrackIds = new Set(getRecommendedTrackIds(ringMatchFrequency));
+  const pauseExpired = selectedTrackId
+    ? (engine.tracks[selectedTrackId]?.pauseExpired ?? false)
+    : false;
 
   // Keep selectedTrackId in sync when a track starts playing externally
   // (e.g. MediaSession lock-screen Play → engine.resume() → playingTrackId changes).
@@ -1187,16 +1212,23 @@ function Home() {
     if (playingTrackId) setSelectedTrackId(playingTrackId);
   }, [playingTrackId]);
 
-  /* Count down every second regardless of play/pause state (not in loop mode).
+  /* Count down continuously for a finite timer, including while paused.
      Uses Date.now() so any time spent with the screen locked / tab backgrounded
      is recovered as elapsed seconds when the page becomes visible again. */
   useEffect(() => {
-    if (durationStep >= LOOP_STEP) return;
+    if (durationStep >= LOOP_STEP || timerCompletionHold) return;
     let lastTick = Date.now();
 
     const tick = () => {
       const now = Date.now();
       const elapsed = Math.floor((now - lastTick) / 1000);
+      // Recover immediately if the device clock moves backward while a timer
+      // is active; otherwise lastTick can remain in the future and freeze the
+      // countdown until wall-clock time catches up.
+      if (elapsed < 0) {
+        lastTick = now;
+        return;
+      }
       if (elapsed < 1) return;
       lastTick += elapsed * 1000;
       setTimeRemaining(prev => Math.max(0, prev - elapsed));
@@ -1211,7 +1243,25 @@ function Home() {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [durationStep, LOOP_STEP]);
+  }, [durationStep, LOOP_STEP, timerCompletionHold]);
+
+  /* When the ten-minute pause grace period expires, the engine reports an
+     explicit expiration. Reset the countdown to the selected duration and
+     leave the knob there, while the play control returns to OFF. */
+  useEffect(() => {
+    if (!pauseExpired || durationStep >= LOOP_STEP || timerCompletionHold) return;
+    timerCompletedRef.current = false;
+    fadeOutStartedRef.current = false;
+    if (fadeResetTimeoutRef.current !== null) {
+      clearTimeout(fadeResetTimeoutRef.current);
+      fadeResetTimeoutRef.current = null;
+    }
+    engine.cancelFade();
+    setTimerCompletionHold(false);
+    setTimeRemaining(timerResetSeconds);
+  // engine methods are stable useCallback refs — safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [durationStep, pauseExpired, LOOP_STEP, timerCompletionHold, timerResetSeconds]);
 
   /* Allow pinch-zoom on settings/diagnostics pages; lock it out on home screen. */
   useEffect(() => {
@@ -1224,31 +1274,62 @@ function Home() {
     }
   }, [settingsOpen, diagOpen]);
 
-  /* React to timeRemaining changes: arm fade-out at ≤5 min, auto-stop at 0. */
+  /* React to timeRemaining changes: arm the fade at 0:59, then enter the
+     resumable pause state at 0 without changing the user's timer selection. */
   useEffect(() => {
     if (durationStep >= LOOP_STEP) return;
-    // Arm the fade-out once when we cross the 1-minute mark (skip if paused).
-    if (isPlaying && timeRemaining <= 60 && timeRemaining > 0 && !fadeOutStartedRef.current) {
+    // Arm the fade-out once when the clock reaches exactly 0:59 (skip if paused).
+    if (isPlaying && timeRemaining <= 59 && timeRemaining > 0 && !fadeOutStartedRef.current) {
       fadeOutStartedRef.current = true;
-      engine.startFadeOut(60); // fades to silence exactly at 0:00
+      engine.startFadeOut(timeRemaining); // reaches silence exactly at 0:00
     }
-    if (timeRemaining <= 0) {
-      fadeOutStartedRef.current = false;
+    if (timeRemaining <= 0 && !timerCompletedRef.current) {
+      timerCompletedRef.current = true;
+      setOptimisticPlaying(false);
       if (playingTrackId) engine.pause(playingTrackId);
-      engine.cancelFade();
-      // Reset slider to ∞ (continuous) so the countdown stops and the
-      // slider sits at the far-right position — not back to the old step.
-      setDurationStep(LOOP_STEP);
+      setTimerCompletionHold(true);
+      setTimeRemaining(timerResetSecondsRef.current);
+      setTimerCompletionSignal(signal => signal + 1);
+      // Keep the global fade closed until the longest native pause fade has
+      // completed, then reopen it while the source is safely paused.
+      fadeResetTimeoutRef.current = window.setTimeout(() => {
+        engine.cancelFade();
+        fadeResetTimeoutRef.current = null;
+      }, 1300);
     }
   // engine methods are stable useCallback refs — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, isPlaying]);
+  }, [timeRemaining, isPlaying, playingTrackId, durationStep, LOOP_STEP]);
 
-  /* Cancel fade whenever playback stops (manual or auto) */
+  /* A manual pause cancels the scheduled fade; resuming re-arms it for the
+     exact time remaining. Auto-stop uses the delayed reset above instead. */
   useEffect(() => {
-    if (!isPlaying) engine.cancelFade();
+    if (!isPlaying && !timerCompletedRef.current) {
+      fadeOutStartedRef.current = false;
+      engine.cancelFade();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying]);
+
+  useEffect(() => () => {
+    if (fadeResetTimeoutRef.current !== null) {
+      clearTimeout(fadeResetTimeoutRef.current);
+    }
+  }, []);
+
+  const prepareTimerForPlayback = useCallback(() => {
+    if (durationStep >= LOOP_STEP) return;
+    if (!timerCompletionHold && timeRemaining > 0) return;
+    if (fadeResetTimeoutRef.current !== null) {
+      clearTimeout(fadeResetTimeoutRef.current);
+      fadeResetTimeoutRef.current = null;
+    }
+    timerCompletedRef.current = false;
+    fadeOutStartedRef.current = false;
+    setTimerCompletionHold(false);
+    engine.cancelFade();
+    setTimeRemaining(timerResetSeconds);
+  }, [durationStep, engine, LOOP_STEP, timeRemaining, timerCompletionHold, timerResetSeconds]);
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
@@ -1256,30 +1337,27 @@ function Home() {
   };
   const handleCenterChange = (idx: number) => {
     const id  = CATEGORIES[idx].id;
-    const cat = CATEGORIES[idx];
     setCenterIdx(idx);
     setSelectedId(id);
-    // Keep whatever track is selected (playing or paused elsewhere) unchanged.
-    // Only fall back to the first track of this category if there is truly no
-    // selection at all (e.g. very first launch before anything has been touched).
-    setSelectedTrackId(prev => prev ?? cat.tracks[0]?.id ?? null);
+    // Category browsing does not create a track selection. An existing playing
+    // or paused selection remains authoritative until the user starts a track.
     localStorage.setItem("tr_last_category", id);
   };
 
   // Tap a track name → play it immediately (no yellow-standby step).
   // Tapping the currently-playing track is a no-op; use PLAY to pause.
-  // Tapping a different track while playing crossfades straight to that track.
-  // Locked premium tracks never start playback — they present the StoreKit paywall.
+  // Tapping a different track while playing opts into the dedicated
+  // three-second audition crossfade; PLAY/pause keeps its existing behavior.
   const handleTrackSelect = useCallback((id: string) => {
     if (isTrackLocked(id, subscription.isSubscribed, subscription.catalogAvailable)) {
       subscription.subscribe();
       return;
     }
     if (id === playingTrackId) return; // tapping the currently-playing track is a no-op
-    // Always start playing immediately — whether paused or mid-play (crossfade).
-    engine.play(id);
+    prepareTimerForPlayback();
+    engine.play(id, playingTrackId ? { transition: "crossfade" } : undefined);
     setSelectedTrackId(id);
-  }, [playingTrackId, engine, subscription]);
+  }, [playingTrackId, prepareTimerForPlayback, engine, subscription]);
 
   // PLAY button: start selected track, or pause the currently playing one.
   const handlePlayButton = useCallback(() => {
@@ -1287,20 +1365,126 @@ function Home() {
       setOptimisticPlaying(false);
       if (playingTrackId) engine.pause(playingTrackId);
       // selectedTrackId stays → reverts to yellow blink
-    } else if (selectedTrackId && isTrackLocked(selectedTrackId, subscription.isSubscribed, subscription.catalogAvailable)) {
-      subscription.subscribe();
-    } else if (selectedTrackId) {
+    } else {
+      const trackToPlay = selectedTrackId ?? CATEGORIES[centerIdx]?.tracks[0]?.id ?? null;
+      if (!trackToPlay) return;
+      if (isTrackLocked(trackToPlay, subscription.isSubscribed, subscription.catalogAvailable)) {
+        subscription.subscribe();
+        return;
+      }
       setOptimisticPlaying(true);
-      engine.play(selectedTrackId);
+      prepareTimerForPlayback();
+      engine.play(trackToPlay);
+      setSelectedTrackId(trackToPlay);
       // If the carousel was spun away from the playing category, spin it back.
       const targetCatIdx = CATEGORIES.findIndex(cat =>
-        cat.tracks.some(t => t.id === selectedTrackId)
+        cat.tracks.some(t => t.id === trackToPlay)
       );
       if (targetCatIdx !== -1 && targetCatIdx !== centerIdx) {
         carouselRef.current?.animateTo(targetCatIdx);
       }
     }
-  }, [isPlaying, playingTrackId, selectedTrackId, engine, centerIdx, subscription]);
+  }, [isPlaying, playingTrackId, selectedTrackId, prepareTimerForPlayback, engine, centerIdx, subscription]);
+
+  const sendRedesignState = useCallback(() => {
+    const playingCategoryIndex = btnPlaying
+      ? CATEGORIES.findIndex(category => category.tracks.some(track => track.id === playingTrackId))
+      : -1;
+    const selectedCategoryIndex = CATEGORIES.findIndex(category =>
+      category.tracks.some(track => track.id === selectedTrackId)
+    );
+    const selectedTrackIndex = selectedCategoryIndex < 0 ? -1 : CATEGORIES[selectedCategoryIndex].tracks.findIndex(track =>
+      track.id === selectedTrackId
+    );
+    window.postMessage({
+      type: "earphoria-redesign-state",
+      categoryIndex: centerIdx,
+      playingCategoryIndex,
+      trackIndex: centerIdx === selectedCategoryIndex ? selectedTrackIndex : -1,
+      isPlaying: btnPlaying,
+      isPaused,
+      volume: Math.round(engine.masterVolume * 100),
+      ringOpen: diagOpen,
+      notchedFreq: engine.notchedFreq,
+      boostedFreq: engine.boostedFreq,
+      durationStep,
+      timeRemaining,
+      timerCompletionHold,
+      timerCompletionSignal,
+      ringMatchSelected: ringMatchFrequency !== null,
+      recommendedTrackIds: [...recommendedTrackIds],
+      lockedTrackIds: CATEGORIES.flatMap(category => category.tracks)
+        .filter(track => isTrackLocked(track.id, subscription.isSubscribed, subscription.catalogAvailable))
+        .map(track => track.id),
+    }, window.location.origin);
+  }, [btnPlaying, centerIdx, diagOpen, durationStep, engine.boostedFreq, engine.masterVolume, engine.notchedFreq, isPaused, playingTrackId, ringMatchFrequency, selectedTrackId, subscription.catalogAvailable, subscription.isSubscribed, timeRemaining, timerCompletionHold, timerCompletionSignal]);
+
+  useEffect(() => {
+    sendRedesignState();
+  }, [sendRedesignState]);
+
+  useEffect(() => {
+    const handleRedesignCommand = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== window) return;
+      if (event.data?.type !== "earphoria-redesign-command") return;
+      const categoryIndex = Number(event.data.categoryIndex);
+      const trackIndex = Number(event.data.trackIndex);
+      switch (event.data.action) {
+        case "ready":
+          sendRedesignState();
+          break;
+        case "select-category":
+          if (CATEGORIES[categoryIndex]) handleCenterChange(categoryIndex);
+          break;
+        case "select-track": {
+          const track = CATEGORIES[categoryIndex]?.tracks[trackIndex];
+          if (track) handleTrackSelect(track.id);
+          break;
+        }
+        case "pause":
+          if (isPlaying) handlePlayButton();
+          break;
+        case "play":
+          if (!isPlaying) handlePlayButton();
+          break;
+        case "set-volume": {
+          const nextVolume = Number(event.data.volume);
+          if (Number.isFinite(nextVolume)) engine.setMasterVolume(Math.min(1, Math.max(0, nextVolume / 100)));
+          break;
+        }
+        case "set-duration": {
+          const nextStep = Number(event.data.durationStep);
+          if (Number.isInteger(nextStep) && nextStep >= 0 && nextStep <= LOOP_STEP) {
+            handleDurationChange(nextStep);
+          }
+          break;
+        }
+        case "adjust-timer": {
+          const deltaSeconds = Number(event.data.deltaSeconds);
+          if (deltaSeconds === -300 || deltaSeconds === 300) {
+            handleTimerAdjustment(deltaSeconds);
+          }
+          break;
+        }
+        case "open-ringmatch":
+          setDiagFlash(true);
+          window.setTimeout(() => {
+            setDiagFlash(false);
+            openDiag();
+          }, 160);
+          break;
+        case "open-settings":
+          setSprocketFlash(true);
+          window.setTimeout(() => {
+            setSprocketFlash(false);
+            setSettingsOpen(true);
+          }, 180);
+          break;
+      }
+    };
+    window.addEventListener("message", handleRedesignCommand);
+    return () => window.removeEventListener("message", handleRedesignCommand);
+  }, [engine, handleDurationChange, handlePlayButton, handleTimerAdjustment, handleTrackSelect, isPlaying, LOOP_STEP, openDiag, sendRedesignState]);
 
   const handleSprocketClick = useCallback(() => {
     setSprocketFlash(true);
@@ -1343,65 +1527,64 @@ function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscription.isSubscribed, subscription.catalogAvailable]);
 
-  // Orientation is locked natively (Info.plist + AppDelegate + MyViewController)
-  // and via "orientation":"portrait" in manifest.json. The JS screen.orientation.lock()
-  // API is intentionally omitted — on iOS it can interfere with the compositor.
+  // Orientation is locked to portrait via "orientation":"portrait" in manifest.json.
+  // The JS screen.orientation.lock() API is intentionally omitted — on iOS it can
+  // interfere with the compositor and corrupt the layout.
 
 
   return (
-    <div className="relative flex flex-col w-full select-none"
-      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "transparent", touchAction: "none", overscrollBehavior: "none", overflow: "visible" }}>
+    <div className="relative flex flex-col w-full overflow-hidden select-none"
+      style={{ height: "100dvh", boxSizing: "border-box", backgroundColor: "#070e0c", paddingTop: "env(safe-area-inset-top)", touchAction: "none", overscrollBehavior: "none" }}>
 
-      {/* Full-screen background — bleeds under status bar and home indicator
-          so there is no black gap at the bottom of the iPhone / Android 16. */}
+      {/* Full-screen background — always visible */}
       <img src={img("evTR_bg_1784150368553.png")} alt=""
-        className="absolute z-0 pointer-events-none"
-        style={{
-          top: `calc(-1 * ${SAFE_TOP})`,
-          left: 0,
-          right: 0,
-          bottom: `calc(-1 * ${SAFE_BOTTOM})`,
-          width: "100%",
-          height: `calc(100% + ${SAFE_TOP} + ${SAFE_BOTTOM})`,
-          objectFit: "cover",
-        }}
-        draggable={false}
+        className="absolute inset-0 w-full h-full object-cover z-0" draggable={false}
         fetchPriority="high" />
 
       {/* Settings overlay */}
       {settingsOpen && (
-        <SettingsPanel
-          onClose={() => setSettingsOpen(false)}
-          eqMode={eqMode}
-          eqBands={eqBands}
-          onEqChange={handleEqChange}
-          onEqBandsChange={handleEqBandsChange}
-          subscription={subscription}
-        />
+        createPortal(
+          <SettingsPanel
+            onClose={() => setSettingsOpen(false)}
+            eqMode={eqMode}
+            eqBands={eqBands}
+            onEqChange={handleEqChange}
+            onEqBandsChange={handleEqBandsChange}
+            subscription={subscription}
+          />,
+          document.body,
+        )
       )}
 
       {/* Diagnostics overlay — floats above the app */}
       {diagOpen && !settingsOpen && (
-        <DiagnosticsPanel
-          onClose={closeDiag}
-          onStartTest={onStartDiagTest}
-          onNotch={(freq) => engine.setNotch(freq ?? null)}
-          currentNotch={engine.notchedFreq}
-          onBoost={(freq) => engine.setBoost(freq ?? null)}
-          currentBoost={engine.boostedFreq}
-        />
+        createPortal(
+          <DiagnosticsPanel
+            onClose={closeDiag}
+            onStartTest={pauseForDiagTest}
+            showInstructionsInitially={diagShowInstructions}
+            selectedFrequency={ringMatchFrequency}
+            onSelectedFrequencyChange={setRingMatchFrequency}
+            onResetRingMatch={resetRingMatch}
+            onNotch={(freq) => engine.setNotch(freq ?? null)}
+            currentNotch={engine.notchedFreq}
+            onBoost={(freq) => engine.setBoost(freq ?? null)}
+            currentBoost={engine.boostedFreq}
+          />,
+          document.body,
+        )
       )}
 
 
       {!settingsOpen && !diagOpen && (
         <>
-          {/* Top Banner — pad under status bar; bg already bleeds behind it */}
-          <div className="relative z-10 flex-shrink-0 w-full" style={{ paddingTop: BANNER_TOP_PAD }}>
-            <img src={img("TopBanner20_1786146771580.png")} alt="earphoria tinnitus relief with RingMatch technology"
+          {/* Top Banner */}
+          <div className="relative z-10 flex-shrink-0 w-full">
+            <img src={img("TopBanner22.png")} alt="earphoria tinnitus relief with RingMatch technology"
               className="w-full h-auto block" draggable={false} />
           </div>
 
-          {/* Carousel — scales + spins in on launch (visual only) */}
+          {/* Carousel — scales + spins in on launch, delayed so it appears last */}
           <div className="relative flex-shrink-0 z-10"
             style={{
               overflow: "visible",
@@ -1434,16 +1617,17 @@ function Home() {
                     category={cat}
                     engine={engine}
                     selectedTrackId={selectedTrackId}
+                    recommendedTrackIds={recommendedTrackIds}
                     onSelectTrack={handleTrackSelect}
-                    isSubscribed={subscription.isSubscribed}
-                    catalogAvailable={subscription.catalogAvailable}
                   />
                 ) : null;
               })()}
             </div>
           </div>
 
-          {/* Bottom controls — bar graphic fills safe-area; icons pad above home indicator. */}
+          {/* Bottom controls — intentionally NOT relative so CPanl_bar_btm's absolute inset-0
+              resolves against only the icon-row's own relative parent, not this outer wrapper.
+              iOS WebKit picks the outermost relative ancestor when there are nested ones. */}
           <div className="z-10 flex-shrink-0" style={{ position: "relative" }}>
             {/* Volume meter — floats above this cluster, anchored to its top edge */}
             <VolumeMeter
@@ -1467,8 +1651,12 @@ function Home() {
 
             {/* Icon row — Diagnostics pinned left, Sprocket pinned right,
                 Play+EQ absolutely centred as a pair.
-                Bar wrapper extends into safe area so CPanl_bar_btm fills to home indicator. */}
-            <div className="relative" style={{ paddingBottom: SAFE_BOTTOM }}>
+                The bar image sits on a wrapper that also covers the safe-area
+                spacer so the graphic fills all the way to the home indicator
+                without pushing the icons down. */}
+            {/* Bar wrapper extends into the safe area so CPanl_bar_btm.png fills
+                all the way to the home indicator. Icons sit above via paddingBottom. */}
+            <div className="relative" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
               <img src={img("CPanl_bar_btm.png")} alt=""
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ objectFit: "fill" }} draggable={false} />
@@ -1538,7 +1726,7 @@ function Home() {
                 style={{ gap: "clamp(6px,1.8cqw,11px)", transform: "translateX(32px)" }}>
                 <PlayButton
                   isPlaying={btnPlaying}
-                  isStandby={!btnPlaying && !!selectedTrackId}
+                  isStandby={!btnPlaying && isPaused}
                   onClick={handlePlayButton}
                 />
                 {/* Fixed-width EQ slot — bars animate inside it */}
@@ -1668,7 +1856,16 @@ function PlayButton({
 // ─── App Shell ────────────────────────────────────────────────────────────────
 
 function Router() {
-  return <Switch><Route path="/" component={Home} /></Switch>;
+  return <Switch><Route path="/" component={() => (
+    <>
+      {/* Home remains mounted as the native audio/state host.  The approved
+          surface below talks to it through the same-window command bridge. */}
+      <div aria-hidden="true" style={{ position: "fixed", inset: 0, visibility: "hidden", pointerEvents: "none" }}>
+        <Home />
+      </div>
+      <UpdatedHome />
+    </>
+  )} /></Switch>;
 }
 
 function App() {

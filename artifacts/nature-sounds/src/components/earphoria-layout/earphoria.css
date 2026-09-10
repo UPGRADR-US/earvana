@@ -1,0 +1,1129 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;700;800&display=swap');
+/* Published home fidelity: the native app uses one unmodified, full-bleed plate. */
+.eh-bg{background-image:url('/earphoria-redesign/published-home-bg.png');background-size:cover;background-position:center;filter:none}
+.eh-app:after{display:none}
+
+/* Subtle home-screen-only camera drift during active playback. Overscan keeps
+   every edge covered throughout the slow pan and zoom. */
+.eh-bg.home-jib {
+  inset: -8%;
+  will-change: transform;
+  animation: home-background-jib 52s cubic-bezier(.45, 0, .55, 1) infinite;
+  animation-play-state: paused;
+}
+.eh-bg.home-jib.is-playing {
+  animation-play-state: running;
+}
+@keyframes home-background-jib {
+  0%, 100% {
+    transform: translate3d(-1.35%, -.9%, 0) scale(1.02);
+  }
+  14% {
+    transform: translate3d(-.25%, -1.8%, 0) scale(1.06);
+  }
+  31% {
+    transform: translate3d(1.65%, -.35%, 0) scale(1.09);
+  }
+  48% {
+    transform: translate3d(.7%, 1.85%, 0) scale(1.045);
+  }
+  66% {
+    transform: translate3d(-1.7%, 1.05%, 0) scale(1.075);
+  }
+  82% {
+    transform: translate3d(-.55%, .15%, 0) scale(1.035);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eh-bg.home-jib,
+  .eh-bg.home-jib.is-playing {
+    animation: none;
+    transform: translate3d(-1.35%, -.9%, 0) scale(1.02);
+  }
+}
+*{box-sizing:border-box} body{margin:0;background:#061b20;font-family:Figtree, sans-serif;color:#e8f0dc}.eh-app{position:relative;width:100%;height:100dvh;min-height:620px;overflow:hidden;background:#102e32}.eh-bg{position:absolute;inset:0;background-image:linear-gradient(180deg,rgba(20,54,42,.1),rgba(3,31,38,.54)),url('/earphoria-redesign/current-bg.png');background-size:cover;background-position:center;filter:saturate(1.16)}.eh-app:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(15,45,27,.08),rgba(0,29,38,.18) 55%,rgba(4,34,42,.74))}.eh-top-banner{position:absolute;z-index:3;top:0;left:0;width:100%;height:auto;opacity:.96}.eh-logo{position:absolute;z-index:2;top:4.5%;left:7%;text-shadow:0 2px 8px #203a29;color:#f9fbeb;letter-spacing:.02em}.eh-logo b{font-size:clamp(28px,8vw,49px);font-weight:700}.eh-logo b i{font-style:normal;color:#b9eb1a}.eh-logo .ear{font-size:42px;margin-right:3px}.eh-logo small{display:block;color:#d9fa22;font-size:clamp(13px,3.4vw,21px);letter-spacing:.27em;margin-left:22%}.eh-logo em{display:block;font-style:normal;font-size:clamp(8px,1.9vw,12px);letter-spacing:.27em;opacity:.88;margin-top:7px}.eh-header{position:absolute;z-index:2;top:2%;right:5%;font-size:10px;letter-spacing:.18em;color:#d8e8ca}.eh-workspace{position:absolute;z-index:2;top:26%;left:7%;right:25%;height:33%;overflow:auto}.eh-category{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#d9eead;opacity:.8;margin:0 0 14px}.eh-tracks{display:grid;gap:7px}.eh-track{border:1px solid rgba(212,244,194,.34);background:rgba(13,54,43,.34);color:#e3f0d9;text-align:left;padding:12px 14px;border-radius:3px;letter-spacing:.045em;font-size:clamp(12px,2.8vw,16px);transition:transform .2s,background .2s,border-color .2s;position:relative}.eh-track:hover{transform:translateX(4px)}.eh-track.selected{border-color:#c9eb38;background:rgba(56,103,46,.62);box-shadow:inset 4px 0 #d8f02d}.eh-track strong{font-weight:800}.bars{position:absolute;right:13px;top:50%;display:flex;gap:2px;transform:translateY(-50%)}.bars b{display:block;width:3px;height:13px;background:#b6e52d;animation:eq .55s ease-in-out infinite alternate}.bars b:nth-child(2){height:20px;animation-delay:.12s}.bars b:nth-child(3){height:9px;animation-delay:.23s}@keyframes eq{to{transform:scaleY(.35)}}.eh-console{position:absolute;z-index:4;bottom:0;left:0;right:0;height:35%;min-height:215px;background:linear-gradient(180deg,rgba(5,38,34,.35),rgba(3,35,39,.88));border-top:1px solid rgba(202,234,101,.22);backdrop-filter:blur(5px)}.eh-console:before{content:"";position:absolute;inset:0;background:url('/earphoria-redesign/BottomBasePane.png') center bottom/100% 100% no-repeat;opacity:.72;pointer-events:none}.eh-controls:before{content:"";position:absolute;inset:0 0 auto;height:47%;background:url('/earphoria-redesign/ControlsBar.png') center top/100% 100% no-repeat;opacity:.58;pointer-events:none}.eh-controls{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:clamp(8px,4vw,30px);padding-top:10px}.eh-control{width:clamp(59px,17vw,94px);border:0;background:transparent;color:#e5edd6;font-size:clamp(8px,2vw,11px);letter-spacing:.16em;text-transform:lowercase;cursor:pointer;transition:transform .2s,filter .2s;position:relative;z-index:1}.eh-control:hover{transform:translateY(-3px)}.eh-control img{width:100%;max-height:65px;object-fit:contain;display:block;margin-bottom:6px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))}.eh-control small{display:block;color:#b8ee34;letter-spacing:.11em;margin-top:4px}.eh-control.paused small{color:#ffde25;animation:blink 1s infinite}.eh-control.active small{color:#b7f42c}.eh-secondary{position:relative;z-index:1;display:flex;justify-content:center;gap:clamp(70px,20vw,140px);margin-top:14px}.eh-secondary button{border:0;background:transparent;color:#dff0d0;cursor:pointer;text-shadow:0 3px 8px #051b18}.eh-secondary img{width:43px}.eh-volume{position:absolute;z-index:2;bottom:8%;left:15%;right:15%;display:flex;flex-direction:column;align-items:center;gap:6px;color:#cfdfc7;letter-spacing:.45em;font-size:11px}.eh-volume input{position:absolute;opacity:0;width:100%;height:35px;cursor:pointer}.led-art{position:relative;width:100%;height:35px}.led-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}.led-art-fill{filter:none}.eh-panel{position:absolute;z-index:8;inset:7% 5% 5%;background:rgba(10,44,47,.91);border:1px solid rgba(209,231,160,.35);box-shadow:0 15px 40px #001a1a;backdrop-filter:blur(16px);overflow:auto;padding:24px;animation:rise .3s ease}@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.eh-close{position:absolute;right:14px;top:10px;color:#eef5d8;background:none;border:0;font-size:28px;cursor:pointer}.eh-panel h2{font-weight:300;letter-spacing:.22em;text-transform:lowercase;margin:8px 0 22px;color:#ddf09f}.eh-panel p{color:#c6d9c2;font-size:13px;line-height:1.65}.eh-panel strong{color:#f1ffb7;font-weight:500}.eh-faq-item{border-top:1px solid rgba(220,239,180,.22)}.eh-faq-item button{width:100%;padding:16px 4px;border:0;background:none;color:#eff7dc;text-align:left;font:inherit;font-size:14px;display:flex;justify-content:space-between;cursor:pointer}.eh-faq-item div{padding:0 5px 16px;color:#bed0bd;font-size:13px;line-height:1.6}.timer-layer{position:absolute;z-index:7;inset:0}.timer-backdrop{position:absolute;inset:0;background:url('/earphoria-redesign/bgBLUR.png') center/cover no-repeat}.timer-panel{inset:10% 7% 8%;text-align:center;padding:20px 12px;background:rgba(34,67,72,.58);border:0;box-shadow:none;backdrop-filter:none;background-image:url('/earphoria-redesign/TimerHoverBGpane.png');background-size:100% 100%;background-repeat:no-repeat}.timer-time{font-size:clamp(76px,22vw,140px);font-weight:700;color:#ff1818;line-height:.9;text-shadow:6px 10px 4px rgba(0,0,0,.45);font-variant-numeric:tabular-nums;margin-top:28px}.timer-time small{display:block;font-size:23px;letter-spacing:.12em;text-shadow:none;margin-top:18px}.timer-title{margin-top:84px;font-size:28px;letter-spacing:.35em;color:#d8d6c6;font-weight:300}.duration{margin:42px 5% 0}.duration-labels{display:flex;justify-content:space-between;color:#d0d5c5;font-size:12px}.duration input{width:100%;accent-color:#63ff47;margin-top:12px}.continuous{color:#66ff4a;margin-top:11px;font-size:12px}.seg-active{color:#61ff42;font-weight:700}.eh-note{color:#cbd9c1;font-size:11px;letter-spacing:.1em}.info-pane h3{font-weight:400;color:#e5f399;margin:24px 0 5px}.info-pane ul{color:#c6d9c2;line-height:1.8;font-size:13px;padding-left:18px}@keyframes blink{50%{opacity:.25}}
+
+/* Preserve the source artwork's geometry: the base pane rises only to the
+   controls, and the ControlsBar is a narrow stripe across that top edge. */
+.eh-console {
+  height: 45.183vw;
+  min-height: 0;
+  background: none;
+  border-top: 0;
+  backdrop-filter: none;
+}
+.eh-console:before {
+  opacity: 1;
+}
+.eh-controls:before {
+  height: 5.134vw;
+  opacity: 1;
+}
+
+/* The normal home uses the published plate completely unmodified.
+   TimerHoverBGpane remains scoped exclusively to .timer-panel. */
+.eh-bg {
+  background-image: url('/earphoria-redesign/published-home-bg.png');
+  background-size: cover;
+  background-position: center;
+  filter: none;
+}
+.eh-app:after {
+  display: none;
+}
+
+/* Match the real app's vertical priority:
+   banner → carousel → flexible track viewport → fixed bottom controls. */
+.eh-app {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  --eh-content-max: 620px;
+}
+.eh-top-banner {
+  position: relative;
+  top: auto;
+  left: auto;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: 100%;
+}
+.eh-carousel {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: 100%;
+  height: clamp(84px, min(24cqw, 16svh), 135px);
+  perspective: 820px;
+  overflow: visible;
+  margin-top: clamp(2px, .8vh, 8px);
+  touch-action: pan-y;
+  cursor: grab;
+}
+.eh-carousel:active { cursor: grabbing; }
+.eh-carousel-cylinder {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.eh-category-card {
+  --angle: 0deg;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(64px, min(17cqw, 11svh), 82px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid rgba(255,255,255,.24);
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+  opacity: .72;
+  transform: translate(-50%, -50%) rotateY(var(--angle)) translateZ(clamp(135px, 34cqw, 220px));
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transition: transform .45s ease, opacity .45s ease, border-color .45s ease;
+  box-shadow: none;
+}
+.eh-category-card.centered {
+  z-index: 2;
+  opacity: 1 !important;
+  border-color: rgba(255,255,255,.24);
+  box-shadow: 0 14px 32px rgba(0,0,0,.85);
+}
+.eh-category-card.centered.neutral-highlight {
+  border-color: rgba(0,255,100,.8);
+  box-shadow: 0 14px 32px rgba(0,0,0,.85), inset 0 0 0 1px rgba(0,255,80,.25);
+}
+.eh-category-card.centered img {
+  opacity: 1;
+  filter: none;
+}
+.eh-category-card.playing {
+  border-color: rgba(0,255,100,.8);
+  box-shadow: inset 0 0 0 1px rgba(0,255,80,.25);
+}
+.eh-category-card.playing:not(.centered) {
+  border-width: 4px;
+  animation: playing-bank-stroke-blink 1s ease-in-out infinite;
+}
+.eh-category-card.paused-off-course {
+  border-width: 4px;
+  animation: paused-bank-stroke-blink 1s ease-in-out infinite;
+}
+.eh-category-card.centered.playing {
+  box-shadow: 0 14px 32px rgba(0,0,0,.85), inset 0 0 0 1px rgba(0,255,80,.25);
+}
+@keyframes playing-bank-stroke-blink {
+  0%, 100% {
+    border-color: rgba(0,255,100,.8);
+    box-shadow:
+      inset 0 0 0 2px rgba(0,255,80,.4),
+      0 0 14px 3px rgba(0,255,80,.5);
+  }
+  50% {
+    border-color: rgba(0,255,100,.16);
+    box-shadow:
+      inset 0 0 0 2px rgba(0,255,80,.08),
+      0 0 5px 1px rgba(0,255,80,.14);
+  }
+}
+@keyframes paused-bank-stroke-blink {
+  0%, 100% {
+    border-color: rgba(255,220,25,.9);
+    box-shadow:
+      inset 0 0 0 2px rgba(255,220,25,.42),
+      0 0 14px 3px rgba(255,210,20,.52);
+  }
+  50% {
+    border-color: rgba(255,220,25,.18);
+    box-shadow:
+      inset 0 0 0 2px rgba(255,220,25,.08),
+      0 0 5px 1px rgba(255,210,20,.15);
+  }
+}
+.eh-category-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.eh-workspace {
+  position: relative;
+  z-index: 2;
+  top: auto;
+  left: auto;
+  right: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  padding: 0 7%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.eh-tracks {
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  gap: 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.eh-tracks::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+.eh-track,
+.eh-track.selected {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 9px 64px;
+}
+.eh-track.selected {
+  color: #f0ffc2;
+  box-shadow: none;
+}
+.eh-track > span {
+  display: inline-flex;
+  align-items: center;
+}
+.eh-track .bars {
+  position: relative;
+  right: auto;
+  top: auto;
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: 9px;
+  transform: none;
+}
+.eh-console {
+  position: relative;
+  flex: 0 0 auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+}
+
+/* Portrait constraint system.
+   Fixed-priority artwork keeps its place; the scrollable track viewport yields. */
+.eh-console {
+  /* Keep the control section proportional on both tall/narrow and short/wide
+     viewports. The flexible track viewport above yields this space first. */
+  height: clamp(220px, min(max(27dvh, 45.183cqw), 33dvh), 390px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.eh-controls:before {
+  height: 30%;
+}
+.eh-workspace {
+  align-self: center;
+  flex: 1 1 auto;
+  width: min(68%, 520px);
+  padding: clamp(18px, 2.4dvh, 28px) 0 clamp(28px, 3.8dvh, 42px);
+  justify-content: center;
+}
+.eh-tracks {
+  flex: 0 1 auto;
+  max-height: 100%;
+  overscroll-behavior: contain;
+}
+.eh-track,
+.eh-track.selected {
+  padding: clamp(4px, min(1.5cqw, .8dvh), 9px) 0;
+  font-size: clamp(12px, min(3.3cqw, 2.4dvh), 19px);
+  line-height: 1.12;
+  white-space: nowrap;
+}
+.eh-track-highlight {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+.eh-track > span {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  padding-left: clamp(14px, 3cqw, 22px);
+  padding-right: clamp(42px, 8cqw, 56px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.eh-track:hover {
+  transform: none;
+}
+.eh-track.selected {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.eh-track.selected.paused .eh-track-highlight,
+.eh-control.paused .eh-control-art img {
+  animation: trackBlink 1s ease-in-out infinite;
+}
+.eh-colon {
+  font-weight: 800;
+  margin: 0 .28em;
+}
+.eh-playing-eq {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px #00ff55);
+  pointer-events: none;
+}
+.eh-track-playing-animation {
+  position: absolute;
+  z-index: 2;
+  right: 4%;
+  top: 50%;
+  width: clamp(12.138px, 3.468cqw, 19.074px);
+  height: 32.946%;
+  opacity: .4;
+  transform: translateY(-50%);
+}
+.eh-console-playing-animation {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(23.25px, 6cqw, 33.75px);
+  height: clamp(23.25px, 6cqw, 33.75px);
+  opacity: .375;
+  transform: translate(-50%, -50%);
+}
+@keyframes trackBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .22; }
+}
+@keyframes eqBar {
+  0%, 100% { transform: scaleY(.18); }
+  50% { transform: scaleY(1); }
+}
+
+/* Primary-control proportions use the approved outside button as the base.
+   RingMatch 100% · Pause 80.5% · Play 130% · Timer 100%. */
+.eh-controls {
+  --outside-control-width: clamp(56px, 14cqw, 82px);
+  gap: 0;
+}
+.eh-control {
+  width: var(--outside-control-width);
+}
+.eh-control[data-testid="button-ring"] {
+  margin-right: clamp(8px, 3cqw, 22px);
+}
+.eh-ringmatch-selected-star {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  color: #ffcf00;
+  font-family: Arial, sans-serif;
+  font-size: clamp(17px, 4.2cqw, 25px);
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(255, 207, 0, .75), 0 1px 2px rgba(0, 0, 0, .8);
+  pointer-events: none;
+}
+.eh-control[data-testid="button-pause"] {
+  width: min(11.27cqw, 66px);
+  min-width: 0;
+  margin-right: clamp(1px, .8cqw, 6px);
+}
+.eh-control[data-testid="button-pause"] img {
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+.eh-control[data-testid="button-play"] {
+  width: calc(var(--outside-control-width) * 1.3);
+  margin-right: clamp(8px, 3cqw, 22px);
+}
+.eh-control[data-testid="button-play"] img {
+  max-height: 84.5px;
+}
+
+/* Center all four primary artworks on the ribbon's vertical axis.
+   Labels occupy a separate row below, so differing artwork sizes do not
+   change the shared center line. */
+.eh-controls {
+  height: 17.85%;
+  padding-top: 0;
+  align-items: stretch;
+}
+.eh-controls:before {
+  /* Fill the 17.85%-high ribbon row. */
+  height: 100%;
+}
+.eh-control {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 100% auto;
+  align-items: center;
+  justify-items: center;
+  font-size: clamp(10px, 2.2cqw, 12px);
+}
+.eh-control img {
+  grid-row: 1;
+  margin: 0;
+  /* Compensate for the transparent/burned-in drop-shadow area beneath each
+     artwork so its visible mass appears centered on the ribbon. */
+  transform: translateY(calc(var(--outside-control-width) * .02));
+}
+.eh-control:hover {
+  transform: none;
+}
+.eh-control > span {
+  grid-row: 2;
+  margin-top: clamp(12px, 2.8cqw, 18px);
+}
+.eh-control > .eh-control-art {
+  grid-row: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.eh-control-art .eh-inside-status {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: calc(46% + var(--outside-control-width) * .04);
+  display: block;
+  margin: 0;
+  transform: translate(-50%, -55%);
+  color: #d8ff3c;
+  width: min(74%, 52px);
+  overflow: hidden;
+  text-align: center;
+  font-size: clamp(13px, 2.8cqw, 18px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.035em;
+  white-space: nowrap;
+  text-shadow: 0 2px 4px rgba(0,0,0,.85), 0 0 5px rgba(0,0,0,.65);
+}
+.eh-control[data-testid="button-timer"] .eh-timer-status {
+  color: #00ff55;
+  text-shadow: 0 2px 4px rgba(0,0,0,.85), 0 0 8px rgba(0,255,85,.8);
+}
+.eh-control[data-testid="button-timer"] .eh-timer-status.final-minute {
+  color: #ff2020;
+  text-shadow: 0 2px 4px rgba(0,0,0,.85), 0 0 8px rgba(255,32,32,.9);
+  animation: timerReadoutFlash 1.8s ease-in-out infinite;
+}
+.eh-control[data-testid="button-timer"] .eh-timer-status.timer-completed,
+.duration-readout.timer-completed {
+  color: #ffde25;
+  text-shadow: 0 2px 4px rgba(0,0,0,.85), 0 0 10px rgba(255,222,37,.9);
+  animation: trackBlink 1s ease-in-out infinite;
+}
+.eh-control-art .eh-notch-arrow {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 2%;
+  transform: translate(-50%, -50%) scaleX(1.5);
+  color: #d8ff3c;
+  opacity: .9;
+  font-size: clamp(13.6px, 3.4cqw, 20.4px);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,.85);
+  pointer-events: none;
+}
+
+.eh-secondary button[data-testid="button-settings"] img {
+  width: 61.8125px;
+}
+.eh-secondary button[data-testid="button-info"] img {
+  width: 30.1px;
+}
+.eh-secondary {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin-top: 0;
+  transform: translateY(-50%);
+  align-items: center;
+}
+.eh-secondary img {
+  display: block;
+}
+
+.eh-volume {
+  bottom: calc(11% + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  right: auto;
+  width: min(59.5%, 314.5px);
+  transform: translateX(-50%);
+}
+.eh-volume input {
+  z-index: 3;
+  top: 0;
+  left: 0;
+  height: auto;
+  aspect-ratio: 1064 / 137;
+  margin: 0;
+  touch-action: none;
+}
+.eh-volume > span {
+  order: 2;
+  text-transform: lowercase;
+  letter-spacing: .65em;
+  font-size: 12.65px;
+}
+.eh-volume .led-art {
+  order: 1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1064 / 137;
+  opacity: .5;
+  transition: opacity 675ms ease-in-out;
+  pointer-events: none;
+}
+.eh-volume.is-emphasized .led-art {
+  opacity: 1;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
+}
+.eh-volume .led-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.timer-layer {
+  display: grid;
+  place-items: center;
+  padding: min(5.5dvh, 42px) 4%;
+}
+.timer-layer .timer-backdrop {
+  opacity: 0;
+}
+.timer-panel {
+  position: relative;
+  inset: auto;
+  left: auto;
+  width: min(95%, calc((100dvh - 24px) * 1823 / 2868));
+  height: auto;
+  aspect-ratio: 1823 / 2868;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  background-image: none;
+  opacity: 1;
+}
+.timer-assembly {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 0;
+  contain: layout;
+  isolation: isolate;
+  transform: translate3d(112%, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.timer-layer.is-preparing {
+  pointer-events: none;
+}
+.timer-layer.is-ready .timer-backdrop {
+  animation: timerBackdropIn 180ms ease-out both;
+}
+.timer-layer.is-ready .timer-assembly {
+  animation: timerPanelIn 240ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.timer-layer.is-closing {
+  pointer-events: none;
+}
+.timer-layer.is-closing .timer-backdrop {
+  animation: timerBackdropOut 220ms ease-in both;
+}
+.timer-layer.is-closing .timer-assembly {
+  animation: timerPanelOut 220ms cubic-bezier(.7, 0, .84, 0) both;
+}
+.timer-pane-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 91.5%;
+  object-fit: fill;
+  pointer-events: none;
+}
+.timer-assembly > :not(.timer-pane-art) {
+  position: relative;
+  z-index: 1;
+}
+.timer-time {
+  margin-top: 12%;
+  left: .85%;
+  text-shadow: 6px 10px 4px rgba(0,0,0,.225);
+}
+.timer-time small {
+  line-height: 1;
+  text-shadow: 6px 10px 4px rgba(0,0,0,.225);
+}
+.timer-title {
+  margin-top: 11%;
+  left: .85%;
+}
+.duration {
+  position: relative;
+  left: .85%;
+  width: 60%;
+  margin: 8% auto 0;
+}
+.duration-readout {
+  position: absolute;
+  top: -10px;
+  z-index: 3;
+  color: #00ff55;
+  font-size: clamp(11px, 3cqw, 16px);
+  font-weight: 700;
+  letter-spacing: .05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 0 12px #00ff55, 0 0 28px #00ff33;
+  transform: translateX(-50%);
+  transition: left .375s linear, color .225s, text-shadow .225s;
+  pointer-events: none;
+}
+.duration-readout.final-minute {
+  color: #ff2020;
+  text-shadow: 0 0 12px #ff2020, 0 0 28px #cc0000;
+  animation: timerReadoutFlash 1.8s ease-in-out infinite;
+}
+.duration-labels {
+  position: relative;
+  display: block;
+  height: 30px;
+}
+.duration-labels button {
+  position: absolute;
+  bottom: 0;
+  min-width: 0;
+  padding: 0;
+  transform: translateX(-50%);
+  transition: color .375s linear, text-shadow .375s linear, font-weight .375s linear;
+}
+.duration-labels button.countdown-active {
+  color: rgba(0, 255, 85, calc(.55 + var(--marker-intensity) * .45));
+  text-shadow:
+    0 0 10px rgba(0, 255, 85, var(--marker-intensity)),
+    0 0 20px rgba(0, 255, 51, var(--marker-intensity));
+  font-weight: 600;
+}
+.duration-loop {
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+.duration-loop img {
+  display: block;
+  width: clamp(19px, 5.4vw, 30px);
+  max-width: none;
+  height: auto;
+}
+.duration-slider {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1450 / 115;
+  margin-top: 5px;
+}
+.duration-slider-base,
+.duration-slider-meter {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: auto;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.duration-slider-meter {
+  clip-path: inset(0 calc(100% - var(--slider-fill)) 0 0);
+  transition: clip-path .375s ease-out;
+}
+.duration-slider-knob {
+  position: absolute;
+  top: 50%;
+  width: 4.9%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: left .375s ease-out;
+}
+.duration-slider {
+  cursor: pointer;
+  touch-action: none;
+}
+.timer-adjustments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: clamp(18px, 4cqw, 24px);
+}
+.timer-adjustment-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.25em;
+  width: 100%;
+  transform: translateY(6px);
+}
+.timer-adjustments button {
+  padding: 2px 0;
+  color: #fff;
+  font-size: clamp(16px, 4cqw, 22px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
+  transition: opacity .15s ease;
+}
+.timer-adjustment-chevron {
+  display: inline-block;
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: .65;
+  vertical-align: -.08em;
+}
+.timer-adjustments button:active:not(:disabled),
+.timer-adjustments button.on-click:not(:disabled) {
+  color: #00ff55;
+  text-shadow:
+    0 0 10px #00ff55,
+    0 0 22px #00ff55,
+    0 0 34px rgba(0, 255, 51, .95);
+}
+.earphoria-click-glow {
+  transition: color .15s ease, text-shadow .15s ease, filter .15s ease;
+}
+.earphoria-click-glow:active,
+.earphoria-click-glow.on-click {
+  color: #00ff55 !important;
+  text-shadow:
+    0 0 10px #00ff55,
+    0 0 22px #00ff55,
+    0 0 34px rgba(0, 255, 51, .95) !important;
+}
+.eh-secondary .earphoria-click-glow:active img,
+.eh-secondary .earphoria-click-glow.on-click img {
+  filter: drop-shadow(0 0 3px rgba(0, 255, 85, .65));
+}
+.timer-adjustments button:disabled {
+  opacity: .25;
+}
+.timer-adjustment-unit {
+  margin-top: 10px;
+  color: #fff;
+  font-size: clamp(10px, 2.2cqw, 13px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: .18em;
+  text-transform: lowercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
+  opacity: .5;
+}
+@keyframes timerPanelIn {
+  from { opacity: 1; transform: translate3d(112%, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes timerPanelOut {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 1; transform: translate3d(112%, 0, 0); }
+}
+@keyframes timerBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes timerBackdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-layer .timer-backdrop,
+  .timer-layer .timer-assembly,
+  .timer-layer.is-closing .timer-backdrop,
+  .timer-layer.is-closing .timer-assembly {
+    animation-duration: 1ms;
+  }
+}
+.duration-footer {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: 7px;
+}
+.duration-text-art {
+  display: block;
+  width: 68%;
+  height: auto;
+}
+.continuous-text-art {
+  position: absolute;
+  display: block;
+  left: 96.5%;
+  top: 0;
+  width: 19%;
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+@keyframes timerReadoutFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .25; }
+}
+
+.eh-recommendation-asterisk {
+  position: static;
+  display: inline-block;
+  margin-left: 5px;
+  color: #ffcc00;
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 204, 0, .85);
+}
+.eh-track-lock {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: .85em;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 0, .45));
+}
+
+/* The separated banner preserves the pane's native geometry. Safe-area space
+   remains transparent so the full-screen background continues behind a notch,
+   status bar, or camera area. Only the pane stays full-width; its logos stop
+   growing at tablet scale to create the intended side breathing room. */
+.eh-top-banner-separated {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: 100%;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.eh-top-banner-pane {
+  position: relative;
+  width: 100%;
+  height: clamp(23.628cqw, 20dvh, 29.535cqw);
+  container-type: size;
+}
+.eh-top-banner-base {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+.eh-top-banner-logo,
+.eh-top-banner-badge {
+  position: absolute;
+  display: block;
+  height: auto;
+  object-fit: contain;
+}
+.eh-top-banner-logo {
+  top: 6cqw;
+  left: 6cqw;
+  /* 55% is only the horizontal cap. The second limit preserves optical
+     top/bottom breathing room while allowing the logo to approach that cap
+     slightly sooner than the strict left-rim fit. */
+  width: min(55cqw, calc(340cqh - 42.07cqw));
+  aspect-ratio: 1427 / 407;
+}
+.eh-top-banner-badge {
+  top: auto;
+  bottom: 16%;
+  right: 4.5%;
+  width: min(18%, 120px);
+}
+
+/* On tablet-like landscape canvases, width-led banner geometry otherwise keeps
+   growing after the rest of the interface has reached its useful scale. The
+   pane is capped, then the primary logo scales from that pane's height and
+   stays on a fixed optical centerline. Portrait behavior remains unchanged. */
+@media (min-width: 900px) and (orientation: landscape) {
+  .eh-top-banner-pane {
+    height: min(23.628cqw, 190px);
+  }
+
+  .eh-top-banner-logo {
+    top: 48cqh;
+    width: 160cqh;
+    transform: translateY(-50%);
+  }
+}
+
+/* Once the layout reaches tablet-like widths, preserve the successful phone
+   scale for the lower artwork instead of continuing to enlarge it. The track
+   list then centers naturally in the full gap between carousel and ribbon;
+   the phone-only optical lift above is no longer appropriate at this width. */
+@media (min-width: 620px) {
+  .eh-console {
+    height: clamp(220px, 30dvh, 263px);
+  }
+
+  .eh-carousel {
+    height: clamp(80px, 13dvh, 118px);
+  }
+
+  .eh-category-card {
+    width: clamp(60px, min(11cqw, 10dvh), 74px);
+  }
+
+  .eh-workspace {
+    width: min(58%, 420px);
+  }
+
+  .eh-track,
+  .eh-track.selected {
+    font-size: clamp(12px, min(2.4cqw, 2.4dvh), 16px);
+  }
+}
+
+/* Short browser windows have much less flexible space between the 3D carousel
+   and fixed control artwork. Keep the track viewport entirely inside that gap:
+   remove the phone-only optical lift, tighten the rows, and retain hard
+   breathing room at both edges. */
+@media (max-height: 740px) {
+  .eh-workspace {
+    padding-top: clamp(14px, 2dvh, 18px);
+    padding-bottom: clamp(23px, 3.2dvh, 30px);
+  }
+
+  .eh-track,
+  .eh-track.selected {
+    padding-block: clamp(3px, .65dvh, 5px);
+    font-size: clamp(11px, min(3cqw, 2.35dvh), 15px);
+    line-height: 1.08;
+  }
+}
+
+/* Narrow phones still have enough vertical track space even when their browser
+   chrome produces a short reported viewport. Do not let the laptop-oriented
+   short-height compression make the primary track labels undersized. */
+@media (max-width: 520px) {
+  .eh-track,
+  .eh-track.selected {
+    padding-block: clamp(5px, .8dvh, 7px);
+    font-size: clamp(14px, 3.5cqw, 15.5px);
+    line-height: 1.16;
+  }
+}
+
+/* The Info screen reuses the timer popup's blurred field and illustrated pane.
+   Its long FAQ document scrolls invisibly inside the fixed pane. */
+.info-layer {
+  --info-outer-gap: clamp(22px, 5cqw, 44px);
+  padding: var(--info-outer-gap);
+  place-items: center;
+}
+.info-layer .timer-backdrop {
+  opacity: 1;
+}
+.info-pane {
+  position: relative;
+  inset: auto;
+  width: min(760px, calc(100cqw - (var(--info-outer-gap) * 2)));
+  max-width: none;
+  height: min(900px, calc(100dvh - (var(--info-outer-gap) * 2)));
+  max-height: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: clamp(28px, 7cqw, 58px);
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: transparent url('/earphoria-redesign/PopupBGpane.png') center/100% 100% no-repeat;
+}
+.info-pane .info-close-hitbox {
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: rgba(245, 250, 238, .92);
+  font-family: Figtree, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0,0,0,.62);
+  /* Align to the artwork's perceived bevel, not the PNG's transparent bounds:
+     the lower-right stroke overlaps the pane while the upper-left stays outside. */
+  transform: translate(-45%, -45%);
+}
+.eh-close.info-close-hitbox {
+  width: 34px;
+  height: 34px;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 200, 180, .35);
+  background: rgba(10, 18, 16, .475);
+  color: rgba(255, 255, 255, .9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Figtree, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-shadow: none;
+  transform: translate(-45%, -45%);
+}
+.info-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding-right: 4px;
+  border-radius: 18px;
+}
+.info-scroll::-webkit-scrollbar {
+  display: none;
+}
+.info-pane h1 {
+  margin: 0 0 34px;
+  color: #dce8d2;
+  font-size: clamp(38px, 9cqw, 64px);
+  font-weight: 300;
+  letter-spacing: .035em;
+}
+.info-pane section {
+  padding: 0 0 28px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid rgba(220,239,180,.22);
+}
+.info-pane section:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.info-pane h2 {
+  margin: 0 0 18px;
+  padding-right: 12px;
+  color: #eff7dc;
+  font-size: clamp(18px, 4.5cqw, 28px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+.info-pane h3 {
+  margin: 28px 0 9px;
+  color: #e5f399;
+  font-size: 16px;
+  font-weight: 600;
+}
+.info-pane p,
+.info-pane li {
+  color: #d1ddca;
+  font-size: clamp(13px, 2.8cqw, 16px);
+  line-height: 1.58;
+}
+.info-pane p {
+  margin: 0 0 14px;
+}
+.info-pane ol,
+.info-pane ul {
+  margin: 8px 0 20px;
+  padding-left: 24px;
+}
+.info-pane li {
+  margin-bottom: 8px;
+}
+.info-pane .info-plain-list {
+  list-style: none;
+  padding-left: 0;
+  font-weight: 600;
+}
+.info-tm {
+  display: inline-block;
+  font-size: .5em;
+  font-weight: 300;
+  line-height: 1;
+  opacity: .52;
+  vertical-align: super;
+}
+
+/* One shared blurred scene for the Info and Timer overlays. */
+.timer-layer .timer-backdrop {
+  background-image: url('/earphoria-redesign/homepage_BLUR_1784150009315.png');
+}

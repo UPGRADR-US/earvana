@@ -4,4 +4,4 @@
  *  Native About is baked at `pnpm cap:build` time.
  */
 export const APP_VERSION = "2.1";
-export const APP_BUILD = 23;
+export const APP_BUILD = 24;

@@ -37,7 +37,7 @@ export default defineConfig({
       const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
       if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
       // Same store build as iOS / Android About (not git rev-count).
-      return 23;
+      return 24;
     })(),
   },
   plugins: [

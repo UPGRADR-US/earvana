@@ -19,7 +19,7 @@ android {
         applicationId "com.earvana.tinnitusrelief"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23;;;
+        versionCode 24;;;
         versionName "2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

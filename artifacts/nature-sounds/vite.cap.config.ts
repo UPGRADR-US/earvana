@@ -11,7 +11,7 @@ function buildNumber(): number {
   // and Android versionCode.
   const fromEnv = process.env.EARVANA_BUILD_NUMBER ?? process.env.BUILD_NUMBER;
   if (fromEnv && !Number.isNaN(Number(fromEnv))) return Number(fromEnv);
-  return 23;
+  return 24;
 }
 
 export default defineConfig({

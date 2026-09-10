@@ -9,4 +9,4 @@ export function useAudioEngine() {
   return useWebAudioEngine();
 }
 
-export type { TrackState, AudioEngineState } from "./useWebAudioEngine";
+export type { TrackState, AudioEngineState, PlayOptions } from "./useWebAudioEngine";
