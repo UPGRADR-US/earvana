@@ -13,16 +13,21 @@ export function UpdatedHome() {
   const [ringMatchSelected, setRingMatchSelected] = useState(false);
   const [playingCategory, setPlayingCategory] = useState(-1);
   const [resumeCarouselSignal, setResumeCarouselSignal] = useState(0);
+  const [jibRunning, setJibRunning] = useState(false);
   const lastPlayingCategoryRef = useRef(-1);
   const timerCompletionSignalRef = useRef<number | null>(null);
   const timerAutoPopupTimeoutRef = useRef<number | null>(null);
   const send = (action: string, payload: Record<string, number> = {}) =>
     window.parent.postMessage({ type: "earphoria-redesign-command", action, ...payload }, window.location.origin);
-  const pause = () => send("pause");
+  const pause = () => {
+    setJibRunning(false);
+    send("pause");
+  };
   const play = () => {
     if (lastPlayingCategoryRef.current >= 0 && category !== lastPlayingCategoryRef.current) {
       setResumeCarouselSignal(signal => signal + 1);
     }
+    setJibRunning(true);
     send("play");
   };
   const selectCategory = (index: number) => {
@@ -55,6 +60,8 @@ export function UpdatedHome() {
       setSelected(event.data.trackIndex);
       setPlaying(event.data.isPlaying);
       setPaused(event.data.isPaused);
+      if (event.data.isPlaying) setJibRunning(true);
+      else if (event.data.isPaused) setJibRunning(false);
       setVolume(event.data.volume);
       setRingOpen(Boolean(event.data.ringOpen));
       setRingMatchSelected(Boolean(event.data.ringMatchSelected));
@@ -116,7 +123,7 @@ export function UpdatedHome() {
     && category !== lastPlayingCategoryRef.current
       ? lastPlayingCategoryRef.current
       : -1;
-  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg home-jib" style={{ ["--eh-jib-state" as string]: playing ? "running" : "paused" }}/>
+  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg home-jib" style={{ ["--eh-jib-state" as string]: jibRunning ? "running" : "paused" }}/>
     <header className="eh-top-banner-separated" aria-label="earphoria tinnitus relief">
       <div className="eh-top-banner-pane">
         <img className="eh-top-banner-base" src={`${A}TopBannerBase24.png`} alt=""/>
