@@ -22,9 +22,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    /// Global hard lock: portrait only (iPhone-only app; TARGETED_DEVICE_FAMILY = 1).
+    /// iPhone stays portrait-locked. iPad matches Android tablets: both
+    /// orientations (portrait = full-bleed, landscape = 430px CSS column).
     func application(_ application: UIApplication,
                      supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return .all
+        }
         return .portrait
     }
 

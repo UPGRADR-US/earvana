@@ -45,9 +45,12 @@ class MyViewController: CAPBridgeViewController {
         }
     }
 
-    // MARK: - Portrait-only lock
+    // MARK: - Orientation
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return .all
+        }
         return .portrait
     }
 
@@ -56,7 +59,6 @@ class MyViewController: CAPBridgeViewController {
     }
 
     override var shouldAutorotate: Bool {
-        // Allow rotation machinery only so the system can snap back to portrait if needed.
         return true
     }
 }

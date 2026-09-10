@@ -25,8 +25,9 @@ img, video {
   pointer-events: auto;
 }
 
-/* Phones: native portrait lock (MainActivity / iOS). Tablets: both
-   orientations — portrait is full-bleed, landscape uses the 430px #root cap. */
+/* Phones: native portrait lock (MainActivity / iPhone AppDelegate).
+   Tablets (Android sw>=600dp, iPad): both orientations — portrait is
+   full-bleed, landscape uses the 430px #root cap. */
 
 
 @keyframes blinkYellow {
@@ -206,9 +207,9 @@ img, video {
     overflow: hidden;
     background: transparent;
   }
-  /* Landscape (tablets / desktop): keep the phone-width column centered over
-     the #bg-blur letterbox. Portrait fills the screen so Android does not
-     show black compatibility bars. */
+  /* Landscape (Android tablets, iPad, desktop): keep the phone-width column
+     centered over the #bg-blur letterbox. Portrait fills the screen so the
+     OS does not show black compatibility bars. */
   @media (orientation: landscape) {
     #root {
       max-width: 430px;

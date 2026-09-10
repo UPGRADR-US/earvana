@@ -38,12 +38,19 @@
 	<array>
 		<string>armv7</string>
 	</array>
-	<!-- Portrait-only iPhone app (TARGETED_DEVICE_FAMILY = 1). No iPad orientations. -->
+	<!-- Full-screen on iPad: clinic desks should not get Split View. -->
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
