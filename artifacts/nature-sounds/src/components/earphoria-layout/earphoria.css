@@ -1155,7 +1155,7 @@ html, body { background: #102e32; }
   }
 
   .eh-app .eh-top-banner-separated {
-    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-top: 0;
   }
 
   .eh-app .eh-top-banner-pane {
@@ -1170,7 +1170,7 @@ html, body { background: #102e32; }
 
   .eh-app .eh-carousel {
     height: clamp(72px, 14dvh, 112px);
-    margin-top: clamp(2px, .6dvh, 8px);
+    margin-top: 0;
   }
 
   .eh-app .eh-category-card {
@@ -1179,16 +1179,39 @@ html, body { background: #102e32; }
 
   .eh-app .eh-console {
     height: clamp(176px, 27dvh, 236px);
-    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    padding-bottom: 0;
   }
 
   .eh-app .eh-volume {
-    bottom: calc(9% + env(safe-area-inset-bottom, 0px));
+    bottom: max(6px, env(safe-area-inset-bottom, 0px));
     width: min(64%, 340px);
   }
 
   .eh-app .eh-workspace {
-    padding-top: clamp(10px, 1.6dvh, 20px);
-    padding-bottom: clamp(12px, 2dvh, 24px);
+    padding-top: clamp(6px, 1dvh, 14px);
+    padding-bottom: clamp(8px, 1.4dvh, 16px);
+  }
+}
+
+/* iPad / large landscape: pull the banner and bottom pane to the physical
+   edges. Status bar and home indicator overlay the artwork instead of
+   adding an empty gutter. */
+@media (orientation: landscape) and (min-width: 900px) {
+  .eh-app .eh-top-banner-separated {
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  .eh-app .eh-top-banner-pane {
+    height: clamp(78px, 16dvh, 128px);
+  }
+
+  .eh-app .eh-console {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .eh-app .eh-volume {
+    bottom: max(4px, calc(env(safe-area-inset-bottom, 0px) * 0.35));
   }
 }
