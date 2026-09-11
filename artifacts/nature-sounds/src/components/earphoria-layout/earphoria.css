@@ -526,7 +526,9 @@ html, body { background: #000; }
 }
 
 .eh-volume {
-  bottom: calc(11% + env(safe-area-inset-bottom, 0px));
+  /* Console already has safe-area padding. Adding the inset here again
+     lifts the bar too high on iPhone. 11% is the artwork position. */
+  bottom: 11%;
   left: 50%;
   right: auto;
   width: min(59.5%, 314.5px);
