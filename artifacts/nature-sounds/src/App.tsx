@@ -1876,9 +1876,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          {/* Width is owned by #root: full-bleed in portrait, 430px column in
-              landscape (see index.css). container-type lets child cqw units
-              resolve against this column width. */}
+          {/* Width is owned by #root: full-bleed in portrait, height-capped
+              column in landscape (see index.css). container-type lets child
+              cqw units resolve against this column width. */}
           <div style={{ width: "100%", margin: "0 auto", height: "100dvh", containerType: "inline-size" }}>
             <Router />
           </div>

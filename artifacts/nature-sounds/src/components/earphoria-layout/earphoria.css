@@ -1143,3 +1143,52 @@ html, body { background: #102e32; }
 .timer-layer .timer-backdrop {
   background-image: url('/earphoria-redesign/homepage_BLUR_1784150009315.png');
 }
+
+/* Landscape tablets / desktop: keep the website's top-to-bottom fit.
+   Banner (earphoria) and volume stay on screen; chrome sizes from height
+   so a wider column does not push the footer off. */
+@media (orientation: landscape) {
+  .eh-app {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .eh-app .eh-top-banner-separated {
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+  }
+
+  .eh-app .eh-top-banner-pane {
+    height: clamp(72px, 15dvh, 118px);
+  }
+
+  .eh-app .eh-top-banner-logo {
+    top: 48cqh;
+    width: min(54cqw, 165cqh);
+    transform: translateY(-50%);
+  }
+
+  .eh-app .eh-carousel {
+    height: clamp(72px, 14dvh, 112px);
+    margin-top: clamp(2px, .6dvh, 8px);
+  }
+
+  .eh-app .eh-category-card {
+    width: clamp(58px, min(13cqw, 12dvh), 82px);
+  }
+
+  .eh-app .eh-console {
+    height: clamp(176px, 27dvh, 236px);
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .eh-app .eh-volume {
+    bottom: calc(9% + env(safe-area-inset-bottom, 0px));
+    width: min(64%, 340px);
+  }
+
+  .eh-app .eh-workspace {
+    padding-top: clamp(10px, 1.6dvh, 20px);
+    padding-bottom: clamp(12px, 2dvh, 24px);
+  }
+}

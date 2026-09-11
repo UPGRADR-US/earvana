@@ -28,7 +28,7 @@ const config: CapacitorConfig = {
   android: {
     // Phones stay portrait-locked in MainActivity / AppDelegate.
     // Tablets (Android sw>=600dp, iPad) allow both orientations:
-    // portrait = full screen, landscape = 430px column.
+    // portrait = full screen, landscape = height-capped column.
     // Target/compile SDK 36 (Android 16) for Google Play — see android/variables.gradle.
     allowMixedContent: false,
   },
