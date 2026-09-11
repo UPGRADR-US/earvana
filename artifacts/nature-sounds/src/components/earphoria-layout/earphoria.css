@@ -1,14 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;700;800&display=swap');
-/* Published home fidelity: the native app uses one unmodified, full-bleed plate. */
-.eh-bg{background-image:url('/earphoria-redesign/published-home-bg.png');background-size:cover;background-position:center;filter:none}
+/* Published home plate lives on #bg-blur so landscape letterbox is the same
+   artwork, not a black bar. The in-column .eh-bg is only a layout spacer. */
+.eh-bg{background:none;filter:none}
 .eh-app:after{display:none}
+#bg-blur {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #102e32;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 
 /* Subtle home-screen-only camera drift during active playback. Overscan keeps
    every edge covered throughout the slow pan and zoom.
    Play-state is a CSS variable (not a class toggle) so WebKit does not restart
    the animation on pause or track change. Alternate ping-pong avoids the
    infinite-loop hitch back to the first keyframe. */
-.eh-bg.home-jib {
+#bg-blur.home-jib {
   inset: -8%;
   will-change: transform;
   animation: home-background-jib 52s cubic-bezier(.45, 0, .55, 1) infinite alternate;
@@ -38,12 +49,13 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eh-bg.home-jib {
+  #bg-blur.home-jib {
     animation: none;
     transform: translate3d(-1.35%, -.9%, 0) scale(1.02);
   }
 }
 *{box-sizing:border-box} body{margin:0;background:#061b20;font-family:Figtree, sans-serif;color:#e8f0dc}.eh-app{position:relative;width:100%;height:100dvh;min-height:620px;overflow:hidden;background:#102e32}.eh-bg{position:absolute;inset:0;background-image:linear-gradient(180deg,rgba(20,54,42,.1),rgba(3,31,38,.54)),url('/earphoria-redesign/current-bg.png');background-size:cover;background-position:center;filter:saturate(1.16)}.eh-app:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(15,45,27,.08),rgba(0,29,38,.18) 55%,rgba(4,34,42,.74))}.eh-top-banner{position:absolute;z-index:3;top:0;left:0;width:100%;height:auto;opacity:.96}.eh-logo{position:absolute;z-index:2;top:4.5%;left:7%;text-shadow:0 2px 8px #203a29;color:#f9fbeb;letter-spacing:.02em}.eh-logo b{font-size:clamp(28px,8vw,49px);font-weight:700}.eh-logo b i{font-style:normal;color:#b9eb1a}.eh-logo .ear{font-size:42px;margin-right:3px}.eh-logo small{display:block;color:#d9fa22;font-size:clamp(13px,3.4vw,21px);letter-spacing:.27em;margin-left:22%}.eh-logo em{display:block;font-style:normal;font-size:clamp(8px,1.9vw,12px);letter-spacing:.27em;opacity:.88;margin-top:7px}.eh-header{position:absolute;z-index:2;top:2%;right:5%;font-size:10px;letter-spacing:.18em;color:#d8e8ca}.eh-workspace{position:absolute;z-index:2;top:26%;left:7%;right:25%;height:33%;overflow:auto}.eh-category{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#d9eead;opacity:.8;margin:0 0 14px}.eh-tracks{display:grid;gap:7px}.eh-track{border:1px solid rgba(212,244,194,.34);background:rgba(13,54,43,.34);color:#e3f0d9;text-align:left;padding:12px 14px;border-radius:3px;letter-spacing:.045em;font-size:clamp(12px,2.8vw,16px);transition:transform .2s,background .2s,border-color .2s;position:relative}.eh-track:hover{transform:translateX(4px)}.eh-track.selected{border-color:#c9eb38;background:rgba(56,103,46,.62);box-shadow:inset 4px 0 #d8f02d}.eh-track strong{font-weight:800}.bars{position:absolute;right:13px;top:50%;display:flex;gap:2px;transform:translateY(-50%)}.bars b{display:block;width:3px;height:13px;background:#b6e52d;animation:eq .55s ease-in-out infinite alternate}.bars b:nth-child(2){height:20px;animation-delay:.12s}.bars b:nth-child(3){height:9px;animation-delay:.23s}@keyframes eq{to{transform:scaleY(.35)}}.eh-console{position:absolute;z-index:4;bottom:0;left:0;right:0;height:35%;min-height:215px;background:linear-gradient(180deg,rgba(5,38,34,.35),rgba(3,35,39,.88));border-top:1px solid rgba(202,234,101,.22);backdrop-filter:blur(5px)}.eh-console:before{content:"";position:absolute;inset:0;background:url('/earphoria-redesign/BottomBasePane.png') center bottom/100% 100% no-repeat;opacity:.72;pointer-events:none}.eh-controls:before{content:"";position:absolute;inset:0 0 auto;height:47%;background:url('/earphoria-redesign/ControlsBar.png') center top/100% 100% no-repeat;opacity:.58;pointer-events:none}.eh-controls{position:relative;display:flex;justify-content:center;align-items:flex-start;gap:clamp(8px,4vw,30px);padding-top:10px}.eh-control{width:clamp(59px,17vw,94px);border:0;background:transparent;color:#e5edd6;font-size:clamp(8px,2vw,11px);letter-spacing:.16em;text-transform:lowercase;cursor:pointer;transition:transform .2s,filter .2s;position:relative;z-index:1}.eh-control:hover{transform:translateY(-3px)}.eh-control img{width:100%;max-height:65px;object-fit:contain;display:block;margin-bottom:6px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))}.eh-control small{display:block;color:#b8ee34;letter-spacing:.11em;margin-top:4px}.eh-control.paused small{color:#ffde25;animation:blink 1s infinite}.eh-control.active small{color:#b7f42c}.eh-secondary{position:relative;z-index:1;display:flex;justify-content:center;gap:clamp(70px,20vw,140px);margin-top:14px}.eh-secondary button{border:0;background:transparent;color:#dff0d0;cursor:pointer;text-shadow:0 3px 8px #051b18}.eh-secondary img{width:43px}.eh-volume{position:absolute;z-index:2;bottom:8%;left:15%;right:15%;display:flex;flex-direction:column;align-items:center;gap:6px;color:#cfdfc7;letter-spacing:.45em;font-size:11px}.eh-volume input{position:absolute;opacity:0;width:100%;height:35px;cursor:pointer}.led-art{position:relative;width:100%;height:35px}.led-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}.led-art-fill{filter:none}.eh-panel{position:absolute;z-index:8;inset:7% 5% 5%;background:rgba(10,44,47,.91);border:1px solid rgba(209,231,160,.35);box-shadow:0 15px 40px #001a1a;backdrop-filter:blur(16px);overflow:auto;padding:24px;animation:rise .3s ease}@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.eh-close{position:absolute;right:14px;top:10px;color:#eef5d8;background:none;border:0;font-size:28px;cursor:pointer}.eh-panel h2{font-weight:300;letter-spacing:.22em;text-transform:lowercase;margin:8px 0 22px;color:#ddf09f}.eh-panel p{color:#c6d9c2;font-size:13px;line-height:1.65}.eh-panel strong{color:#f1ffb7;font-weight:500}.eh-faq-item{border-top:1px solid rgba(220,239,180,.22)}.eh-faq-item button{width:100%;padding:16px 4px;border:0;background:none;color:#eff7dc;text-align:left;font:inherit;font-size:14px;display:flex;justify-content:space-between;cursor:pointer}.eh-faq-item div{padding:0 5px 16px;color:#bed0bd;font-size:13px;line-height:1.6}.timer-layer{position:absolute;z-index:7;inset:0}.timer-backdrop{position:absolute;inset:0;background:url('/earphoria-redesign/bgBLUR.png') center/cover no-repeat}.timer-panel{inset:10% 7% 8%;text-align:center;padding:20px 12px;background:rgba(34,67,72,.58);border:0;box-shadow:none;backdrop-filter:none;background-image:url('/earphoria-redesign/TimerHoverBGpane.png');background-size:100% 100%;background-repeat:no-repeat}.timer-time{font-size:clamp(76px,22vw,140px);font-weight:700;color:#ff1818;line-height:.9;text-shadow:6px 10px 4px rgba(0,0,0,.45);font-variant-numeric:tabular-nums;margin-top:28px}.timer-time small{display:block;font-size:23px;letter-spacing:.12em;text-shadow:none;margin-top:18px}.timer-title{margin-top:84px;font-size:28px;letter-spacing:.35em;color:#d8d6c6;font-weight:300}.duration{margin:42px 5% 0}.duration-labels{display:flex;justify-content:space-between;color:#d0d5c5;font-size:12px}.duration input{width:100%;accent-color:#63ff47;margin-top:12px}.continuous{color:#66ff4a;margin-top:11px;font-size:12px}.seg-active{color:#61ff42;font-weight:700}.eh-note{color:#cbd9c1;font-size:11px;letter-spacing:.1em}.info-pane h3{font-weight:400;color:#e5f399;margin:24px 0 5px}.info-pane ul{color:#c6d9c2;line-height:1.8;font-size:13px;padding-left:18px}@keyframes blink{50%{opacity:.25}}
+html, body { background: #102e32; }
 
 /* Preserve the source artwork's geometry: the base pane rises only to the
    controls, and the ControlsBar is a narrow stripe across that top edge. */
@@ -62,13 +74,14 @@
   opacity: 1;
 }
 
-/* The normal home uses the published plate completely unmodified.
-   TimerHoverBGpane remains scoped exclusively to .timer-panel. */
+/* The published plate is painted on #bg-blur (full viewport). Keep the
+   in-column layer empty so landscape sides stay the same artwork. */
 .eh-bg {
-  background-image: url('/earphoria-redesign/published-home-bg.png');
-  background-size: cover;
-  background-position: center;
+  position: absolute;
+  inset: 0;
+  background: none;
   filter: none;
+  pointer-events: none;
 }
 .eh-app:after {
   display: none;
@@ -81,6 +94,7 @@
   flex-direction: column;
   container-type: inline-size;
   --eh-content-max: 620px;
+  background: transparent;
 }
 .eh-top-banner {
   position: relative;

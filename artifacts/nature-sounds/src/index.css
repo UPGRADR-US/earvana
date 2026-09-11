@@ -3,7 +3,7 @@
 html {
   height: 100%;
   height: -webkit-fill-available;
-  background: #070e0c;
+  background: #102e32;
   /* Prevent iOS subject-lift / Remove Background on long-press of UI art */
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -12,7 +12,7 @@ html {
 body {
   height: 100%;
   min-height: -webkit-fill-available;
-  background: #070e0c;
+  background: #102e32;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -180,7 +180,7 @@ img, video {
   }
   html {
     height: 100%;
-    background: #070e0c;
+    background: #102e32;
   }
   body {
     @apply text-foreground antialiased selection:bg-primary/30;
@@ -208,8 +208,7 @@ img, video {
     background: transparent;
   }
   /* Landscape (Android tablets, iPad, desktop): keep the phone-width column
-     centered over the #bg-blur letterbox. Portrait fills the screen so the
-     OS does not show black compatibility bars. */
+     centered over the full-bleed homepage plate. Portrait fills the screen. */
   @media (orientation: landscape) {
     #root {
       max-width: 430px;
