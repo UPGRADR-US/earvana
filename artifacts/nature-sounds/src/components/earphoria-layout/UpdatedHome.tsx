@@ -113,17 +113,6 @@ export function UpdatedHome() {
     const closeTimer = window.setTimeout(() => setOverlay(null), 220);
     return () => window.clearTimeout(closeTimer);
   }, [overlay]);
-  useEffect(() => {
-    const stage = document.getElementById("bg-blur");
-    if (!stage) return;
-    stage.classList.add("home-jib");
-    return () => { stage.classList.remove("home-jib"); };
-  }, []);
-  useEffect(() => {
-    const stage = document.getElementById("bg-blur");
-    if (!stage) return;
-    stage.style.setProperty("--eh-jib-state", jibRunning ? "running" : "paused");
-  }, [jibRunning]);
   const carouselPlayingCategory = playingCategory >= 0
     ? playingCategory
     : paused && category === lastPlayingCategoryRef.current
@@ -134,7 +123,7 @@ export function UpdatedHome() {
     && category !== lastPlayingCategoryRef.current
       ? lastPlayingCategoryRef.current
       : -1;
-  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg"/>
+  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg home-jib" style={{ backgroundImage: `url("${A}published-home-bg.png")`, ["--eh-jib-state" as string]: jibRunning ? "running" : "paused" }}/>
     <header className="eh-top-banner-separated" aria-label="earphoria tinnitus relief">
       <div className="eh-top-banner-pane">
         <img className="eh-top-banner-base" src={`${A}TopBannerBase24.png`} alt=""/>
