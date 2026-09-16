@@ -4,7 +4,7 @@ import { TRACKS } from "../sounds";
 import type { PlayOptions } from "./useWebAudioEngine";
 
 const PAUSE_EXPIRY_MS = 10 * 60 * 1000;
-const TRACK_SWITCH_CROSSFADE = 7;
+const TRACK_SWITCH_CROSSFADE = 2.25;
 
 export type TrackState = {
   isPlaying: boolean;
@@ -28,6 +28,7 @@ export type AudioEngineState = {
   lastPlayedId: string | null;
   startFadeOut: (durationSeconds: number) => void;
   cancelFade: () => void;
+  clearResumePosition: (trackId?: string) => void;
   notchedFreq: number | null;
   setNotch: (freq: number | null) => void;
   boostedFreq: number | null;
@@ -266,6 +267,10 @@ export function useNativeAudioEngine(): AudioEngineState {
     }
   }, []);
 
+  const clearResumePosition = useCallback((_trackId?: string) => {
+    // Native audio players start from offset zero when play() is called.
+  }, []);
+
   return {
     tracks: tracksState,
     masterVolume,
@@ -279,6 +284,7 @@ export function useNativeAudioEngine(): AudioEngineState {
     lastPlayedId,
     startFadeOut,
     cancelFade,
+    clearResumePosition,
     notchedFreq,
     setNotch,
     boostedFreq,

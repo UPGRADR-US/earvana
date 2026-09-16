@@ -11,6 +11,8 @@ export function UpdatedHome() {
   const [recommendedTrackIds, setRecommendedTrackIds] = useState<Set<string>>(new Set());
   const [lockedTrackIds, setLockedTrackIds] = useState<Set<string>>(new Set());
   const [ringMatchSelected, setRingMatchSelected] = useState(false);
+  const [hasEqPreset, setHasEqPreset] = useState(false);
+  const [eqEnabled, setEqEnabled] = useState(false);
   const [playingCategory, setPlayingCategory] = useState(-1);
   const [resumeCarouselSignal, setResumeCarouselSignal] = useState(0);
   const [jibRunning, setJibRunning] = useState(false);
@@ -24,6 +26,10 @@ export function UpdatedHome() {
     send("pause");
   };
   const play = () => {
+    if (playing) {
+      pause();
+      return;
+    }
     if (lastPlayingCategoryRef.current >= 0 && category !== lastPlayingCategoryRef.current) {
       setResumeCarouselSignal(signal => signal + 1);
     }
@@ -70,6 +76,8 @@ export function UpdatedHome() {
       if (Number.isInteger(event.data.durationStep)) setDurationStep(event.data.durationStep);
       if (Number.isFinite(event.data.timeRemaining)) setTimeRemaining(event.data.timeRemaining);
       setTimerCompleted(Boolean(event.data.timerCompletionHold));
+      setHasEqPreset(Boolean(event.data.hasEqPreset));
+      setEqEnabled(Boolean(event.data.eqEnabled));
       setRecommendedTrackIds(new Set(Array.isArray(event.data.recommendedTrackIds) ? event.data.recommendedTrackIds : []));
       setLockedTrackIds(new Set(Array.isArray(event.data.lockedTrackIds) ? event.data.lockedTrackIds : []));
       if (Number.isInteger(event.data.timerCompletionSignal)) {
@@ -123,7 +131,7 @@ export function UpdatedHome() {
     && category !== lastPlayingCategoryRef.current
       ? lastPlayingCategoryRef.current
       : -1;
-  return <main className="eh-app" data-testid="updated-home"><div className="eh-bg home-jib" style={{ backgroundImage: `url("${A}published-home-bg.png")`, ["--eh-jib-state" as string]: jibRunning ? "running" : "paused" }}/>
+  return <main className="eh-app" data-testid="updated-home"><div className={`eh-bg home-jib${playing ? " is-playing" : ""}`} style={{ backgroundImage: `url("${A}published-home-bg.png")`, ["--eh-jib-state" as string]: playing ? "running" : "paused" }}/>
     <header className="eh-top-banner-separated" aria-label="earphoria tinnitus relief">
       <div className="eh-top-banner-pane">
         <img className="eh-top-banner-base" src={`${A}TopBannerBase24.png`} alt=""/>
@@ -133,7 +141,7 @@ export function UpdatedHome() {
     </header>
     <CategoryCarousel selected={category} playingIndex={carouselPlayingCategory} pausedOffCourseIndex={pausedOffCourseCategory} resumeIndex={lastPlayingCategoryRef.current} resumeSignal={resumeCarouselSignal} isPlaying={playing} onSelect={selectCategory} onActivateFirst={activateFirstTrack}/>
     <section className="eh-workspace"><TrackList categoryIndex={category} selected={selected} playing={playing} paused={paused} recommendedTrackIds={recommendedTrackIds} lockedTrackIds={lockedTrackIds} onSelect={selectTrack}/></section>
-    <Console playing={playing} paused={paused} timerCompleted={timerCompleted} onPlay={play} onPause={pause} timerOn={durationStep < 10} timeRemaining={timeRemaining} ringOpen={ringOpen} ringMatchSelected={ringMatchSelected} notchedFreq={notchedFreq} boostedFreq={boostedFreq} onTimer={() => setOverlay("timer")} onRing={() => send("open-ringmatch")} onInfo={() => setOverlay("info")} onSettings={() => send("open-settings")} volume={volume} setVolume={changeVolume}/>
+    <Console playing={playing} paused={paused} timerCompleted={timerCompleted} onPlay={play} onPause={pause} timerOn={durationStep < 10} timeRemaining={timeRemaining} ringOpen={ringOpen} ringMatchSelected={ringMatchSelected} notchedFreq={notchedFreq} boostedFreq={boostedFreq} hasEqPreset={hasEqPreset} eqEnabled={eqEnabled} onToggleEq={() => send("toggle-eq")} onTimer={() => setOverlay("timer")} onRing={() => send("open-ringmatch")} onInfo={() => setOverlay("info")} onSettings={() => send("open-settings")} volume={volume} setVolume={changeVolume}/>
     {(overlay === "timer" || overlay === "timer-closing") && <TimerOverlay onClose={() => setOverlay("timer-closing")} isClosing={overlay === "timer-closing"} timerCompleted={timerCompleted} durationStep={durationStep} timeRemaining={timeRemaining} isPlaying={playing} onDurationChange={(nextStep) => { setTimerTweakSignal(signal => signal + 1); send("set-duration", { durationStep: nextStep }); }} onAdjust={(deltaSeconds) => { setTimerTweakSignal(signal => signal + 1); send("adjust-timer", { deltaSeconds }); }}/>}
     {overlay === "info" && <InfoFaq onClose={() => setOverlay(null)}/>}
   </main>;

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
-import { EarvanaAudio, isNativeAudio } from "./plugins/EarvanaAudio";
 import freqTestPane from "@assets/freqtest_emptypane_1784147052188.png";
+import { getRecommendedCategoryNames } from "./frequencyRecommendations";
+import { Volume } from "./components/earphoria-layout/shared";
+import { EarvanaAudio, isNativeAudio } from "./plugins/EarvanaAudio";
 
 const BASE = import.meta.env.BASE_URL;
 const img  = (name: string) => `${BASE}${name}`;
@@ -60,6 +62,11 @@ function getSubBands(band: Band): number[] {
 function fmtSub(hz: number): string {
   if (hz < 1000) return `${hz} hz`;
   return `${(hz / 1000).toFixed(1)} khz`;
+}
+
+function fmtStatus(hz: number): string {
+  if (hz < 1000) return `${hz}hz`;
+  return `${(hz / 1000).toFixed(1)}khz`;
 }
 
 function volToGain(v: number) { return v * TONE_MAX_GAIN; }
@@ -151,6 +158,7 @@ interface BandRowProps {
   blinkingBand: string | null;
   playingFreq: number | null;
   activeBandLabel: string | null;
+  auditionedFreq: number | null;
   currentNotch: number | null;
   currentBoost: number | null;
   onStopTone: () => void;
@@ -164,7 +172,7 @@ interface BandRowProps {
 }
 
 const BandRow = memo(function BandRow({
-  band, expandedBand, blinkingBand, playingFreq, activeBandLabel,
+  band, expandedBand, blinkingBand, playingFreq, activeBandLabel, auditionedFreq,
   currentNotch, currentBoost,
   onStopTone, onSetExpandedBand, onBandExpand, onBandPlay, onSubPlay, onSelectClick,
   onNotch, onBoost,
@@ -239,7 +247,8 @@ const BandRow = memo(function BandRow({
 
           return (
             <div key={sf} style={{
-              display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 5, paddingLeft: 120,
+              display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 4,
+              paddingLeft: 106,
               borderRadius: sfActive ? 5 : 0,
               background: sfActive ? "rgba(184,154,42,0.10)" : "transparent",
             }}>
@@ -262,10 +271,10 @@ const BandRow = memo(function BandRow({
                 <SpeakerIcon active={sfPlaying} size={14} />
               </button>
 
-              {sfPlaying && !sfActive && (
-                <button onClick={() => onSelectClick(sf)}
-                  style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 8, flexShrink: 0 }}>
-                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em" }}>PROCESS</span>
+              {auditionedFreq === sf && !sfActive && (
+                <button onClick={() => onSelectClick(sf)} data-testid={`select-frequency-${sf}`}
+                  style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 4, flexShrink: 0 }}>
+                  <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em" }}>SELECT</span>
                   <Chevron color="#ffcc00" />
                 </button>
               )}
@@ -292,10 +301,10 @@ const BandRow = memo(function BandRow({
 interface Props {
   onClose:      () => void;
   onStartTest?: () => void;
-  showInstructionsInitially?: boolean;
-  selectedFrequency?: number | null;
-  onSelectedFrequencyChange?: (freq: number | null) => void;
-  onResetRingMatch?: () => void;
+  showInstructionsInitially: boolean;
+  selectedFrequency: number | null;
+  onSelectedFrequencyChange: (freq: number | null) => void;
+  onResetRingMatch: () => void;
   onNotch:      (freq: number | null) => void;
   currentNotch: number | null;
   onBoost:      (freq: number | null) => void;
@@ -305,29 +314,27 @@ interface Props {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DiagnosticsPanel({
-  onClose, onStartTest, showInstructionsInitially = true, selectedFrequency = null, onSelectedFrequencyChange, onResetRingMatch,
+  onClose, onStartTest, showInstructionsInitially, selectedFrequency, onSelectedFrequencyChange, onResetRingMatch,
   onNotch, currentNotch, onBoost, currentBoost,
 }: Props) {
   const initialSelectedFrequency = selectedFrequency ?? currentNotch ?? currentBoost;
-  const hasActiveSetting = initialSelectedFrequency !== null;
 
   // First open after launch starts with instructions. Any selected frequency
   // starts on Status, regardless of whether notching is active.
-  const [page,           setPage]           = useState<1 | 2 | "confirm" | "stat">(() =>
+  const [page, setPage] = useState<1 | 2 | "confirm" | "confirm2" | "stat">(() =>
     initialSelectedFrequency !== null ? "stat" : showInstructionsInitially ? 1 : 2
   );
-  // true when stat window was opened because a setting was already engaged (vs. just processed)
-  const [statIsReturning, setStatIsReturning] = useState(hasActiveSetting);
   // the frequency anchored in the stat window (persists across mode changes)
   const [statFreq,       setStatFreq]       = useState<number | null>(initialSelectedFrequency);
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
+  const [auditionedFreq, setAuditionedFreq]  = useState<number | null>(null);
   const [expandedBand,   setExpandedBand]   = useState<string | null>(null);
-  const [toneVolume,     setToneVolume]     = useState(0.25);
+  const [toneVolume,     setToneVolume]     = useState(0.20);
   const [startPressed,   setStartPressed]   = useState(false);
-  const [backPressed,    setBackPressed]    = useState(false);
   const [p2Anchored,     setP2Anchored]     = useState(false);
   const [blinkingBand,   setBlinkingBand]   = useState<string | null>(null);
   const [statDismissing, setStatDismissing] = useState(false);
+  const [instructionsFromStatus, setInstructionsFromStatus] = useState(false);
   // Caution overlay: shows once when entering page 2 via START TEST
   const [showCaution,    setShowCaution]    = useState(false);
 
@@ -336,6 +343,7 @@ export function DiagnosticsPanel({
     if (!active) return null;
     return BANDS.find(b => getSubBands(b).includes(active))?.label ?? null;
   }, [currentNotch, currentBoost]);
+  const recommendedCategories = useMemo(() => getRecommendedCategoryNames(statFreq), [statFreq]);
 
   // When p2 is shown with an active notch/boost, auto-expand + blink that band
   useEffect(() => {
@@ -352,8 +360,6 @@ export function DiagnosticsPanel({
   const gRef   = useRef<GainNode | null>(null);
 
   const killOsc = useCallback(() => {
-    // Native iOS/Android: sine tones via DiagnosticTonePlayer / native engine, not WKWebView Web Audio.
-    // Web Audio here would fail silently / fight the therapy engine and stop nature playback.
     if (isNativeAudio) {
       EarvanaAudio.stopTestTone().catch(() => {});
       return;
@@ -395,10 +401,7 @@ export function DiagnosticsPanel({
     }
     if (gRef.current) gRef.current.gain.value = gain;
   }, [toneVolume, playingFreq]);
-  useEffect(() => () => {
-    killOsc();
-    if (!isNativeAudio) ctxRef.current?.close().catch(() => {});
-  }, [killOsc]);
+  useEffect(() => () => { killOsc(); ctxRef.current?.close().catch(() => {}); }, [killOsc]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -406,7 +409,10 @@ export function DiagnosticsPanel({
     setExpandedBand(prev => (prev !== null && prev !== band.label) ? null : prev);
     setBlinkingBand(null);
     if (playingFreq === band.base) stopTone();
-    else playTone(band.base, volToGain(toneVolume));
+    else {
+      setAuditionedFreq(band.base);
+      playTone(band.base, volToGain(toneVolume));
+    }
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
   const handleBandExpand = useCallback((label: string) => {
@@ -417,15 +423,17 @@ export function DiagnosticsPanel({
 
   const handleSubPlay = useCallback((sf: number) => {
     if (playingFreq === sf) stopTone();
-    else playTone(sf, volToGain(toneVolume));
+    else {
+      setAuditionedFreq(sf);
+      playTone(sf, volToGain(toneVolume));
+    }
   }, [playingFreq, playTone, stopTone, toneVolume]);
 
   // SELECT: remember the frequency immediately; notching remains optional.
   const handleSelectClick = (freq: number) => {
     stopTone();
     setStatFreq(freq);
-    onSelectedFrequencyChange?.(freq);
-    setStatIsReturning(false);
+    onSelectedFrequencyChange(freq);
     setStatDismissing(false);
     setPage("confirm");
   };
@@ -435,59 +443,73 @@ export function DiagnosticsPanel({
     const freq = statFreq;
     if (freq === null) return;
     if (mode === "normal") { onNotch(null); onBoost(null); }
-    else if (mode === "notch") { onNotch(freq); onBoost(null); }
+    else if (mode === "notch") { onNotch(freq); onBoost(null); setPage("confirm2"); }
     else { onBoost(freq); onNotch(null); }
   };
 
-  // "repeat test >>" → go back to p2 (stop nature audio again for pure-tone listening)
+  // "repeat test >>" → go back to p2
   const handleRepeatTest = () => {
     setStatDismissing(true);
     setTimeout(() => {
       setStatDismissing(false);
-      onStartTest?.();
       stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null);
     }, 200);
   };
 
   // "reset >>" → restore a true first-launch RingMatch state
   const handleReset = () => {
-    onNotch(null); onBoost(null);
-    setStatFreq(null);
-    stopTone();
-    onResetRingMatch?.();
-    onClose();
+    if (statDismissing) return;
+    setStatDismissing(true);
+    window.setTimeout(() => {
+      onNotch(null); onBoost(null);
+      setStatFreq(null);
+      stopTone();
+      onResetRingMatch();
+      onClose();
+    }, 200);
   };
 
-  // p2 back → p1
+  const handleShowInstructions = () => {
+    stopTone();
+    setInstructionsFromStatus(true);
+    setPage(1);
+    setExpandedBand(null);
+    setP2Anchored(false);
+    setBlinkingBand(null);
+    window.setTimeout(() => setInstructionsFromStatus(false), WIPE_MS);
+  };
+
   const handleSetExpandedBand = useCallback((label: string | null) => {
     setExpandedBand(label);
     if (label === null) setP2Anchored(false);
   }, []);
 
-  const handleBack = () => { stopTone(); setPage(1); setExpandedBand(null); setP2Anchored(false); setBlinkingBand(null); };
   const handleClose = () => { stopTone(); onClose(); };
+  const flashClickable = (target: EventTarget | null) => {
+    const button = target instanceof Element ? target.closest<HTMLButtonElement>("button:not([aria-label^='Close'])") : null;
+    if (!button) return;
+    button.classList.add("on-click");
+    window.setTimeout(() => button.classList.remove("on-click"), 110);
+  };
 
   // Derive current mode from engine state
   const currentMode: "normal" | "notch" | "boost" =
     currentNotch !== null ? "notch" :
     currentBoost !== null ? "boost" : "normal";
 
-  // Mode option label — 'ed' suffix for returning users
-  const modeLabel = (m: "normal" | "notch" | "boost"): string => {
-    if (m === "normal") return "normal";
-    if (m === "notch")  return statIsReturning ? "notched" : "notch";
-    return statIsReturning ? "boosted" : "boost";
-  };
-
   // Slide positions — stat shows over whatever page is underneath
-  const p1X    = page === 1 ? "0%" : "-100%";
+  // From Status, instructions wait off-canvas on the right so ? brings them
+  // in right-to-left. From the selector, page 1 remains parked on the left.
+  const p1X    = page === 1 ? "0%" : page === "stat" ? "100%" : "-100%";
   const p2X    = page === 2 ? "0%" : "100%";
   const wipeTx = `transform ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="absolute inset-0 z-50" onClick={handleClose}>
+    <div className="ringmatch-click-glow absolute inset-0 z-50" onClick={handleClose}
+      onPointerDownCapture={event => flashClickable(event.target)}
+      onClickCapture={event => { if (event.detail === 0) flashClickable(event.target); }}>
 
       <style>{`
         @keyframes diagScaleIn {
@@ -513,6 +535,45 @@ export function DiagnosticsPanel({
           52%  { transform: scale(0.79); opacity: 0.4; }
           100% { transform: scale(1.00); opacity: 1.0; }
         }
+        @keyframes instructionsInFromRight {
+          0%   { transform: translateX(100%); }
+          100% { transform: translateX(0%); }
+        }
+        .ringmatch-confirm-overlay {
+          overflow-y: auto;
+          overflow-x: hidden;
+          overscroll-behavior: contain;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .ringmatch-confirm-overlay::-webkit-scrollbar {
+          display: none;
+        }
+        .ringmatch-confirm-choice {
+          box-sizing: border-box;
+          border: 1px solid #ffcc00 !important;
+          border-radius: 5px;
+          background: rgba(0, 0, 0, 0.05) !important;
+          transition: border-width 80ms ease, box-shadow 80ms ease;
+        }
+        .ringmatch-confirm-choice.on-click,
+        .ringmatch-confirm-choice:active {
+          border-width: 2px !important;
+          box-shadow:
+            0 0 8px rgba(255, 204, 0, 0.95),
+            0 0 18px rgba(255, 204, 0, 0.72),
+            inset 0 0 10px rgba(255, 204, 0, 0.32);
+        }
+        @media (max-height: 760px) {
+          .ringmatch-confirm-overlay {
+            align-items: flex-start !important;
+            padding-top: max(32px, calc(env(safe-area-inset-top) + 20px)) !important;
+            padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+          }
+          .ringmatch-confirm-panel {
+            flex: 0 0 auto;
+          }
+        }
       `}</style>
 
       {/* Blurred background */}
@@ -522,34 +583,52 @@ export function DiagnosticsPanel({
       {/* Shadow + animation wrapper — main panel (p1 / p2) */}
       <div onClick={e => e.stopPropagation()} style={{
         position: "absolute",
-        top:    "clamp(48px,7.5vh,70px)",
-        left:   "clamp(22px,5cqw,34px)",
-        right:  "clamp(22px,5cqw,34px)",
-        bottom: "clamp(48px,7vh,70px)",
+        top:    "max(calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px), clamp(48px,7.5vh,70px))",
+        left:   "max(calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px), clamp(22px,5cqw,34px))",
+        right:  "max(calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px), clamp(22px,5cqw,34px))",
+        bottom: "max(calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px), clamp(48px,7vh,70px))",
         filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.78))",
         animation: "diagScaleIn 0.72s cubic-bezier(0.25,0.7,0.4,1) both",
-        display: page === "confirm" ? "none" : undefined,
+        display: page === "confirm" || page === "confirm2" ? "none" : undefined,
+        visibility: page === "stat" ? "hidden" : "visible",
+        pointerEvents: page === "stat" ? "none" : "auto",
       }}>
+
+        {/* Standard popup close control — straddles the pane's upper-left corner */}
+        <button onClick={handleClose} aria-label="Close" style={{
+          position: "absolute", top: 0, left: 0, zIndex: 70,
+          width: 34, height: 34, borderRadius: "50%",
+          transform: "translate(-45%, -45%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          ...KALLISTO, fontWeight: 700, fontSize: 17, lineHeight: 1,
+          color: "rgba(255,255,255,0.90)",
+          background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
+          cursor: "pointer", padding: 0,
+          opacity: page === "stat" ? 0 : 1,
+          pointerEvents: page === "stat" ? "none" : "auto",
+          transition: "opacity 0.2s ease",
+        }}>✕</button>
 
         {/* Carousel container */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", clipPath: "inset(0 round 22px)" }}>
 
-          {/* ✕ — hidden when stat window is showing */}
-          <button onClick={handleClose} aria-label="Close" style={{
-            position: "absolute", top: 0, left: 0, zIndex: 70,
-            width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center",
-            ...KALLISTO, fontWeight: 300, fontSize: "1.55rem", lineHeight: 1,
-            color: "rgba(255,255,255,0.80)",
-            background: "none", border: "none", cursor: "pointer",
-            opacity: page === "stat" ? 0 : 1,
-            pointerEvents: page === "stat" ? "none" : "auto",
-            transition: "opacity 0.2s ease",
-          }}>✕</button>
-
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 1 — "Find Your Tinnitus Pitch" instructions (code-rendered)
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p1X})`, transition: wipeTx, willChange: "transform" }}>
+          <div
+            data-testid="ringmatch-instructions-page"
+            aria-hidden={page !== 1}
+            inert={page !== 1}
+            style={{
+            position: "absolute", inset: 0,
+            transform: `translateX(${p1X})`,
+            transition: wipeTx,
+            willChange: "transform",
+            pointerEvents: page === 1 ? "auto" : "none",
+            animation: page === 1 && instructionsFromStatus
+              ? `instructionsInFromRight ${WIPE_MS}ms cubic-bezier(0.25,0.46,0.45,0.94) both`
+              : undefined,
+          }}>
 
             {/* Card background */}
             <div style={CARD_BG} />
@@ -602,7 +681,7 @@ export function DiagnosticsPanel({
                   { n: 3, text: <>Audition each frequency band, clicking the arrow to expand and fine-tune.</> },
                   { n: 4, text: <>Start with short bursts, and notice which one(s) exhibit a change in your internal ringing. When you hit your precise frequency, you may notice a temporary relief.</> },
                   { n: 5, text: <>Once you feel you've matched your ringing frequency, experiment with longer tones, as this may help extend the temporary relief period.</> },
-                  { n: 6, text: <>Optional:&nbsp; Click "<strong style={{ color: "#ffcc00", fontWeight: 700 }}>PROCESS</strong>" and follow the prompts for a possible long-term&nbsp; solution.<br /><span style={{ color: "#ffcc00", fontStyle: "italic", fontWeight: 300, fontSize: "clamp(9px,2.2cqw,11px)" }}>• (see FAQ) for details.</span></> },
+                  { n: 6, text: <>Optional:&nbsp; Click "<strong style={{ color: "#ffcc00", fontWeight: 700 }}>SELECT</strong>" and follow the prompts for a possible long-term&nbsp; solution.<br /><span style={{ color: "#ffcc00", fontStyle: "italic", fontWeight: 300, fontSize: "clamp(9px,2.2cqw,11px)" }}>• (see FAQ) for details.</span></> },
                 ].map(({ n, text }) => (
                   <li key={n} style={{ display: "flex", alignItems: "flex-start", gap: "clamp(10px,2.5cqw,14px)" }}>
                     <span style={{
@@ -623,39 +702,48 @@ export function DiagnosticsPanel({
                 ))}
               </ol>
 
+              {/* START TEST stays in the scroll flow after the instructions. */}
+              <button
+                onPointerDown={() => setStartPressed(true)}
+                onPointerUp={() => setStartPressed(false)}
+                onPointerLeave={() => setStartPressed(false)}
+                onClick={() => { onStartTest?.(); setPage(2); setTimeout(() => setShowCaution(true), 380); }}
+                style={{
+                  alignSelf: "center", flexShrink: 0,
+                  marginTop: "clamp(14px,3svh,22px)",
+                  display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
+                  background: "none", border: "none", cursor: "pointer",
+                  ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
+                  color: startPressed ? "#ffe566" : "#ffcc00",
+                  textShadow: startPressed
+                    ? "0 0 8px rgba(255,200,0,0.9), 0 0 20px rgba(220,160,0,0.6)"
+                    : "0 0 8px rgba(220,180,0,0.5)",
+                  transition: "color 0.08s, text-shadow 0.08s",
+                }}>
+                <span style={{ width: 14, flexShrink: 0 }} />
+                <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
+                <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                  <polygon points="4,2 4,18 17,10"
+                    fill={startPressed ? "#ffe566" : "#ffcc00"}
+                    style={{ filter: startPressed ? "drop-shadow(0 0 5px rgba(255,200,0,0.9))" : "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
+                </svg>
+              </button>
             </div>
-
-            {/* START TEST button */}
-            <button
-              onPointerDown={() => setStartPressed(true)}
-              onPointerUp={() => setStartPressed(false)}
-              onPointerLeave={() => setStartPressed(false)}
-              onClick={() => { onStartTest?.(); setPage(2); setTimeout(() => setShowCaution(true), 380); }}
-              style={{
-                position: "absolute", bottom: "4%", left: "50%", transform: "translateX(-50%)",
-                display: "flex", flexDirection: "row", alignItems: "center", gap: 7,
-                background: "none", border: "none", cursor: "pointer",
-                ...KALLISTO, fontWeight: 700, letterSpacing: "0.12em",
-                color: startPressed ? "#ffe566" : "#ffcc00",
-                textShadow: startPressed
-                  ? "0 0 8px rgba(255,200,0,0.9), 0 0 20px rgba(220,160,0,0.6)"
-                  : "0 0 8px rgba(220,180,0,0.5)",
-                transition: "color 0.08s, text-shadow 0.08s",
-              }}>
-              <span style={{ width: 14, flexShrink: 0 }} />
-              <span style={{ fontSize: "clamp(13px,3.5vw,16px)" }}>START TEST</span>
-              <svg width={14} height={14} viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
-                <polygon points="4,2 4,18 17,10"
-                  fill={startPressed ? "#ffe566" : "#ffcc00"}
-                  style={{ filter: startPressed ? "drop-shadow(0 0 5px rgba(255,200,0,0.9))" : "drop-shadow(0 0 3px rgba(220,180,0,0.5))" }} />
-              </svg>
-            </button>
           </div>
 
           {/* ════════════════════════════════════════════════════════════════════
               PAGE 2 — RingMatch™ Tool (code-rendered background + interactive list)
           ════════════════════════════════════════════════════════════════════ */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${p2X})`, transition: wipeTx, willChange: "transform" }}>
+          <div
+            aria-hidden={page !== 2}
+            inert={page !== 2}
+            style={{
+            position: "absolute", inset: 0,
+            transform: `translateX(${p2X})`,
+            transition: wipeTx,
+            willChange: "transform",
+            pointerEvents: page === 2 ? "auto" : "none",
+          }}>
 
             {/* Card background */}
             <div style={CARD_BG} />
@@ -740,6 +828,7 @@ export function DiagnosticsPanel({
                     blinkingBand={blinkingBand}
                     playingFreq={playingFreq}
                     activeBandLabel={activeBandLabel}
+                    auditionedFreq={auditionedFreq}
                     currentNotch={currentNotch}
                     currentBoost={currentBoost}
                     onStopTone={stopTone}
@@ -755,43 +844,23 @@ export function DiagnosticsPanel({
               </div>
             </div>
 
-            {/* Volume meter — right column */}
-            <div style={{
-              position: "absolute",
-              top: "22%", bottom: "15%",
-              right: 8,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <DiagVolMeter volume={toneVolume} onChange={setToneVolume} />
-            </div>
-
-            {/* Back button */}
-            <button
-              onPointerDown={() => setBackPressed(true)}
-              onPointerUp={() => setBackPressed(false)}
-              onPointerLeave={() => setBackPressed(false)}
-              onClick={handleBack}
-              style={{
-                position: "absolute", bottom: "3%", left: 14, zIndex: 70,
-                background: "none", border: "none", cursor: "pointer",
-                ...KALLISTO, fontWeight: 700,
-                fontSize: "clamp(11px,2.7cqw,13px)", letterSpacing: "0.04em",
-                color: backPressed ? "#ffe880" : "#b89a2a",
-                textShadow: backPressed ? "0 0 8px #ffd040, 0 0 20px #c09010" : "none",
-                transition: "color 0.08s, text-shadow 0.08s",
-              }}>«« back</button>
+            {/* Reuse the home-screen horizontal volume control for tone auditioning. */}
+            <Volume
+              className="ringmatch-volume"
+              value={toneVolume * 100}
+              onChange={(value) => setToneVolume(value / 100)}
+            />
 
             {/* ── CAUTION overlay ─────────────────────────────────────────── */}
             {showCaution && (
               <div style={{
                 position: "absolute", inset: 0, zIndex: 80,
-                display: "flex", alignItems: "flex-start", justifyContent: "center",
-                paddingTop: "clamp(80px,16svh,110px)",
-                paddingLeft: "clamp(14px,4cqw,22px)",
-                paddingRight: "clamp(30px,8cqw,48px)", // leave room for vol slider
+                display: "flex", alignItems: "flex-end", justifyContent: "center",
+                padding: "0 clamp(14px,4cqw,22px) clamp(100px,14svh,125px)",
                 pointerEvents: "auto",
               }}>
                 <div style={{
+                  position: "relative",
                   width: "100%",
                   background: "linear-gradient(160deg, rgba(14,28,24,0.90) 0%, rgba(10,22,18,0.90) 100%)",
                   borderRadius: 14,
@@ -847,16 +916,6 @@ export function DiagnosticsPanel({
                       of your ringing<br />
                       at your comfort level.
                     </p>
-                    {/* Diagonal arrow — floated above on its own layer */}
-                    <div style={{
-                      position: "absolute", top: 0, right: 0,
-                      zIndex: 2, pointerEvents: "none",
-                    }}>
-                      <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
-                        <line x1="4" y1="4" x2="30" y2="30" stroke="#ffcc00" strokeWidth="2.5" strokeLinecap="round" />
-                        <polygon points="30,18 30,30 18,30" fill="#ffcc00" />
-                      </svg>
-                    </div>
                   </div>
 
                   {/* Got it button */}
@@ -883,6 +942,23 @@ export function DiagnosticsPanel({
                     </button>
                   </div>
 
+                  {/* Point directly to the horizontal volume control below. */}
+                  <div style={{
+                    position: "absolute",
+                    left: "50%",
+                    bottom: -50,
+                    width: 34,
+                    height: 50,
+                    transform: "translateX(-50%)",
+                    zIndex: 2,
+                    pointerEvents: "none",
+                  }}>
+                    <svg width="34" height="50" viewBox="0 0 34 50" fill="none" aria-hidden="true">
+                      <line x1="17" y1="2" x2="17" y2="35" stroke="#ffcc00" strokeWidth="3" strokeLinecap="round" />
+                      <polygon points="5,33 29,33 17,48" fill="#ffcc00" />
+                    </svg>
+                  </div>
+
                 </div>
               </div>
             )}
@@ -896,26 +972,32 @@ export function DiagnosticsPanel({
           PROCESS CONFIRMATION PAGE — shown immediately after clicking PROCESS
       ════════════════════════════════════════════════════════════════════════ */}
       {page === "confirm" && statFreq !== null && (
-        <div onClick={e => e.stopPropagation()} style={{
+        <div className="ringmatch-confirm-overlay" onClick={e => e.stopPropagation()} style={{
           position: "absolute", inset: 0, zIndex: 90,
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 clamp(28px,7cqw,44px)",
+          paddingTop: "max(24px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px))",
+          paddingBottom: "max(24px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px))",
+          paddingLeft: "max(clamp(28px,7cqw,44px), calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px))",
+          paddingRight: "max(clamp(28px,7cqw,44px), calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px))",
+          boxSizing: "border-box",
         }}>
-          <div style={{
+          <div className="ringmatch-confirm-panel" style={{
             position: "relative", width: "100%", maxWidth: 390,
+            maxHeight: "calc(100dvh - max(48px, calc((var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 44px)))",
             filter: "drop-shadow(0 14px 52px rgba(0,0,0,0.92))",
             animation: "statScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
             <img src={freqTestPane} alt="" draggable={false}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", display: "block" }} />
 
-            <button onClick={handleClose} style={{
-              position: "absolute", top: -16, left: -16, zIndex: 11,
+            <button onClick={handleClose} aria-label="Close confirmation" style={{
+              position: "absolute", top: 0, left: 0, zIndex: 11,
               width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(10,18,16,0.95)", border: "1px solid rgba(0,200,180,0.35)",
+              transform: "translate(-45%, -45%)",
+              background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", padding: 0,
-              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
+              ...KALLISTO, color: "rgba(255,255,255,0.90)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
             <div style={{
@@ -936,6 +1018,18 @@ export function DiagnosticsPanel({
                 <span style={{ color: "#4adf5a", fontSize: "clamp(16px,4cqw,18px)", lineHeight: 1 }}>✓</span>
               </div>
 
+              <div style={{ ...KALLISTO, marginBottom: 18 }}>
+                <p style={{ margin: "0 0 7px", color: "rgba(255,255,255,.92)", fontSize: "clamp(12px,3cqw,14px)", lineHeight: 1.35 }}>
+                  Best soundscapes to target<br />YOUR specific frequency:
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "2px 18px", color: "#00ff55", fontSize: "clamp(13px,3.25cqw,15px)", fontWeight: 700 }}>
+                  {recommendedCategories.map(category => <span key={category}>{category}</span>)}
+                </div>
+                <p style={{ margin: "10px 0 0", color: "rgba(255,255,255,.86)", fontSize: "clamp(11px,2.75cqw,12.5px)", lineHeight: 1.35 }}>
+                  Matched soundscapes will be marked with an <span style={{ color: "#ffcc00" }}>asterisk *</span>
+                </p>
+              </div>
+
               {/* Section heading — "FREQUENCY-NOTCHING (optional)" */}
               <p style={{ ...KALLISTO, fontSize: "clamp(11px,2.7cqw,12.5px)", letterSpacing: "0.06em", marginBottom: 10, lineHeight: 1.3 }}>
                 <strong style={{ fontWeight: 800, color: "#ffcc00" }}>FREQUENCY-NOTCHING</strong>
@@ -950,32 +1044,51 @@ export function DiagnosticsPanel({
                 Notched audio is a developing, research-informed approach that some people with tonal tinnitus choose to explore. Individual experiences vary, and benefits are not guaranteed.
               </p>
               <p style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(11px,2.75cqw,12.5px)", color: "rgba(255,255,255,0.82)", lineHeight: 1.60, marginBottom: 16 }}>
-                 <strong style={{ fontWeight: 700, color: "#fff" }}>Select the option below</strong> to apply your personalized notch. This notch will apply to all soundscapes within this app, and will remain active until you return to the RingMatch<sup style={{ fontSize: "0.52em", fontWeight: 300, verticalAlign: "0.38em", color: "rgba(255,255,255,0.6)" }}>™</sup> section and change or reset it.
+                 <strong style={{ fontWeight: 700, color: "#fff" }}>Select an option below</strong> to apply or skip your personalized notch. Any notch will apply to all soundscapes within this app, and will remain active until you return to the RingMatch<sup style={{ fontSize: "0.52em", fontWeight: 300, verticalAlign: "0.38em", color: "rgba(255,255,255,0.6)" }}>™</sup> section and change or reset it.
                </p>
 
-              {/* CTA button */}
-              <button
-                onClick={() => { onBoost(null); onNotch(statFreq!); setStatIsReturning(false); onClose(); }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 9,
-                  background: "linear-gradient(135deg, rgba(0,55,18,0.97) 0%, rgba(0,90,35,0.93) 100%)",
-                  border: "1.5px solid rgba(74,223,90,0.45)",
-                  borderRadius: 28, padding: "10px 14px 10px 12px",
-                  cursor: "pointer", width: "100%",
-                }}
-              >
-                <svg width="18" height="14" viewBox="0 0 18 14" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
-                  <rect x="0" y="7"  width="3.5" height="7"  rx="1"/>
-                  <rect x="4.5" y="3.5" width="3.5" height="10.5" rx="1"/>
-                  <rect x="9"  y="5"  width="3.5" height="9"  rx="1"/>
-                  <rect x="13.5" y="0" width="3.5" height="14" rx="1"/>
-                </svg>
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(12px,3cqw,13.5px)", color: "#fff", letterSpacing: "0.04em", flexShrink: 0 }}>Notch</span>
-                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(12px,3cqw,13.5px)", color: "rgba(255,255,255,0.85)", flex: 1, textAlign: "left" }}>&nbsp;{fmtSub(statFreq)} from my playback</span>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="#4adf5a" aria-hidden="true" style={{ flexShrink: 0 }}>
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </button>
+              {/* Confirmation choices */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, width: "100%" }}>
+                <button
+                  className="ringmatch-confirm-choice"
+                  onClick={() => { onBoost(null); onNotch(statFreq!); setPage("confirm2"); }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8,
+                    width: "100%", minHeight: 34, padding: "5px 9px", cursor: "pointer",
+                    ...KALLISTO, fontSize: "clamp(11px,2.85cqw,13px)", letterSpacing: ".035em",
+                    color: "rgba(255,255,255,.88)", textAlign: "right",
+                  }}
+                >
+                  <span><strong style={{ color: "#ffcc00", fontWeight: 700 }}>notch</strong> {fmtSub(statFreq)} from my playback</span>
+                  <span aria-hidden="true" style={{ color: "#ffcc00", fontSize: 15, lineHeight: 1 }}>▶</span>
+                </button>
+                <button
+                  className="ringmatch-confirm-choice"
+                  onClick={() => { onNotch(null); onBoost(null); onClose(); }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8,
+                    width: "100%", minHeight: 34, padding: "5px 9px", cursor: "pointer",
+                    ...KALLISTO, fontSize: "clamp(11px,2.85cqw,13px)", letterSpacing: ".035em",
+                    color: "rgba(255,255,255,.88)", textAlign: "right",
+                  }}
+                >
+                  <span>keep selection but don't notch</span>
+                  <span aria-hidden="true" style={{ color: "#ffcc00", fontSize: 15, lineHeight: 1 }}>▶</span>
+                </button>
+                <button
+                  className="ringmatch-confirm-choice"
+                  onClick={handleReset}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8,
+                    width: "100%", minHeight: 34, padding: "5px 9px", cursor: "pointer",
+                    ...KALLISTO, fontSize: "clamp(11px,2.85cqw,13px)", letterSpacing: ".035em",
+                    color: "rgba(255,255,255,.68)", textAlign: "right",
+                  }}
+                >
+                  <span>reset and cancel</span>
+                  <span aria-hidden="true" style={{ color: "rgba(255,255,255,.68)", fontSize: 15, lineHeight: 1 }}>▶</span>
+                </button>
+              </div>
 
             </div>
           </div>
@@ -983,17 +1096,91 @@ export function DiagnosticsPanel({
       )}
 
       {/* ════════════════════════════════════════════════════════════════════════
-          STAT WINDOW — profile card (shown after PROCESS or for returning users)
+          NOTCH APPLIED CONFIRMATION — shown only after choosing to notch
+      ════════════════════════════════════════════════════════════════════════ */}
+      {page === "confirm2" && statFreq !== null && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: "absolute", inset: 0, zIndex: 95,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          paddingTop: "max(24px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px))",
+          paddingBottom: "max(24px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px))",
+          paddingLeft: "max(clamp(42px,10cqw,72px), calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px))",
+          paddingRight: "max(clamp(42px,10cqw,72px), calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px))",
+          boxSizing: "border-box",
+        }}>
+          <div style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: 340,
+            maxHeight: "calc(100dvh - max(48px, calc((var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 44px)))",
+            padding: "clamp(42px,7svh,54px) clamp(24px,6cqw,34px) clamp(22px,4svh,28px)",
+            border: 0,
+            background: `transparent url("${img("PopupBGpane.png")}") center / 100% 100% no-repeat`,
+            filter: "drop-shadow(0 16px 52px rgba(0,0,0,0.9))",
+            animation: "statScaleIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}>
+            <button onClick={handleClose} aria-label="Close notch confirmation" style={{
+              position: "absolute", top: 0, left: 0, zIndex: 11,
+              width: 34, height: 34, borderRadius: "50%",
+              transform: "translate(-45%, -45%)",
+              background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+              ...KALLISTO, color: "rgba(255,255,255,0.90)", fontSize: 17, fontWeight: 700,
+            }}>✕</button>
+
+            <p style={{
+              ...KALLISTO,
+              margin: "0 0 clamp(24px,4svh,32px)",
+              color: "#fff",
+              fontSize: "clamp(16px,4cqw,20px)",
+              lineHeight: 1.55,
+              textAlign: "center",
+              fontWeight: 400,
+            }}>
+              You have selected to <strong style={{ color: "#ffcc00", fontWeight: 800 }}>notch</strong>{" "}
+              <strong style={{ color: "#ffcc00", fontWeight: 800 }}>{fmtSub(statFreq)}</strong> from your playback!
+            </p>
+
+            <button onClick={handleClose} style={{
+              display: "block",
+              minWidth: 94,
+              margin: "0 auto",
+              padding: "8px 20px",
+              borderRadius: 7,
+              border: "1px solid rgba(255,204,0,0.8)",
+              background: "rgba(0,0,0,0.18)",
+              boxShadow: "0 0 12px rgba(255,204,0,0.15)",
+              cursor: "pointer",
+              ...KALLISTO,
+              color: "#fff",
+              fontSize: "clamp(13px,3.2cqw,15px)",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+            }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          STATUS WINDOW — shown whenever a frequency has been selected
       ════════════════════════════════════════════════════════════════════════ */}
       {page === "stat" && (
         <div onClick={e => e.stopPropagation()} style={{
           position: "absolute", inset: 0, zIndex: 90,
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 clamp(28px,7cqw,44px)",
+          paddingTop: "max(24px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px))",
+          paddingBottom: "max(24px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px))",
+          paddingLeft: "max(clamp(22px,5.5cqw,56px), calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px))",
+          paddingRight: "max(clamp(22px,5.5cqw,56px), calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px))",
+          boxSizing: "border-box",
         }}>
 
           <div style={{
-            position: "relative", width: "100%", maxWidth: 390,
+            position: "relative",
+            width: "100%",
+            maxWidth: 590,
+            height: "min(calc(100svh - max(48px, calc((var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 44px))), 650px)",
             filter: "drop-shadow(0 14px 52px rgba(0,0,0,0.92))",
             willChange: "transform, opacity",
             animation: statDismissing
@@ -1001,50 +1188,93 @@ export function DiagnosticsPanel({
               : "statScaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
 
-            {/* Background pane — stretches to content height */}
-            <img src={freqTestPane} alt="" draggable={false}
+            {/* Supplied rounded popup pane */}
+            <img src={img("PopupBGpane.png")} alt="" draggable={false}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", display: "block" }} />
 
-            {/* ✕ close — top-left, outside card */}
-            <button onClick={handleClose} style={{
-              position: "absolute", top: -16, left: -16, zIndex: 11,
+            {/* X straddles the perceived rounded corner */}
+            <button onClick={handleClose} aria-label="Close status" style={{
+              position: "absolute", top: 0, left: 0, zIndex: 11,
               width: 34, height: 34, borderRadius: "50%",
-              background: "rgba(10,18,16,0.95)", border: "1px solid rgba(0,200,180,0.35)",
+              transform: "translate(-45%, -45%)",
+              background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", padding: 0,
-              ...KALLISTO, color: "rgba(255,255,255,0.82)", fontSize: 17, fontWeight: 700,
+              ...KALLISTO, color: "rgba(255,255,255,0.90)", fontSize: 17, fontWeight: 700,
             }}>✕</button>
 
-            {/* Content — determines card height */}
+            {/* Left-aligned status composition modeled after the supplied reference */}
             <div style={{
               position: "relative", zIndex: 1,
-              display: "flex", flexDirection: "column", alignItems: "center",
-              padding: "clamp(24px,6svh,36px) clamp(20px,5cqw,28px) clamp(32px,8svh,44px)",
-              textAlign: "center",
+              height: "100%",
+              display: "flex", flexDirection: "column", alignItems: "flex-start",
+              padding: "clamp(72px,15%,98px) 10% clamp(28px,5%,38px) 14%",
+              textAlign: "left",
             }}>
 
-              {/* Title */}
-              <div style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(13px,3.2cqw,15px)", color: "rgba(255,255,255,0.90)", letterSpacing: "0.02em", marginBottom: "clamp(16px,4svh,22px)" }}>
-                Your selected tinnitus frequency:
+              <div style={{
+                ...KALLISTO,
+                fontWeight: 700,
+                fontSize: "clamp(15px,3.25vw,21px)",
+                color: "rgba(255,255,255,0.90)",
+                letterSpacing: "0.055em",
+                marginBottom: "clamp(8px,1.5svh,12px)",
+              }}>
+                Your selected tinnitus frequency:<span style={{ color: "#ffcc00", fontSize: "1.2em", lineHeight: 1 }}>*</span>
               </div>
 
-              {/* Frequency + checkmark — ✓ is absolute so text stays centred */}
-              <div style={{ position: "relative", display: "inline-block", marginBottom: "clamp(28px,6svh,38px)" }}>
-                <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(16px,4cqw,18px)", color: "#7adf6a", letterSpacing: "0.05em" }}>
-                  {statFreq !== null ? fmtSub(statFreq) : "—"}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "22px auto 34px",
+                alignItems: "center",
+                columnGap: 8,
+                marginLeft: "7%",
+                marginBottom: "clamp(42px,7svh,68px)",
+              }}>
+                <span style={{
+                  color: "#d8d900",
+                  fontSize: "clamp(17px,3.8vw,24px)",
+                  lineHeight: 1,
+                }}>▶</span>
+                <span style={{
+                  ...KALLISTO,
+                  fontWeight: 700,
+                  fontSize: "clamp(20px,4.4vw,28px)",
+                  color: "#d8d900",
+                  letterSpacing: "0.05em",
+                }}>
+                  {statFreq !== null ? fmtStatus(statFreq) : "—"}
                 </span>
                 {statFreq !== null && (
-                  <span style={{ position: "absolute", left: "100%", paddingLeft: 10, top: "50%", transform: "translateY(-50%)", color: "#7adf6a", fontSize: "clamp(17px,4.2cqw,20px)", lineHeight: 1 }}>✓</span>
+                  <span style={{
+                    color: "rgba(255,255,255,.90)",
+                    fontSize: "clamp(26px,5.2vw,34px)",
+                    fontWeight: 300,
+                    lineHeight: 1,
+                    transform: "rotate(-12deg)",
+                  }}>✓</span>
                 )}
               </div>
 
-              {/* Listening mode label */}
-              <div style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(14px,3.5cqw,16px)", color: "rgba(255,255,255,0.92)", letterSpacing: "0.04em", marginBottom: "clamp(8px,2svh,12px)" }}>
-                listening mode:
+              <div style={{
+                ...KALLISTO,
+                fontWeight: 700,
+                fontSize: "clamp(16px,3.5vw,22px)",
+                color: "rgba(255,255,255,0.90)",
+                letterSpacing: "0.07em",
+                marginBottom: "clamp(8px,1.5svh,12px)",
+              }}>
+                Listening mode:
               </div>
 
-              {/* Mode options */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "clamp(4px,1.2svh,8px)", marginBottom: "clamp(24px,6svh,34px)" }}>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: "clamp(5px,1svh,9px)",
+                marginLeft: "7%",
+                marginBottom: "clamp(38px,6svh,58px)",
+              }}>
                 {(["normal", "notch"] as const).map(mode => {
                   const active = currentMode === mode;
                   return (
@@ -1052,49 +1282,108 @@ export function DiagnosticsPanel({
                       onClick={() => handleModeChange(mode)}
                       style={{
                         background: "none", border: "none", cursor: "pointer", padding: 0,
-                        position: "relative", display: "inline-block",
+                        display: "grid",
+                        gridTemplateColumns: "22px auto 34px",
+                        alignItems: "center",
+                        columnGap: 8,
                       }}>
+                      <span style={{
+                        color: active ? (mode === "normal" ? "rgba(255,255,255,.90)" : "#d8d900") : "rgba(255,255,255,.38)",
+                        fontSize: "clamp(17px,3.8vw,24px)",
+                        lineHeight: 1,
+                        transition: "color 0.12s",
+                      }}>{active ? "▶" : "▷"}</span>
                       <span style={{
                         ...KALLISTO,
                         fontWeight: active ? 700 : 300,
-                        fontSize: "clamp(14px,3.5cqw,16px)",
-                        color: active ? "#7adf6a" : "rgba(255,255,255,0.42)",
-                        letterSpacing: "0.04em",
+                        fontSize: "clamp(16px,3.5vw,22px)",
+                        color: active ? (mode === "normal" ? "rgba(255,255,255,.90)" : "#d8d900") : "rgba(255,255,255,0.55)",
+                        letterSpacing: "0.09em",
                         transition: "color 0.12s",
                       }}>
-                        {modeLabel(mode)}
+                        {mode === "notch" ? "notched" : "normal"}
                       </span>
-                      {active && (
-                        <span style={{ position: "absolute", left: "100%", paddingLeft: 8, top: "50%", transform: "translateY(-50%)", color: "#7adf6a", fontSize: "clamp(15px,3.8cqw,17px)", lineHeight: 1 }}>✓</span>
-                      )}
+                      <span style={{
+                        visibility: active ? "visible" : "hidden",
+                        color: "rgba(255,255,255,.90)",
+                        fontSize: "clamp(26px,5.2vw,34px)",
+                        fontWeight: 300,
+                        lineHeight: 1,
+                        transform: "rotate(-12deg)",
+                      }}>✓</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* repeat test */}
               <button onClick={handleRepeatTest}
                 style={{
                   background: "none", border: "none", cursor: "pointer", padding: 0,
-                  position: "relative", display: "inline-block",
-                  marginBottom: "clamp(12px,3svh,18px)",
+                  display: "flex", alignItems: "center", gap: 12,
+                  marginLeft: "2%",
+                  marginBottom: "clamp(13px,2.3svh,19px)",
                 }}>
-                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "rgba(255,255,255,0.80)", letterSpacing: "0.06em" }}>
-                  repeat test
+                <span style={{ ...KALLISTO, display: "inline-block", transform: "scaleY(.85)", fontWeight: 400, fontSize: "clamp(18px,4vw,25px)", color: "#d8d900", letterSpacing: "0.08em" }}>
+                  Repeat Test
                 </span>
-                <span style={{ position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 6, fontSize: "clamp(15px,3.75cqw,16.5px)", fontWeight: 100, color: "rgba(255,255,255,0.80)", lineHeight: 1 }}>›</span>
+                <span style={{ fontSize: "clamp(20px,4.4vw,28px)", fontWeight: 300, color: "#d8d900", lineHeight: 1 }}>»</span>
               </button>
 
-              {/* reset */}
               <button onClick={handleReset}
                 style={{
                   background: "none", border: "none", cursor: "pointer", padding: 0,
-                  position: "relative", display: "inline-block",
+                  display: "flex", alignItems: "center", gap: 12,
+                  marginLeft: "3%",
+                  marginBottom: "clamp(18px,3.2svh,28px)",
                 }}>
-                <span style={{ ...KALLISTO, fontWeight: 400, fontSize: "clamp(16px,4cqw,18px)", color: "rgba(255,255,255,0.80)", letterSpacing: "0.06em" }}>
-                  reset
+                <span style={{ ...KALLISTO, display: "inline-block", transform: "scaleY(.85)", fontWeight: 400, fontSize: "clamp(18px,4vw,25px)", color: "rgba(255,255,255,0.80)", letterSpacing: "0.09em" }}>
+                  Reset
                 </span>
-                <span style={{ position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 6, fontSize: "clamp(15px,3.75cqw,16.5px)", fontWeight: 100, color: "rgba(255,255,255,0.80)", lineHeight: 1 }}>›</span>
+                <span style={{ fontSize: "clamp(20px,4.4vw,28px)", fontWeight: 300, color: "rgba(255,255,255,0.80)", lineHeight: 1 }}>»</span>
+              </button>
+
+              <button
+                onClick={handleShowInstructions}
+                aria-label="Show RingMatch instructions"
+                style={{
+                  width: "clamp(34px,7vw,44px)",
+                  height: "clamp(34px,7vw,44px)",
+                  marginLeft: "4%",
+                  borderRadius: "50%",
+                  border: "1px solid rgba(216,217,0,.72)",
+                  background: "rgba(22,50,43,.3)",
+                  color: "#d8d900",
+                  fontSize: "clamp(22px,4.6vw,29px)",
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >?</button>
+
+              <button
+                onClick={handleClose}
+                style={{
+                  position: "absolute",
+                  right: "10%",
+                  bottom: "7%",
+                  transform: "scale(.85)",
+                  transformOrigin: "bottom right",
+                  minWidth: "clamp(64px,15vw,92px)",
+                  padding: "clamp(7px,1.2svh,10px) 18px",
+                  borderRadius: 22,
+                  border: "1.5px solid rgba(74,223,90,.58)",
+                  background: "linear-gradient(135deg, rgba(0,72,27,.154), rgba(0,112,43,.147))",
+                  boxShadow: "0 2px 7px rgba(0,0,0,.16), inset 0 0 5px rgba(74,223,90,.04)",
+                  color: "#62ed72",
+                  cursor: "pointer",
+                  ...KALLISTO,
+                  fontSize: "clamp(14px,3.1vw,19px)",
+                  fontWeight: 700,
+                  letterSpacing: ".08em",
+                }}
+              >
+                OK
               </button>
 
             </div>

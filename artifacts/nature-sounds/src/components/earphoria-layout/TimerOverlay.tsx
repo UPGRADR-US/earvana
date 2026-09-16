@@ -2,6 +2,22 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as R
 import { A, useClock } from "./shared";
 import "./earphoria.css";
 
+const TIMER_PRELOAD_ASSETS = [
+  `${A}PopupBGpane.png`,
+  `${A}homepage_BLUR_1784150009315.png`,
+  `${A}TimerHoverKnob.png`,
+  `${A}TimerHoverMeterFill.png`,
+  `${A}TimerHoverMeterTrack.png`,
+  `${A}TimerHoverInfinite.png`,
+].map(src => {
+  if (typeof Image !== "undefined") {
+    const img = new Image();
+    img.src = src;
+    return img;
+  }
+  return null;
+});
+
 const detentPosition = (value: number) => value === 11 ? 96.5 : ((value - 1) / 9) * 84;
 
 function formatRemaining(seconds: number) {

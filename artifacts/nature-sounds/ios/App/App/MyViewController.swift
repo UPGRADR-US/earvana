@@ -25,9 +25,26 @@ class MyViewController: CAPBridgeViewController {
         defaults.set(defaults.integer(forKey: Self.reviewLaunchKey) + 1, forKey: Self.reviewLaunchKey)
     }
 
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        injectSafeAreaInsets()
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        injectSafeAreaInsets()
         requestStoreReviewIfAppropriate()
+    }
+
+    private func injectSafeAreaInsets() {
+        let insets = view.safeAreaInsets
+        let js = """
+        document.documentElement.style.setProperty('--safe-area-inset-top', '\(Int(insets.top))px');
+        document.documentElement.style.setProperty('--safe-area-inset-bottom', '\(Int(insets.bottom))px');
+        document.documentElement.style.setProperty('--safe-area-inset-left', '\(Int(insets.left))px');
+        document.documentElement.style.setProperty('--safe-area-inset-right', '\(Int(insets.right))px');
+        """
+        (webView ?? bridge?.webView)?.evaluateJavaScript(js, completionHandler: nil)
     }
 
     /// After 3 launches, once per marketing version. Apple may still suppress the dialog.

@@ -8,7 +8,7 @@ const FADE_IN_DURATION   = 1.5; // seconds
 const STOP_FADE_DURATION  = 0.75; // seconds — PLAY button / timer auto-stop fade
 const MANUAL_PAUSE_FADE_DURATION = 0.75; // manual pause only; independent of other ramps
 const LEGACY_TRACK_REPLACEMENT_FADE = 0.75; // preserve non-audition replacement behavior
-const TRACK_SWITCH_CROSSFADE = 7; // seconds — only when auditioning another track while playing
+const TRACK_SWITCH_CROSSFADE = 2.25; // seconds — dedicated crossfade for track switching
 const PAUSE_EXPIRY_MS     = 10 * 60 * 1000;
 
 // 5-band parametric EQ: centre frequencies and Q values
@@ -47,6 +47,7 @@ export type AudioEngineState = {
   lastPlayedId: string | null;
   startFadeOut: (durationSeconds: number) => void;
   cancelFade: () => void;
+  clearResumePosition: (trackId?: string) => void;
   notchedFreq: number | null;
   setNotch: (freq: number | null) => void;
   boostedFreq: number | null;
@@ -694,6 +695,14 @@ export function useAudioEngine(): AudioEngineState {
     fg.gain.setValueAtTime(1.0, t);
   }, []);
 
+  const clearResumePosition = useCallback((trackId?: string) => {
+    if (trackId) {
+      enginesRef.current[trackId]?.clearResumePosition();
+    } else {
+      Object.values(enginesRef.current).forEach(eng => eng.clearResumePosition());
+    }
+  }, []);
+
   const setNotch = useCallback((freq: number | null) => {
     notchedFreqRef.current = freq;
     setNotchedFreqState(freq);
@@ -797,6 +806,7 @@ export function useAudioEngine(): AudioEngineState {
     stopAll,
     startFadeOut,
     cancelFade,
+    clearResumePosition,
     notchedFreq,
     setNotch,
     boostedFreq,

@@ -851,13 +851,24 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
     <div className="settings-click-glow absolute inset-0 z-50 flex items-center justify-center" onClick={handleClose}
       onPointerDownCapture={event => flashClickable(event.target)}
       onClickCapture={event => { if (event.detail === 0) flashClickable(event.target); }}
-      style={{ animation: "settingsPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+      style={{
+        animation: "settingsPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+        paddingTop: "max(24px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px))",
+        paddingBottom: "max(24px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px))",
+        paddingLeft: "max(24px, calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px))",
+        paddingRight: "max(24px, calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px))",
+        boxSizing: "border-box",
+      }}>
       <img src={img("homepage_BLUR_1784150009315.png")} alt=""
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
       {/* Panel */}
       <div className="relative" onClick={(event) => event.stopPropagation()}
-        style={{ width: "88%", maxWidth: "88cqw", height: "min(88svh, calc(88cqw * 2.01))" }}>
+        style={{
+          width: "min(88%, calc(100cqw - max(48px, calc((var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) + 44px))))",
+          maxWidth: "88cqw",
+          height: "min(calc(100svh - max(48px, calc((var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) + 44px))), calc(88cqw * 2.01))",
+        }}>
         <img src={img("PopupBGpane.png")} alt=""
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
 
@@ -1066,7 +1077,10 @@ function Home() {
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
   const [diagHasOpened, setDiagHasOpened] = useState(false);
   const [diagShowInstructions, setDiagShowInstructions] = useState(true);
-  const [ringMatchFrequency, setRingMatchFrequency] = useState<number | null>(null);
+  const [ringMatchFrequency, setRingMatchFrequency] = useState<number | null>(() => {
+    const saved = localStorage.getItem("tr_ringmatch_frequency");
+    return saved ? Number(saved) : null;
+  });
   const diagPausedRef  = useRef(false);  // true when we auto-paused on diag open
   const carouselRef    = useRef<CarouselHandle>(null);
 
@@ -1104,17 +1118,58 @@ function Home() {
 
   const resetRingMatch = useCallback(() => {
     setRingMatchFrequency(null);
+    localStorage.removeItem("tr_ringmatch_frequency");
     setDiagHasOpened(false);
     setDiagShowInstructions(true);
+  }, []);
+
+  const handleSelectedFrequencyChange = useCallback((freq: number | null) => {
+    setRingMatchFrequency(freq);
+    if (freq !== null) {
+      localStorage.setItem("tr_ringmatch_frequency", String(freq));
+    } else {
+      localStorage.removeItem("tr_ringmatch_frequency");
+    }
   }, []);
 
   const [sprocketFlash,   setSprocketFlash]   = useState<boolean>(false);
   const [diagFlash,       setDiagFlash]       = useState<boolean>(false);
 
-  const [eqMode,  setEqMode]  = useState<EqModeId>(
-    () => (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal"
-  );
+  const [storedEqMode, setStoredEqMode] = useState<EqModeId | null>(() => {
+    const stored = localStorage.getItem("tr_stored_eq_mode") as EqModeId | null;
+    if (stored && stored !== "normal") return stored;
+    const directMode = localStorage.getItem("tr_eq_mode") as EqModeId | null;
+    if (directMode && directMode !== "normal") return directMode;
+    return null;
+  });
+  const [storedEqBands, setStoredEqBands] = useState<number[] | null>(() => {
+    try {
+      const stored = localStorage.getItem("tr_stored_eq_bands");
+      if (stored) {
+        const arr = JSON.parse(stored);
+        if (Array.isArray(arr) && arr.length === 5) return arr as number[];
+      }
+    } catch {}
+    const storedMode = (localStorage.getItem("tr_stored_eq_mode") ?? localStorage.getItem("tr_eq_mode")) as EqModeId | null;
+    if (storedMode && storedMode !== "normal" && EQ_PRESETS[storedMode]) {
+      return EQ_PRESETS[storedMode];
+    }
+    return null;
+  });
+  const [eqEnabled, setEqEnabled] = useState<boolean>(() => {
+    const savedEnabled = localStorage.getItem("tr_eq_enabled");
+    if (savedEnabled !== null) return savedEnabled === "true";
+    const mode = (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal";
+    return mode !== "normal";
+  });
+  const [eqMode,  setEqMode]  = useState<EqModeId>(() => {
+    const savedEnabled = localStorage.getItem("tr_eq_enabled");
+    if (savedEnabled === "false") return "normal";
+    return (localStorage.getItem("tr_eq_mode") as EqModeId | null) ?? "normal";
+  });
   const [eqBands, setEqBands] = useState<number[]>(() => {
+    const savedEnabled = localStorage.getItem("tr_eq_enabled");
+    if (savedEnabled === "false") return [0, 0, 0, 0, 0];
     try {
       const saved = localStorage.getItem("tr_eq_bands");
       if (saved) {
@@ -1131,13 +1186,11 @@ function Home() {
 
   /* ── Timer ───────────────────────────────────────────────────────────────── */
   const LOOP_STEP = DURATION_STEPS.length - 1;
-  const [timeRemaining, setTimeRemaining] = useState<number>(
-    durationStep < LOOP_STEP ? stepToStartSeconds(durationStep) : 0,
-  );
-  const [timerResetSeconds, setTimerResetSeconds] = useState<number>(
-    durationStep < LOOP_STEP ? stepToStartSeconds(durationStep) : 0,
-  );
+  const initialDuration = durationStep < LOOP_STEP ? stepToStartSeconds(durationStep) : 0;
+  const [timeRemaining, setTimeRemaining] = useState<number>(initialDuration);
+  const [timerResetSeconds, setTimerResetSeconds] = useState<number>(initialDuration);
   const timerResetSecondsRef = useRef(timerResetSeconds);
+  const lastPositiveTimerDurationRef = useRef<number>(initialDuration > 0 ? initialDuration : stepToStartSeconds(0));
   const [timerCompletionHold, setTimerCompletionHold] = useState(false);
   const [timerCompletionSignal, setTimerCompletionSignal] = useState(0);
 
@@ -1160,6 +1213,9 @@ function Home() {
     if (s < LOOP_STEP) {
       const nextStartSeconds = stepToStartSeconds(s);
       timerResetSecondsRef.current = nextStartSeconds;
+      if (nextStartSeconds > 0) {
+        lastPositiveTimerDurationRef.current = nextStartSeconds;
+      }
       setTimerResetSeconds(nextStartSeconds);
       setTimeRemaining(nextStartSeconds);
     }
@@ -1179,6 +1235,9 @@ function Home() {
     setTimerResetSeconds(current => {
       const nextResetSeconds = Math.max(0, current + deltaSeconds);
       timerResetSecondsRef.current = nextResetSeconds;
+      if (nextResetSeconds > 0) {
+        lastPositiveTimerDurationRef.current = nextResetSeconds;
+      }
       return nextResetSeconds;
     });
     setTimeRemaining(current => Math.max(0, current + deltaSeconds));
@@ -1287,8 +1346,9 @@ function Home() {
       timerCompletedRef.current = true;
       setOptimisticPlaying(false);
       if (playingTrackId) engine.pause(playingTrackId);
+      engine.clearResumePosition();
       setTimerCompletionHold(true);
-      setTimeRemaining(timerResetSecondsRef.current);
+      setTimeRemaining(0);
       setTimerCompletionSignal(signal => signal + 1);
       // Keep the global fade closed until the longest native pause fade has
       // completed, then reopen it while the source is safely paused.
@@ -1328,7 +1388,13 @@ function Home() {
     fadeOutStartedRef.current = false;
     setTimerCompletionHold(false);
     engine.cancelFade();
-    setTimeRemaining(timerResetSeconds);
+    engine.clearResumePosition();
+    const restartSeconds = lastPositiveTimerDurationRef.current > 0
+      ? lastPositiveTimerDurationRef.current
+      : (timerResetSeconds > 0 ? timerResetSeconds : stepToStartSeconds(durationStep));
+    timerResetSecondsRef.current = restartSeconds;
+    setTimerResetSeconds(restartSeconds);
+    setTimeRemaining(restartSeconds);
   }, [durationStep, engine, LOOP_STEP, timeRemaining, timerCompletionHold, timerResetSeconds]);
 
   const handleSelect = (id: string) => {
@@ -1347,7 +1413,7 @@ function Home() {
   // Tap a track name → play it immediately (no yellow-standby step).
   // Tapping the currently-playing track is a no-op; use PLAY to pause.
   // Tapping a different track while playing opts into the dedicated
-  // seven-second audition crossfade; PLAY/pause keeps its existing behavior.
+  // 2.25-second audition crossfade; PLAY/pause keeps its existing behavior.
   const handleTrackSelect = useCallback((id: string) => {
     if (isTrackLocked(id, subscription.isSubscribed, subscription.catalogAvailable)) {
       subscription.subscribe();
@@ -1389,6 +1455,27 @@ function Home() {
     }
   }, [isPlaying, playingTrackId, selectedTrackId, prepareTimerForPlayback, engine, centerIdx, subscription]);
 
+  const handleToggleEq = useCallback(() => {
+    if (eqEnabled) {
+      setEqEnabled(false);
+      setEqMode("normal");
+      setEqBands([0, 0, 0, 0, 0]);
+      localStorage.setItem("tr_eq_enabled", "false");
+      localStorage.setItem("tr_eq_mode", "normal");
+      engine.setEq([0, 0, 0, 0, 0]);
+    } else {
+      const modeToRestore = storedEqMode ?? "normal";
+      const bandsToRestore = storedEqBands ?? (EQ_PRESETS[modeToRestore] ?? [0, 0, 0, 0, 0]);
+      setEqEnabled(true);
+      setEqMode(modeToRestore);
+      setEqBands(bandsToRestore);
+      localStorage.setItem("tr_eq_enabled", "true");
+      localStorage.setItem("tr_eq_mode", modeToRestore);
+      localStorage.setItem("tr_eq_bands", JSON.stringify(bandsToRestore));
+      engine.setEq(bandsToRestore);
+    }
+  }, [eqEnabled, storedEqMode, storedEqBands, engine]);
+
   const sendRedesignState = useCallback(() => {
     const playingCategoryIndex = btnPlaying
       ? CATEGORIES.findIndex(category => category.tracks.some(track => track.id === playingTrackId))
@@ -1419,8 +1506,10 @@ function Home() {
       lockedTrackIds: CATEGORIES.flatMap(category => category.tracks)
         .filter(track => isTrackLocked(track.id, subscription.isSubscribed, subscription.catalogAvailable))
         .map(track => track.id),
+      hasEqPreset: storedEqMode !== null && storedEqMode !== "normal",
+      eqEnabled,
     }, window.location.origin);
-  }, [btnPlaying, centerIdx, diagOpen, durationStep, engine.boostedFreq, engine.masterVolume, engine.notchedFreq, isPaused, playingTrackId, ringMatchFrequency, selectedTrackId, subscription.catalogAvailable, subscription.isSubscribed, timeRemaining, timerCompletionHold, timerCompletionSignal]);
+  }, [btnPlaying, centerIdx, diagOpen, durationStep, engine.boostedFreq, engine.masterVolume, engine.notchedFreq, eqEnabled, isPaused, playingTrackId, ringMatchFrequency, selectedTrackId, storedEqMode, subscription.catalogAvailable, subscription.isSubscribed, timeRemaining, timerCompletionHold, timerCompletionSignal]);
 
   useEffect(() => {
     sendRedesignState();
@@ -1448,7 +1537,10 @@ function Home() {
           if (isPlaying) handlePlayButton();
           break;
         case "play":
-          if (!isPlaying) handlePlayButton();
+          handlePlayButton();
+          break;
+        case "toggle-eq":
+          handleToggleEq();
           break;
         case "set-volume": {
           const nextVolume = Number(event.data.volume);
@@ -1487,7 +1579,7 @@ function Home() {
     };
     window.addEventListener("message", handleRedesignCommand);
     return () => window.removeEventListener("message", handleRedesignCommand);
-  }, [engine, handleDurationChange, handlePlayButton, handleTimerAdjustment, handleTrackSelect, isPlaying, LOOP_STEP, openDiag, sendRedesignState]);
+  }, [engine, handleDurationChange, handlePlayButton, handleTimerAdjustment, handleToggleEq, handleTrackSelect, isPlaying, LOOP_STEP, openDiag, sendRedesignState]);
 
   const handleSprocketClick = useCallback(() => {
     setSprocketFlash(true);
@@ -1497,15 +1589,39 @@ function Home() {
   const handleEqChange = useCallback((mode: EqModeId, bands: number[]) => {
     setEqMode(mode);
     setEqBands(bands);
-    localStorage.setItem("tr_eq_mode", mode);
-    localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
-    engine.setEq(bands);
+    if (mode === "normal") {
+      setEqEnabled(false);
+      setStoredEqMode(null);
+      setStoredEqBands(null);
+      localStorage.setItem("tr_eq_mode", "normal");
+      localStorage.setItem("tr_eq_enabled", "false");
+      localStorage.removeItem("tr_stored_eq_mode");
+      localStorage.removeItem("tr_stored_eq_bands");
+      localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
+      engine.setEq(bands);
+    } else {
+      setEqEnabled(true);
+      setStoredEqMode(mode);
+      setStoredEqBands(bands);
+      localStorage.setItem("tr_eq_mode", mode);
+      localStorage.setItem("tr_eq_enabled", "true");
+      localStorage.setItem("tr_stored_eq_mode", mode);
+      localStorage.setItem("tr_stored_eq_bands", JSON.stringify(bands));
+      localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
+      engine.setEq(bands);
+    }
   }, [engine]);
 
   const handleEqBandsChange = useCallback((bands: number[]) => {
     setEqBands(bands);
     setEqMode("custom");
+    setEqEnabled(true);
+    setStoredEqMode("custom");
+    setStoredEqBands(bands);
     localStorage.setItem("tr_eq_mode", "custom");
+    localStorage.setItem("tr_eq_enabled", "true");
+    localStorage.setItem("tr_stored_eq_mode", "custom");
+    localStorage.setItem("tr_stored_eq_bands", JSON.stringify(bands));
     localStorage.setItem("tr_eq_bands", JSON.stringify(bands));
     engine.setEq(bands);
   }, [engine]);

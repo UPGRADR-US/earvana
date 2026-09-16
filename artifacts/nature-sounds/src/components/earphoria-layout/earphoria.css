@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;700;800&display=swap');
 /* The published plate stays inside the app column. Landscape letterbox is a
    dark box around that column, matching Jay's iPad layout. */
-.eh-bg{background-size:cover;background-position:center;filter:none}
+.eh-bg{background-image:url('/earphoria-redesign/published-home-bg.png');background-size:cover;background-position:center;filter:none}
 .eh-app:after{display:none}
 #bg-blur {
   position: fixed;
@@ -12,15 +12,15 @@
 }
 
 /* Subtle home-screen-only camera drift during active playback. Overscan keeps
-   every edge covered throughout the slow pan and zoom.
-   Play-state is a CSS variable (not a class toggle) so WebKit does not restart
-   the animation on pause or track change. Alternate ping-pong avoids the
-   infinite-loop hitch back to the first keyframe. */
+   every edge covered throughout the slow pan and zoom. */
 .eh-bg.home-jib {
   inset: -8%;
   will-change: transform;
   animation: home-background-jib 52s cubic-bezier(.45, 0, .55, 1) infinite alternate;
   animation-play-state: var(--eh-jib-state, paused);
+}
+.eh-bg.home-jib.is-playing {
+  animation-play-state: running;
 }
 @keyframes home-background-jib {
   0% {
@@ -274,8 +274,10 @@ html, body { background: #000; }
    Fixed-priority artwork keeps its place; the scrollable track viewport yields. */
 .eh-console {
   /* Keep the control section proportional on both tall/narrow and short/wide
-     viewports. The flexible track viewport above yields this space first. */
-  height: clamp(220px, min(max(27dvh, 45.183cqw), 33dvh), 390px);
+     viewports. The flexible track viewport above yields this space first.
+     Expand height by the safe area inset so the home indicator never compresses
+     the controls on iPhone. */
+  height: calc(clamp(220px, min(max(27dvh, 45.183cqw), 33dvh), 390px) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .eh-controls:before {
@@ -353,12 +355,38 @@ html, body { background: #000; }
 }
 .eh-console-playing-animation {
   position: absolute;
-  left: 50%;
+  left: calc(50% - 25px);
   top: 50%;
   width: clamp(23.25px, 6cqw, 33.75px);
   height: clamp(23.25px, 6cqw, 33.75px);
   opacity: .375;
   transform: translate(-50%, -50%);
+}
+.eh-eq-button {
+  position: absolute;
+  left: calc(50% + 9px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.15s ease, text-shadow 0.15s ease, opacity 0.15s ease;
+}
+.eh-eq-button.is-on {
+  color: #ffde25;
+  text-shadow: 0 0 8px rgba(255, 222, 37, 0.75), 0 0 16px rgba(255, 222, 37, 0.4);
+  opacity: 1;
+}
+.eh-eq-button.is-off {
+  color: rgba(255, 255, 255, 0.32);
+  text-shadow: none;
+  opacity: 0.6;
 }
 @keyframes trackBlink {
   0%, 100% { opacity: 1; }
@@ -516,7 +544,7 @@ html, body { background: #000; }
   position: absolute;
   left: 0;
   right: 0;
-  top: 50%;
+  top: calc((100% - env(safe-area-inset-bottom, 0px)) * 0.48);
   margin-top: 0;
   transform: translateY(-50%);
   align-items: center;
@@ -526,22 +554,24 @@ html, body { background: #000; }
 }
 
 .eh-volume {
-  /* Console already has safe-area padding. Adding the inset here again
-     lifts the bar too high on iPhone. 11% is the artwork position. */
-  bottom: 11%;
+  bottom: calc(11% + env(safe-area-inset-bottom, 0px));
   left: 50%;
   right: auto;
   width: min(59.5%, 314.5px);
   transform: translateX(-50%);
+  cursor: pointer;
+  touch-action: none;
 }
 .eh-volume input {
+  position: absolute;
   z-index: 3;
   top: 0;
   left: 0;
-  height: auto;
-  aspect-ratio: 1064 / 137;
+  width: 100%;
+  height: 100%;
   margin: 0;
-  touch-action: none;
+  opacity: 0;
+  pointer-events: none;
 }
 .eh-volume > span {
   order: 2;
@@ -568,11 +598,50 @@ html, body { background: #000; }
   height: 100%;
   object-fit: contain;
 }
+.eh-volume.ringmatch-volume {
+  z-index: 90;
+  bottom: calc(3% + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Android Phone (Motorola / mobile): raise volume bar above 3-button nav bar ─ */
+/* On Android phones with 3 navigation buttons (Back, Home, Overview), the bottom
+   bar is ~48dp-56dp tall. We lift the volume slider and expand the console so the
+   word "volume" is clearly visible above the bottom bar and never cut off.
+   Tablets (sw >= 600dp) and iOS devices remain untouched. */
+.android-phone {
+  --android-nav-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), 48px);
+}
+
+@media (orientation: portrait) {
+  .android-phone .eh-console,
+  .android-phone .eh-app .eh-console {
+    height: calc(clamp(220px, min(max(27dvh, 45.183cqw), 33dvh), 390px) + var(--android-nav-bottom));
+    padding-bottom: var(--android-nav-bottom);
+  }
+
+  .android-phone .eh-secondary,
+  .android-phone .eh-app .eh-secondary {
+    top: calc((100% - var(--android-nav-bottom)) * 0.48);
+  }
+
+  .android-phone .eh-volume,
+  .android-phone .eh-app .eh-volume {
+    bottom: calc(11% + var(--android-nav-bottom));
+  }
+}
 
 .timer-layer {
   display: grid;
   place-items: center;
-  padding: min(5.5dvh, 42px) 4%;
+  box-sizing: border-box;
+  --safe-area-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+  --safe-area-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  --safe-area-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
+  --safe-area-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+  padding-top: max(min(5.5dvh, 42px), calc(var(--safe-area-top) + 22px));
+  padding-bottom: max(min(5.5dvh, 42px), calc(var(--safe-area-bottom) + 22px));
+  padding-left: max(4%, calc(var(--safe-area-left) + 22px));
+  padding-right: max(4%, calc(var(--safe-area-right) + 22px));
 }
 .timer-layer .timer-backdrop {
   opacity: 0;
@@ -581,9 +650,9 @@ html, body { background: #000; }
   position: relative;
   inset: auto;
   left: auto;
-  width: min(95%, calc((100dvh - 24px) * 1823 / 2868));
+  width: min(95%, calc((100dvh - 24px) * 1713 / 2791));
   height: auto;
-  aspect-ratio: 1823 / 2868;
+  aspect-ratio: 1713 / 2791;
   padding: 0;
   overflow: visible;
   background: transparent;
@@ -625,7 +694,7 @@ html, body { background: #000; }
   inset: 0;
   z-index: 0;
   width: 100%;
-  height: 91.5%;
+  height: 100%;
   object-fit: fill;
   pointer-events: none;
 }
@@ -864,9 +933,10 @@ html, body { background: #000; }
   display: inline-block;
   margin-left: 5px;
   color: #ffcc00;
-  font-size: 1.05em;
+  font-size: 1.4em;
   font-weight: 700;
   line-height: 1;
+  vertical-align: -0.1em;
   text-shadow: 0 0 8px rgba(255, 204, 0, .85);
 }
 .eh-track-lock {
@@ -1002,8 +1072,35 @@ html, body { background: #000; }
 /* The Info screen reuses the timer popup's blurred field and illustrated pane.
    Its long FAQ document scrolls invisibly inside the fixed pane. */
 .info-layer {
-  --info-outer-gap: clamp(22px, 5cqw, 44px);
-  padding: var(--info-outer-gap);
+  --info-side-gap: clamp(22px, 5cqw, 44px);
+  --safe-area-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+  --safe-area-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  --safe-area-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
+  --safe-area-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+
+  --info-top-gap: max(
+    var(--info-side-gap),
+    calc(var(--safe-area-top) + 22px)
+  );
+  --info-bottom-gap: max(
+    var(--info-side-gap),
+    calc(var(--safe-area-bottom) + 22px)
+  );
+  --info-left-gap: max(
+    var(--info-side-gap),
+    calc(var(--safe-area-left) + 22px)
+  );
+  --info-right-gap: max(
+    var(--info-side-gap),
+    calc(var(--safe-area-right) + 22px)
+  );
+
+  box-sizing: border-box;
+  padding-top: var(--info-top-gap);
+  padding-right: var(--info-right-gap);
+  padding-bottom: var(--info-bottom-gap);
+  padding-left: var(--info-left-gap);
+  display: grid;
   place-items: center;
 }
 .info-layer .timer-backdrop {
@@ -1012,9 +1109,12 @@ html, body { background: #000; }
 .info-pane {
   position: relative;
   inset: auto;
-  width: min(760px, calc(100cqw - (var(--info-outer-gap) * 2)));
+  width: min(760px, calc(100cqw - var(--info-left-gap) - var(--info-right-gap)));
   max-width: none;
-  height: min(900px, calc(100dvh - (var(--info-outer-gap) * 2)));
+  height: min(
+    900px,
+    calc(100dvh - var(--info-top-gap) - var(--info-bottom-gap))
+  );
   max-height: none;
   min-width: 0;
   min-height: 0;
@@ -1117,10 +1217,29 @@ html, body { background: #000; }
 .info-pane p {
   margin: 0 0 14px;
 }
-.info-pane ol,
-.info-pane ul {
+.info-pane ol {
   margin: 8px 0 20px;
   padding-left: 24px;
+}
+.info-pane ul {
+  margin: 8px 0 20px;
+}
+.info-pane ul:not(.info-plain-list) {
+  list-style: none;
+  padding-left: 4px;
+}
+.info-pane ul:not(.info-plain-list) li {
+  position: relative;
+  padding-left: 18px;
+}
+.info-pane ul:not(.info-plain-list) li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #eff7dc;
+  font-size: 1.15em;
+  line-height: 1.58;
 }
 .info-pane li {
   margin-bottom: 8px;
@@ -1128,6 +1247,10 @@ html, body { background: #000; }
 .info-pane .info-plain-list {
   list-style: none;
   padding-left: 0;
+  font-weight: 600;
+}
+.info-pane .info-plain-list li {
+  color: #ff4444;
   font-weight: 600;
 }
 .info-tm {

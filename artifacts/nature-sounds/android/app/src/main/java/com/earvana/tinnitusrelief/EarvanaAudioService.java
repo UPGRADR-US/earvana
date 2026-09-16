@@ -359,9 +359,10 @@ public class EarvanaAudioService extends Service {
         }
 
         // Short fade then release — status flips immediately via isPlaying=false
+        final int pauseGen = loadGeneration.get();
         notifyStatus();
         player.pause(0.35f, () -> {
-            if (loopPlayer == player) loopPlayer = null;
+            if (pauseGen == loadGeneration.get() && loopPlayer == player) loopPlayer = null;
             updateNotification(false);
             notifyStatus();
         });

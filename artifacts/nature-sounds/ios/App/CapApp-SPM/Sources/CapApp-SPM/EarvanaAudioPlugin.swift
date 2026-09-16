@@ -40,6 +40,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     private var eqGains: [Float] = [0, 0, 0, 0, 0]
     private var notchFreq: Float?
     private var boostFreq: Float?
+    private var playbackGeneration: Int = 0
 
     private func parseOptionalFreq(from call: CAPPluginCall) -> Float? {
         guard call.options["freq"] != nil else { return nil }
@@ -55,10 +56,47 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         loopPlayer?.setBoost(freq: boostFreq)
     }
 
+    public override func load() {
+        super.load()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleAudioInterruption(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            switch type {
+            case .began:
+                break
+            case .ended:
+                guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    self.ensureAudioSession()
+                    self.loopPlayer?.resumeEngineIfNeeded()
+                }
+            @unknown default:
+                break
+            }
+        }
+    }
+
     private func ensureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default)
             if #available(iOS 15.0, *) {
                 try session.setSupportsMultichannelContent(false)
             }
@@ -141,7 +179,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let loopStart = call.getDouble("loopStart") ?? 0
         let loopEnd = call.getDouble("loopEnd")
         let audition = call.getString("transition") == "crossfade"
-        let auditionSeconds = call.getDouble("transitionDuration") ?? 7
+        let auditionSeconds = call.getDouble("transitionDuration") ?? 2.25
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
@@ -159,6 +197,8 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 } else {
                     self.outgoingPlayer?.stop(immediate: true)
                 }
+                self.playbackGeneration += 1
+                let gen = self.playbackGeneration
                 let player = CrossfadeLoopPlayer()
                 try player.play(
                     url: url,
@@ -179,8 +219,9 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 if let outgoing {
                     self.outgoingPlayer = outgoing
                     outgoing.pause(fadeSeconds: auditionSeconds, immediate: false) { [weak self] in
-                        if self?.outgoingPlayer === outgoing {
-                            self?.outgoingPlayer = nil
+                        guard let self = self else { return }
+                        if self.playbackGeneration == gen && self.outgoingPlayer === outgoing {
+                            self.outgoingPlayer = nil
                         }
                     }
                 }
@@ -203,12 +244,22 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve()
                 return
             }
-            self.outgoingPlayer?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
-                self?.outgoingPlayer = nil
+            self.playbackGeneration += 1
+            let gen = self.playbackGeneration
+            let playerToPause = self.loopPlayer
+            let outgoingToPause = self.outgoingPlayer
+            outgoingToPause?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
+                guard let self = self else { return }
+                if self.playbackGeneration == gen && self.outgoingPlayer === outgoingToPause {
+                    self.outgoingPlayer = nil
+                }
             }
-            self.loopPlayer?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
-                self?.loopPlayer = nil
-                self?.activeTrackId = nil
+            playerToPause?.pause(fadeSeconds: 0.75, immediate: false) { [weak self] in
+                guard let self = self else { return }
+                if self.playbackGeneration == gen && self.loopPlayer === playerToPause {
+                    self.loopPlayer = nil
+                    self.activeTrackId = nil
+                }
             }
             self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
             call.resolve()
@@ -312,11 +363,15 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            let playerToStop = self.loopPlayer
+            let gen = self.playbackGeneration
             self.loopPlayer?.setPlayDuration(seconds: duration) { [weak self] in
                 guard let self = self else { return }
-                self.loopPlayer = nil
-                self.activeTrackId = nil
-                self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
+                if self.playbackGeneration == gen && self.loopPlayer === playerToStop {
+                    self.loopPlayer = nil
+                    self.activeTrackId = nil
+                    self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
+                }
             }
             call.resolve()
         }
@@ -328,6 +383,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve()
                 return
             }
+            self.playbackGeneration += 1
             self.outgoingPlayer?.stop(immediate: true)
             self.outgoingPlayer = nil
             self.loopPlayer?.stop(immediate: true)

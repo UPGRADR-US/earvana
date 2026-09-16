@@ -88,6 +88,7 @@ class SubscriptionBillingManager(
                 .enableOneTimeProducts()
                 .build()
         )
+        .enableAutoServiceReconnection()
         .build()
 
     // ── Public API ──────────────────────────────────────────────────────────
@@ -275,7 +276,8 @@ class SubscriptionBillingManager(
                 listener.onPurchaseCanceled()
             }
             else -> {
-                Log.e(TAG, "Purchase failed: ${billingResult.debugMessage}")
+                val subCode = billingResult.onPurchasesUpdatedSubResponseCode
+                Log.e(TAG, "Purchase failed: code=${billingResult.responseCode} subCode=$subCode debug=${billingResult.debugMessage}")
                 listener.onBillingError(
                     billingResult.responseCode,
                     billingResult.debugMessage.orEmpty()

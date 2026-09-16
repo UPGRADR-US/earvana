@@ -264,6 +264,16 @@ final class CrossfadeLoopPlayer {
         stopWorkItem = nil
     }
 
+    func resumeEngineIfNeeded() {
+        guard isPlaying else { return }
+        if !engine.isRunning {
+            try? engine.start()
+        }
+        if !activePlayer.isPlaying {
+            activePlayer.play()
+        }
+    }
+
     private static func normalizedEqGains(_ gains: [Float]) -> [Float] {
         var out = [Float](repeating: 0, count: 5)
         for i in 0..<min(5, gains.count) { out[i] = gains[i] }

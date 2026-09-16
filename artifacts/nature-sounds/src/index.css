@@ -237,3 +237,26 @@ img, video {
   scrollbar-width: none;       /* Firefox */
   -ms-overflow-style: none;    /* IE / Edge */
 }
+
+/* Shared pressed feedback, matched to the Timer popup's ±5 minute controls. */
+.settings-click-glow button:not([aria-label^="Close"]):active,
+.settings-click-glow button:not([aria-label^="Close"]).on-click,
+.ringmatch-click-glow button:not([aria-label^="Close"]):active,
+.ringmatch-click-glow button:not([aria-label^="Close"]).on-click {
+  color: #00ff55 !important;
+  text-shadow:
+    0 0 10px #00ff55,
+    0 0 22px #00ff55,
+    0 0 34px rgba(0, 255, 51, .95) !important;
+  transition: color .15s ease, text-shadow .15s ease;
+}
+.settings-click-glow button:not([aria-label^="Close"]):active *,
+.settings-click-glow button:not([aria-label^="Close"]).on-click *,
+.ringmatch-click-glow button:not([aria-label^="Close"]):active *,
+.ringmatch-click-glow button:not([aria-label^="Close"]).on-click * {
+  color: #00ff55 !important;
+  text-shadow:
+    0 0 10px #00ff55,
+    0 0 22px #00ff55,
+    0 0 34px rgba(0, 255, 51, .95) !important;
+}

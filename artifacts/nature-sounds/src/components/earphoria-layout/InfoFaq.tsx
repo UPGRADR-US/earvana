@@ -20,12 +20,12 @@ export function InfoFaq({ onClose }: { onClose?: () => void }) {
           <section>
             <h2>How can <Brand /> help relieve my tinnitus ringing?</h2>
             <p>The <Brand /> app bundles 4 benefits:</p>
-            <ol>
+            <ul className="info-benefits-list">
               <li>Excellent Masking</li>
               <li>Calm/relaxation with ultra-realistic nature recordings.</li>
               <li>RingMatch<Tm /> tool to help identify the frequency area of your ringing.</li>
               <li>“Notch Filter” option: for personal exploration/experimentation with an emerging therapy that may suggest promise in longer-term suppression of ringing.</li>
-            </ol>
+            </ul>
 
             <h3>Masking:</h3>
             <p>The easiest and quickest way to get tinnitus relief is by ‘masking’, which is to apply an <u>external</u> sound to overshadow (mask) the <u>internal</u> ringing.</p>
@@ -39,7 +39,7 @@ export function InfoFaq({ onClose }: { onClose?: () => void }) {
             <h3>The RingMatch tool:</h3>
             <p>This on-board tool can help give you more information about your specific tinnitus frequency range. Here you can access a tone generator, allowing you to preview different frequency bands, and then fine-tune to pinpoint your specific ringing pitch frequency.</p>
             <p>For best results:</p>
-            <ul>
+            <ul className="info-benefits-list">
               <li>listen with headphones (wired or wireless)</li>
               <li>go to the quietest possible environment, away from external noise.</li>
               <li>start with a very low volume</li>
@@ -63,7 +63,7 @@ export function InfoFaq({ onClose }: { onClose?: () => void }) {
             <p>The <Brand /> soundscapes sound great on any playback system. <u>If you are a tinnitus sufferer</u>, you will find that using earbuds/airpods/headphones will provide the most effective experience. Noise cancellation helps further to minimize outside noise and distraction.</p>
             <p>When playing through external speakers, the most immersive realism happens when your <u>stereo</u> speakers can be physically separated; the wider the better.</p>
             <p>NOTE: For the most natural <Brand /> listening experience, it is recommended to <u>disable</u> any additional processing that may be present on your device. For example:</p>
-            <ul className="info-plain-list">
+            <ul className="info-plain-list info-red-list">
               <li>Mono playback</li>
               <li>Dolby Atmos</li>
               <li>Surround sound/effects</li>
@@ -73,7 +73,7 @@ export function InfoFaq({ onClose }: { onClose?: () => void }) {
             </ul>
             <p>While these software features can be helpful with certain types of media, it is recommended to disable them if you desire the full <Brand /> experience. These soundscapes are very different. They are professionally engineered for sonic realism, and therefore additional processing may hinder the intended experience.</p>
             <p><strong>TIP:</strong> There are a few ways to get a surprisingly realistic soundscape — even from tiny phone speakers:</p>
-            <ul>
+            <ul className="info-benefits-list">
               <li>The closer the speakers are to your ears, the more immersive and effective.</li>
               <li>When playing this directly from your smartphone, you will notice a big difference in the stereo field by simply <u>rotating your phone 90 degrees to landscape mode.</u></li>
               <li>Some users will simply lay their phone under their chin (in landscape), or use a MagSafe phone protector with a lanyard (neck strap) to mount the phone in the same way. Additional benefits: hands-free immersive sound without resorting to in-ear buds. Also, having your phone away from ‘line-of-sight’ can help to minimize addictive phone distractions.</li>
@@ -121,23 +121,23 @@ export function InfoFaq({ onClose }: { onClose?: () => void }) {
           <section>
             <h2>I press PLAY, the button turns green, but I don’t hear any audio.</h2>
             <p>All devices are different, and sometimes it can be a challenge to get audio to the right place.</p>
-            <ol>
+            <ul className="info-benefits-list">
               <li>Stop the playback, and then start again.</li>
               <li>On the right side of the screen, make sure the LED volume slider is up (showing green LEDs).</li>
               <li>Make sure your device’s physical volume is up (i.e., on the side edge of your device).</li>
               <li>It’s likely that your device’s audio output is going to a nearby bluetooth speaker or device. To change this, stop playback and manage your output routing through your device’s settings pages. Then restart the playback.</li>
               <li>When all else fails, quit the app and relaunch.</li>
-            </ol>
+            </ul>
           </section>
 
           <section>
             <h2>Can I play this through my TV system?</h2>
             <p>Yes. The method depends on your device’s settings as well as your TV setup.</p>
             <p>In general, the following may help:</p>
-            <ol>
+            <ul className="info-benefits-list">
               <li>On iOS (iPhone/iPad): use AirPlay (control center) to stream to an Apple TV or compatible soundbar.</li>
               <li>On Android: use Chromecast or bluetooth to your TV’s audio system.</li>
-            </ol>
+            </ul>
           </section>
 
           <section>

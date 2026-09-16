@@ -11,7 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Activate the audio session so background playback works immediately.
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default)
             if #available(iOS 15.0, *) {
                 try session.setSupportsMultichannelContent(false)
             }

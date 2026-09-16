@@ -156,9 +156,12 @@ export function TrackList({ categoryIndex, selected, playing, paused, recommende
     </button>)}</div>;
 }
 
-export function Volume({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+export function Volume({ value, onChange, className = "" }: { value: number; onChange: (n: number) => void; className?: string }) {
   const [isEmphasized, setIsEmphasized] = useState(false);
   const fadeTimerRef = useRef<number | null>(null);
+  const draggingRef = useRef(false);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
   const emphasize = () => {
     if (fadeTimerRef.current !== null) window.clearTimeout(fadeTimerRef.current);
     setIsEmphasized(true);
@@ -167,22 +170,89 @@ export function Volume({ value, onChange }: { value: number; onChange: (n: numbe
       fadeTimerRef.current = null;
     }, 250);
   };
+
   useEffect(() => () => {
     if (fadeTimerRef.current !== null) window.clearTimeout(fadeTimerRef.current);
   }, []);
-  return <label className={`eh-volume${isEmphasized ? " is-emphasized" : ""}`} onPointerDown={emphasize} onPointerUp={emphasize}><span>volume</span><input aria-label="Volume" type="range" min="0" max="100" value={value} onChange={e => { emphasize(); onChange(Number(e.target.value)); }}/><div className="led-art"><img src={`${A}VolSldrBase-horizontal.png`} alt="" /><img className="led-art-fill" src={`${A}VolSldr_LEDS-horizontal.png`} alt="" style={{ clipPath: `inset(0 ${100-value}% 0 0)` }}/></div></label>;
+
+  const updateFromClientX = (clientX: number) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.max(0, Math.min(100, Math.round(((clientX - rect.left) / rect.width) * 100)));
+    emphasize();
+    onChange(pct);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    updateFromClientX(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (draggingRef.current) {
+      updateFromClientX(e.clientX);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = false;
+    try {
+      if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+  };
+
+  return (
+    <div
+      className={`eh-volume${className ? ` ${className}` : ""}${isEmphasized ? " is-emphasized" : ""}`}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }}
+    >
+      <span>volume</span>
+      <input
+        aria-label="Volume"
+        type="range"
+        min="0"
+        max="100"
+        value={value}
+        onChange={e => { emphasize(); onChange(Number(e.target.value)); }}
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ pointerEvents: "none" }}
+      />
+      <div ref={trackRef} className="led-art">
+        <img src={`${A}VolSldrBase-horizontal.png`} alt="" draggable={false} />
+        <img
+          className="led-art-fill"
+          src={`${A}VolSldr_LEDS-horizontal.png`}
+          alt=""
+          style={{ clipPath: `inset(0 ${100 - value}% 0 0)` }}
+          draggable={false}
+        />
+      </div>
+    </div>
+  );
 }
 
-export function Console({ playing, paused, timerCompleted, onPlay, onPause, timerOn, timeRemaining, ringOpen, ringMatchSelected, notchedFreq, boostedFreq, onTimer, onRing, onInfo, onSettings, volume, setVolume }: any) {
+
+export function Console({ playing, paused, timerCompleted, onPlay, onPause, timerOn, timeRemaining, ringOpen, ringMatchSelected, notchedFreq, boostedFreq, hasEqPreset, eqEnabled, onToggleEq, onTimer, onRing, onInfo, onSettings, volume, setVolume }: any) {
   const activeFreq = notchedFreq ?? boostedFreq;
   const ringActive = ringOpen || ringMatchSelected || activeFreq !== null;
   const ringArtworkOn = ringOpen || activeFreq !== null;
   const frequencyLabel = activeFreq === null
     ? null
     : activeFreq >= 1000 ? `${(activeFreq / 1000).toFixed(1)}k` : `${activeFreq}`;
-  const timerLabel = timeRemaining < 60
-    ? `:${String(Math.max(0, timeRemaining)).padStart(2, "0")}`
-    : `${Math.floor(timeRemaining / 3600)}:${String(Math.floor((timeRemaining % 3600) / 60)).padStart(2, "0")}`;
+  const timerLabel = timerCompleted
+    ? ":00"
+    : timeRemaining < 60
+      ? `:${String(Math.max(0, timeRemaining)).padStart(2, "0")}`
+      : `${Math.floor(timeRemaining / 3600)}:${String(Math.floor((timeRemaining % 3600) / 60)).padStart(2, "0")}`;
   const timerFading = playing && timeRemaining > 0 && timeRemaining <= 59;
   return <div className="eh-console"
     onPointerDownCapture={event => flashClickable(event.target)}
@@ -193,7 +263,21 @@ export function Console({ playing, paused, timerCompleted, onPlay, onPause, time
       <button onClick={onPlay} className={`eh-control ${playing ? "active" : ""}`} data-testid="button-play"><span className="eh-control-art"><img src={`${A}PLAYbutt(${playing ? "ON" : "OFF"}).png`} /></span><span>PLAY</span></button>
       <button onClick={onTimer} className={`eh-control earphoria-click-glow ${timerOn ? "active" : ""}`} data-testid="button-timer"><span className="eh-control-art"><img src={`${A}TimerButt(${timerOn ? "ON" : "OFF"}).png`} />{timerOn && <small className={`eh-inside-status eh-timer-status${timerFading ? " final-minute" : ""}${timerCompleted ? " timer-completed" : ""}`}>{timerLabel}</small>}</span><span>TIMER</span></button>
     </div>
-    <div className="eh-secondary"><button onClick={onInfo} className="earphoria-click-glow" data-testid="button-info"><img src={`${A}InfoButt.png`} /></button>{playing && <PlayingEqBars className="eh-console-playing-animation"/>}<button onClick={onSettings} className="gear earphoria-click-glow" data-testid="button-settings"><img src={`${A}Settings_Sprocket.png`} alt="Settings" /></button></div>
+    <div className="eh-secondary">
+      <button onClick={onInfo} className="earphoria-click-glow" data-testid="button-info"><img src={`${A}InfoButt.png`} alt="Info" /></button>
+      {playing && <PlayingEqBars className="eh-console-playing-animation"/>}
+      {hasEqPreset && (
+        <button
+          onClick={onToggleEq}
+          className={`eh-eq-button earphoria-click-glow ${eqEnabled ? "is-on" : "is-off"}`}
+          data-testid="button-eq"
+          aria-label={eqEnabled ? "EQ on" : "EQ off"}
+        >
+          EQ
+        </button>
+      )}
+      <button onClick={onSettings} className="gear earphoria-click-glow" data-testid="button-settings"><img src={`${A}Settings_Sprocket.png`} alt="Settings" /></button>
+    </div>
     <Volume value={volume} onChange={setVolume}/>
   </div>;
 }
