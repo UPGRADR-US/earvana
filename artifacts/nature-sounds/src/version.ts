@@ -5,3 +5,4 @@
  */
 export const APP_VERSION = "1.1";
 export const APP_BUILD = 21;
+export const ANDROID_BUILD = 31;
