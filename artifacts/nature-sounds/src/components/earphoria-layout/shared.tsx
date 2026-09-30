@@ -156,7 +156,7 @@ export function TrackList({ categoryIndex, selected, playing, paused, recommende
     </button>)}</div>;
 }
 
-export function Volume({ value, onChange, className = "" }: { value: number; onChange: (n: number) => void; className?: string }) {
+export function Volume({ value, onChange, className = "", style }: { value: number; onChange: (n: number) => void; className?: string; style?: React.CSSProperties }) {
   const [isEmphasized, setIsEmphasized] = useState(false);
   const fadeTimerRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
@@ -212,7 +212,7 @@ export function Volume({ value, onChange, className = "" }: { value: number; onC
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }}
+      style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", ...style }}
     >
       <span>volume</span>
       <input

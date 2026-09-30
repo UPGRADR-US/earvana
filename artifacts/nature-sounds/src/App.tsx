@@ -7,12 +7,12 @@ import { createPortal } from "react-dom";
 import { Loader2, AlertTriangle } from "lucide-react";
 
 import { CATEGORIES, FREE_TRACK_ID, SoundCategory, SoundTrack } from "./sounds";
+import { Capacitor } from "@capacitor/core";
 import { useAudioEngine } from "./hooks/useAudioEngine";
 import { useSubscription } from "./hooks/useSubscription";
 import { isFreemiumLockingEnabled, isTrackLocked } from "./lib/freemium";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
-import { Capacitor } from "@capacitor/core";
-import { ANDROID_BUILD, APP_BUILD, APP_VERSION } from "./version";
+import { APP_BUILD, APP_VERSION, ANDROID_BUILD, IOS_BUILD } from "./version";
 import { isPlayBillingAvailable } from "./plugins/EarphoriaBilling";
 import { StoreReview, isStoreReviewAvailable } from "./plugins/StoreReview";
 import { getRecommendedTrackIds } from "./frequencyRecommendations";
@@ -22,7 +22,8 @@ const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
 const img = (name: string) => `${BASE}${name}`;
 
-const BUILD_NUMBER = Capacitor.getPlatform() === "android" ? ANDROID_BUILD : APP_BUILD;
+const isAndroidPlatform = (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") || (typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent));
+const BUILD_NUMBER = isAndroidPlatform ? ANDROID_BUILD : IOS_BUILD;
 const BUILD_DATE = new Date(__BUILD_TIME__).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 // ─── Volume LED Meter ────────────────────────────────────────────────────────

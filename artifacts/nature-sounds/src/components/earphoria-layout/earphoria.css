@@ -598,9 +598,10 @@ html, body { background: #000; }
   height: 100%;
   object-fit: contain;
 }
-.eh-volume.ringmatch-volume {
+.eh-volume.ringmatch-volume,
+.android-phone .eh-volume.ringmatch-volume {
   z-index: 90;
-  bottom: calc(3% + env(safe-area-inset-bottom, 0px));
+  bottom: 3% !important;
 }
 
 /* ── Android Phone (Motorola / mobile): raise volume bar above 3-button nav bar ─ */
@@ -624,8 +625,8 @@ html, body { background: #000; }
     top: calc((100% - var(--android-nav-bottom)) * 0.48);
   }
 
-  .android-phone .eh-volume,
-  .android-phone .eh-app .eh-volume {
+  .android-phone .eh-console .eh-volume,
+  .android-phone .eh-app .eh-console .eh-volume {
     bottom: calc(11% + var(--android-nav-bottom));
   }
 }

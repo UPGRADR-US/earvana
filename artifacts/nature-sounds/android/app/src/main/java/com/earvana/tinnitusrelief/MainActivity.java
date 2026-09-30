@@ -44,6 +44,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
+
         // Tablet detection: smallest screen width >= 600dp is Google's official definition
         // and works reliably in both emulators and real devices (unlike SCREENLAYOUT_SIZE_LARGE).
         int smallestWidth = getResources().getConfiguration().smallestScreenWidthDp;
@@ -76,19 +78,32 @@ public class MainActivity extends BridgeActivity {
             );
             float density = getResources().getDisplayMetrics().density;
             if (density > 0) {
-                safeTopDp = Math.round(insets.top / density);
-                safeBottomDp = Math.round(insets.bottom / density);
-                safeLeftDp = Math.round(insets.left / density);
-                safeRightDp = Math.round(insets.right / density);
-            }
+                int top = Math.round(insets.top / density);
+                int bottom = Math.round(insets.bottom / density);
+                int left = Math.round(insets.left / density);
+                int right = Math.round(insets.right / density);
 
-            if (getBridge() != null && getBridge().getWebView() != null) {
-                applyInsetsToWebView(getBridge().getWebView());
+                if (top != safeTopDp || bottom != safeBottomDp || left != safeLeftDp || right != safeRightDp) {
+                    safeTopDp = top;
+                    safeBottomDp = bottom;
+                    safeLeftDp = left;
+                    safeRightDp = right;
+
+                    if (getBridge() != null && getBridge().getWebView() != null) {
+                        applyInsetsToWebView(getBridge().getWebView());
+                    }
+                }
             }
             return windowInsets;
         });
 
         if (getBridge() != null) {
+            WebView webView = getBridge().getWebView();
+            if (webView != null) {
+                webView.setBackgroundColor(ContextCompat.getColor(this, R.color.colorSurface));
+                webView.getSettings().setOffscreenPreRaster(true);
+            }
+
             getBridge().addWebViewListener(new WebViewListener() {
                 @Override
                 public void onPageLoaded(WebView webView) {

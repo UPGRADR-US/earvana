@@ -847,6 +847,7 @@ export function DiagnosticsPanel({
             {/* Reuse the home-screen horizontal volume control for tone auditioning. */}
             <Volume
               className="ringmatch-volume"
+              style={{ bottom: "3%" }}
               value={toneVolume * 100}
               onChange={(value) => setToneVolume(value / 100)}
             />
