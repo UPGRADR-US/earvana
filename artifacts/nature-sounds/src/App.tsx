@@ -10,13 +10,15 @@ import { CATEGORIES, FREE_TRACK_ID, SoundCategory, SoundTrack } from "./sounds";
 import { Capacitor } from "@capacitor/core";
 import { useAudioEngine } from "./hooks/useAudioEngine";
 import { useSubscription } from "./hooks/useSubscription";
-import { isFreemiumLockingEnabled, isTrackLocked } from "./lib/freemium";
+import { developmentFreeview, isFreeviewExhaustion } from "./lib/developmentFreeview";
+import { isFreemiumLockingEnabled, isPremiumFeatureLocked, isPremiumTrack, isTrackLocked } from "./lib/freemium";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { APP_BUILD, APP_VERSION, ANDROID_BUILD, IOS_BUILD } from "./version";
 import { isPlayBillingAvailable } from "./plugins/EarphoriaBilling";
 import { StoreReview, isStoreReviewAvailable } from "./plugins/StoreReview";
 import { getRecommendedTrackIds } from "./frequencyRecommendations";
-import UpdatedHome from "./components/earphoria-layout/UpdatedHome";
+import { SubscriptionPreview } from "./components/earphoria-layout/SubscriptionPreview";
+import HomeStartup from "./components/earphoria-layout/HomeStartup";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL;
@@ -806,6 +808,101 @@ function SettingsRow({ label, isOpen, onToggle, children }: {
   );
 }
 
+function SubscriptionInvitation({ onClose, subscription, reason }: {
+  onClose: () => void;
+  subscription: ReturnType<typeof useSubscription>;
+  reason: "soundscape" | "ringmatch";
+}) {
+  const busy = subscription.busy;
+  const status = subscription.accessStatus;
+  const message = reason === "ringmatch"
+    ? "RingMatch is part of Premium Earphoria."
+    : "This soundscape is part of Premium Earphoria.";
+  const statusText =
+    status === "loading" ? "Checking your subscription status…" :
+    status === "unknown" ? "We could not confirm your subscription status. High Tide Beach remains free." :
+    !subscription.catalogAvailable ? "Purchasing is temporarily unavailable. Premium access still requires an active subscription." :
+    null;
+
+  return (
+    <div className="settings-click-glow absolute inset-0 z-[60] flex items-center justify-center" onClick={onClose}
+      style={{
+        animation: "settingsPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+        paddingTop: "max(24px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px))",
+        paddingBottom: "max(24px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 22px))",
+        paddingLeft: "max(24px, calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px))",
+        paddingRight: "max(24px, calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 22px))",
+        boxSizing: "border-box",
+      }}>
+      <img src={img("homepage_BLUR_1784150009315.png")} alt=""
+        className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+
+      <div className="relative" onClick={(event) => event.stopPropagation()}
+        style={{
+          width: "min(88%, 390px)",
+          minHeight: "min(390px, calc(100svh - 72px))",
+          padding: "56px 30px 30px",
+          boxSizing: "border-box",
+        }}>
+        <img src={img("PopupBGpane.png")} alt=""
+          className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} draggable={false} />
+
+        <button onClick={onClose} aria-label="Close subscription invitation"
+          style={{
+            position: "absolute", top: 0, left: 0, zIndex: 10,
+            width: 34, height: 34, borderRadius: "50%",
+            background: "rgba(10,18,16,0.475)", border: "1px solid rgba(0,200,180,0.35)",
+            cursor: "pointer", padding: 0, lineHeight: 1,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "rgba(255,255,255,0.90)", fontSize: "17px", fontWeight: 700,
+            textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+            transform: "translate(-45%, -45%)",
+          }}>✕</button>
+
+        <div className="relative z-10" style={{ color: "rgba(255,255,255,0.86)", textAlign: "center" }}>
+          <div style={{ color: "#ffcc00", fontSize: "20px", fontWeight: 800, letterSpacing: "0.06em", marginBottom: "12px" }}>
+            Premium Earphoria
+          </div>
+          <p style={{ fontSize: "15px", lineHeight: 1.55, margin: "0 0 10px" }}>{message}</p>
+          <p style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.58)", margin: "0 0 18px" }}>
+            High Tide Beach stays free. Subscribe monthly to unlock all soundscapes and RingMatch.
+          </p>
+          {statusText && (
+            <p style={{ fontSize: "12px", lineHeight: 1.45, color: "rgba(255,255,255,0.44)", margin: "0 0 14px" }}>
+              {statusText}
+            </p>
+          )}
+          <button onClick={() => subscription.subscribe()} disabled={busy || !subscription.billingAvailable}
+            style={{
+              display: "block", width: "100%", padding: "10px 14px", marginBottom: "8px",
+              background: "rgba(0,180,90,0.18)", border: "1px solid rgba(0,255,100,0.35)",
+              borderRadius: "6px", color: "#00ee88", fontSize: "14px", cursor: busy ? "default" : "pointer",
+              letterSpacing: "0.04em", opacity: busy || !subscription.billingAvailable ? 0.55 : 1,
+            }}>
+            {busy ? "please wait…" : "subscribe — monthly $4.99"}
+          </button>
+          <button onClick={() => subscription.restore()} disabled={busy}
+            style={{
+              display: "block", width: "100%", padding: "9px 14px", marginBottom: "8px",
+              background: "none", border: "1px solid rgba(255,255,255,0.16)",
+              borderRadius: "6px", color: "rgba(255,255,255,0.78)", fontSize: "14px", cursor: busy ? "default" : "pointer",
+              letterSpacing: "0.04em", opacity: busy ? 0.55 : 1,
+            }}>
+            restore purchases
+          </button>
+          <button onClick={onClose}
+            style={{
+              background: "none", border: "none", color: "rgba(255,255,255,0.50)",
+              fontSize: "13px", cursor: "pointer", padding: "7px 12px",
+            }}>
+            not now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, subscription }: {
   onClose: () => void;
   eqMode: EqModeId;
@@ -819,7 +916,6 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
   const [reviewText,  setReviewText]  = useState("");
   const [reviewSent,  setReviewSent]  = useState(false);
   const handleClose = onClose;
-  const subStatus = subscription.statusLabel;
   const subBusy = subscription.busy;
   const handleSubscribe = () => { subscription.subscribe(); };
   const handleRestore = () => { subscription.restore(); };
@@ -950,10 +1046,10 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
           {/* MY SUBSCRIPTION */}
           <SettingsRow label="my subscription" isOpen={openSection === "sub"} onToggle={() => toggleSection("sub")}>
             <div style={{ paddingLeft: "14px" }}>
-              {subscription.billingAvailable && subStatus && (
+              {subscription.billingAvailable && (
                 <div style={{ padding: "4px 0 10px", fontSize: "13px",
-                  color: subStatus === "active" ? "#00ee88" : "rgba(255,255,255,0.45)" }}>
-                  status: {subStatus === "active" ? "active" : subStatus === "pending" ? "pending" : "not subscribed"}
+                  color: subscription.accessStatus === "active" ? "#00ee88" : "rgba(255,255,255,0.45)" }}>
+                  status: {subscription.accessStatus === "active" ? "active" : subscription.accessStatus === "pending" ? "pending" : subscription.accessStatus === "loading" ? "checking" : subscription.accessStatus === "unknown" ? "not confirmed" : "not subscribed"}
                 </div>
               )}
               {([
@@ -1071,13 +1167,31 @@ function SettingsPanel({ onClose, eqMode, eqBands, onEqChange, onEqBandsChange, 
 function Home() {
   const engine = useAudioEngine();
   const subscription = useSubscription();
+  const previewFreeUser =
+    import.meta.env.DEV &&
+    !Capacitor.isNativePlatform() &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("previewFreeUser") === "1";
+  const shouldLockTrack = useCallback((trackId: string) => (
+    previewFreeUser ? isPremiumTrack(trackId) : isTrackLocked(trackId, subscription.isSubscribed)
+  ), [previewFreeUser, subscription.isSubscribed]);
   const [durationStep, setDurationStep] = useState<number>(10);
   // Always start on Oceans (index 0) regardless of last session.
   const [centerIdx,   setCenterIdx]   = useState<number>(0);
   const [selectedId,  setSelectedId]  = useState<string | null>(CATEGORIES[0]?.id ?? null);
   const [settingsOpen,  setSettingsOpen]  = useState<boolean>(false);
   const [diagOpen,      setDiagOpen]      = useState<boolean>(false);
-  const [diagHasOpened, setDiagHasOpened] = useState(false);
+  const pendingRingMatchSelection = useRef<{ frequency: number; resume: () => void } | null>(null);
+  const ringMatchFreeviewPreview = import.meta.env.DEV && !Capacitor.isNativePlatform() && developmentFreeview.enabled;
+  const [developmentSubscriptionPreview, setDevelopmentSubscriptionPreview] = useState(false);
+  const [subscriptionInvite, setSubscriptionInvite] = useState<"soundscape" | "ringmatch" | null>(() => {
+    const previewSubscription =
+      import.meta.env.DEV &&
+      !Capacitor.isNativePlatform() &&
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("previewSubscription") === "1";
+    return previewSubscription ? "soundscape" : null;
+  });
   const [diagShowInstructions, setDiagShowInstructions] = useState(true);
   const [ringMatchFrequency, setRingMatchFrequency] = useState<number | null>(() => {
     const saved = localStorage.getItem("tr_ringmatch_frequency");
@@ -1093,10 +1207,13 @@ function Home() {
   }, []);
 
   const openDiag = useCallback(() => {
-    setDiagShowInstructions(!diagHasOpened);
-    setDiagHasOpened(true);
+    if (!ringMatchFreeviewPreview && (previewFreeUser || isPremiumFeatureLocked(subscription.isSubscribed))) {
+      setSubscriptionInvite("ringmatch");
+      return;
+    }
+    setDiagShowInstructions(true);
     setDiagOpen(true);
-  }, [diagHasOpened]);
+  }, [previewFreeUser, subscription.isSubscribed, ringMatchFreeviewPreview]);
 
   // Called when user clicks START TEST / REPEAT TEST — pause here, not on panel open
   // START TEST / REPEAT TEST — hard-stop nature sounds so pure tones are clear.
@@ -1111,6 +1228,7 @@ function Home() {
   }, []);
 
   const closeDiag = useCallback(() => {
+    pendingRingMatchSelection.current = null;
     setDiagOpen(false);
     if (diagPausedRef.current) {
       diagPausedRef.current = false;
@@ -1121,7 +1239,6 @@ function Home() {
   const resetRingMatch = useCallback(() => {
     setRingMatchFrequency(null);
     localStorage.removeItem("tr_ringmatch_frequency");
-    setDiagHasOpened(false);
     setDiagShowInstructions(true);
   }, []);
 
@@ -1417,8 +1534,8 @@ function Home() {
   // Tapping a different track while playing opts into the dedicated
   // 2.25-second audition crossfade; PLAY/pause keeps its existing behavior.
   const handleTrackSelect = useCallback((id: string) => {
-    if (isTrackLocked(id, subscription.isSubscribed, subscription.catalogAvailable)) {
-      subscription.subscribe();
+    if (!developmentFreeview.enabled && shouldLockTrack(id)) {
+      setSubscriptionInvite("soundscape");
       return;
     }
     if (id === playingTrackId) return; // tapping the currently-playing track is a no-op
@@ -1426,9 +1543,11 @@ function Home() {
     // Keep the homepage camera running across the native load gap so a track
     // change does not freeze/restart the background jib.
     if (playingTrackId) setOptimisticPlaying(true);
-    engine.play(id, playingTrackId ? { transition: "crossfade" } : undefined);
+    engine.play(id, playingTrackId ? { transition: "crossfade" } : undefined).catch(error => {
+      if (isFreeviewExhaustion(error)) setOptimisticPlaying(null);
+    });
     setSelectedTrackId(id);
-  }, [playingTrackId, prepareTimerForPlayback, engine, subscription]);
+  }, [playingTrackId, prepareTimerForPlayback, engine, shouldLockTrack]);
 
   // PLAY button: start selected track, or pause the currently playing one.
   const handlePlayButton = useCallback(() => {
@@ -1439,13 +1558,15 @@ function Home() {
     } else {
       const trackToPlay = selectedTrackId ?? CATEGORIES[centerIdx]?.tracks[0]?.id ?? null;
       if (!trackToPlay) return;
-      if (isTrackLocked(trackToPlay, subscription.isSubscribed, subscription.catalogAvailable)) {
-        subscription.subscribe();
+      if (!developmentFreeview.enabled && shouldLockTrack(trackToPlay)) {
+        setSubscriptionInvite("soundscape");
         return;
       }
       setOptimisticPlaying(true);
       prepareTimerForPlayback();
-      engine.play(trackToPlay);
+      engine.play(trackToPlay).catch(error => {
+        if (isFreeviewExhaustion(error)) setOptimisticPlaying(null);
+      });
       setSelectedTrackId(trackToPlay);
       // If the carousel was spun away from the playing category, spin it back.
       const targetCatIdx = CATEGORIES.findIndex(cat =>
@@ -1455,7 +1576,7 @@ function Home() {
         carouselRef.current?.animateTo(targetCatIdx);
       }
     }
-  }, [isPlaying, playingTrackId, selectedTrackId, prepareTimerForPlayback, engine, centerIdx, subscription]);
+  }, [isPlaying, playingTrackId, selectedTrackId, prepareTimerForPlayback, engine, centerIdx, shouldLockTrack]);
 
   const handleToggleEq = useCallback(() => {
     if (eqEnabled) {
@@ -1490,6 +1611,7 @@ function Home() {
     );
     window.postMessage({
       type: "earphoria-redesign-state",
+      ...(import.meta.env.DEV ? { freeviewSelectedTrackId: selectedTrackId, freeviewPlayingTrackId: btnPlaying ? playingTrackId : null } : {}),
       categoryIndex: centerIdx,
       playingCategoryIndex,
       trackIndex: centerIdx === selectedCategoryIndex ? selectedTrackIndex : -1,
@@ -1506,12 +1628,12 @@ function Home() {
       ringMatchSelected: ringMatchFrequency !== null,
       recommendedTrackIds: [...recommendedTrackIds],
       lockedTrackIds: CATEGORIES.flatMap(category => category.tracks)
-        .filter(track => isTrackLocked(track.id, subscription.isSubscribed, subscription.catalogAvailable))
+        .filter(track => shouldLockTrack(track.id))
         .map(track => track.id),
       hasEqPreset: storedEqMode !== null && storedEqMode !== "normal",
       eqEnabled,
     }, window.location.origin);
-  }, [btnPlaying, centerIdx, diagOpen, durationStep, engine.boostedFreq, engine.masterVolume, engine.notchedFreq, eqEnabled, isPaused, playingTrackId, ringMatchFrequency, selectedTrackId, storedEqMode, subscription.catalogAvailable, subscription.isSubscribed, timeRemaining, timerCompletionHold, timerCompletionSignal]);
+  }, [btnPlaying, centerIdx, diagOpen, durationStep, engine.boostedFreq, engine.masterVolume, engine.notchedFreq, eqEnabled, isPaused, playingTrackId, ringMatchFrequency, selectedTrackId, storedEqMode, shouldLockTrack, timeRemaining, timerCompletionHold, timerCompletionSignal]);
 
   useEffect(() => {
     sendRedesignState();
@@ -1569,6 +1691,12 @@ function Home() {
             setDiagFlash(false);
             openDiag();
           }, 160);
+          break;
+        case "open-freeview-subscription":
+          if (import.meta.env.DEV && !Capacitor.isNativePlatform() && developmentFreeview.enabled) {
+            setDevelopmentSubscriptionPreview(true);
+            setSubscriptionInvite("soundscape");
+          }
           break;
         case "open-settings":
           setSprocketFlash(true);
@@ -1638,15 +1766,26 @@ function Home() {
   // If a premium track is playing when the entitlement drops, stop it and
   // fall back to the free sound so the UI matches the lock state.
   useEffect(() => {
-    if (!isFreemiumLockingEnabled || subscription.isSubscribed || !subscription.catalogAvailable) return;
-    if (playingTrackId && isTrackLocked(playingTrackId, false, true)) {
+    if (!isFreemiumLockingEnabled || subscription.isSubscribed) return;
+    if (playingTrackId && isTrackLocked(playingTrackId, false)) {
       engine.pause(playingTrackId);
     }
     setSelectedTrackId(prev =>
-      prev && isTrackLocked(prev, false, true) ? FREE_TRACK_ID : prev
+      prev && isTrackLocked(prev, false) ? FREE_TRACK_ID : prev
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscription.isSubscribed, subscription.catalogAvailable]);
+  }, [subscription.isSubscribed]);
+
+  useEffect(() => {
+    if (subscriptionInvite && subscription.accessStatus === "active") {
+      if (ringMatchFreeviewPreview && diagOpen && subscriptionInvite === "ringmatch" && pendingRingMatchSelection.current) {
+        const pending = pendingRingMatchSelection.current;
+        pendingRingMatchSelection.current = null;
+        pending.resume(); // Original SELECT -> recommendation/notch confirmations, never a direct notch.
+      }
+      setSubscriptionInvite(null);
+    }
+  }, [subscriptionInvite, subscription.accessStatus, ringMatchFreeviewPreview, diagOpen]);
 
   // Orientation is locked to portrait via "orientation":"portrait" in manifest.json.
   // The JS screen.orientation.lock() API is intentionally omitted — on iOS it can
@@ -1682,6 +1821,12 @@ function Home() {
         createPortal(
           <DiagnosticsPanel
             onClose={closeDiag}
+            developmentSelectBoundary={ringMatchFreeviewPreview && !subscription.isSubscribed ? (frequency, resume) => {
+              pendingRingMatchSelection.current = { frequency, resume };
+              setDevelopmentSubscriptionPreview(true);
+              setSubscriptionInvite("ringmatch");
+              return true;
+            } : undefined}
             onStartTest={pauseForDiagTest}
             showInstructionsInitially={diagShowInstructions}
             selectedFrequency={ringMatchFrequency}
@@ -1692,7 +1837,7 @@ function Home() {
             onBoost={(freq) => engine.setBoost(freq ?? null)}
             currentBoost={engine.boostedFreq}
           />,
-          document.body,
+          document.getElementById("earphoria-overlay-host") ?? document.body,
         )
       )}
 
@@ -1882,6 +2027,18 @@ function Home() {
           </div>
         </>
       )}
+      {subscriptionInvite && (!diagOpen || (ringMatchFreeviewPreview && developmentSubscriptionPreview && subscriptionInvite === "ringmatch")) && !settingsOpen && (
+        createPortal(
+          import.meta.env.DEV && !Capacitor.isNativePlatform() && developmentSubscriptionPreview ?
+          <SubscriptionPreview variant={subscriptionInvite === "ringmatch" ? "ringmatch" : "soundscape"} terms={TERMS_OF_SERVICE} privacy={PRIVACY_POLICY} onClose={() => { setDevelopmentSubscriptionPreview(false); setSubscriptionInvite(null); }}/> :
+          <SubscriptionInvitation
+            reason={subscriptionInvite}
+            subscription={subscription}
+            onClose={() => setSubscriptionInvite(null)}
+          />,
+          document.getElementById("earphoria-overlay-host") ?? document.body,
+        )
+      )}
     </div>
   );
 }
@@ -1984,7 +2141,7 @@ function Router() {
       <div aria-hidden="true" style={{ position: "fixed", inset: 0, visibility: "hidden", pointerEvents: "none" }}>
         <Home />
       </div>
-      <UpdatedHome />
+      <HomeStartup />
     </>
   )} /></Switch>;
 }
@@ -1999,6 +2156,7 @@ function App() {
               cqw units resolve against this column width. */}
           <div style={{ width: "100%", margin: "0 auto", height: "100dvh", containerType: "inline-size" }}>
             <Router />
+            <div id="earphoria-overlay-host" className="earphoria-overlay-host" />
           </div>
         </WouterRouter>
         <Toaster />

@@ -1,6 +1,8 @@
 // Web fallback for EarvanaAudioPlugin — no-op stub because the web build
 // uses the native Web Audio API directly via useAudioEngine.ts.
 // This module is only imported when running in a browser (not Capacitor).
+import { configureDevelopmentFreeview, getDevelopmentFreeview } from "../lib/developmentFreeview";
+import { playbackUsage } from "../lib/playbackUsage";
 import type { EarvanaAudioPlugin } from "./EarvanaAudio";
 
 export const EarvanaAudioWeb: EarvanaAudioPlugin = {
@@ -15,6 +17,9 @@ export const EarvanaAudioWeb: EarvanaAudioPlugin = {
   async startFadeOut() { },
   async cancelFade() { },
   async stopAll()   { },
+  async configureDevelopmentFreeview({ enabled }) { return configureDevelopmentFreeview(enabled); },
+  async getDevelopmentFreeview() { return getDevelopmentFreeview(); },
+  async getPlaybackUsage() { return playbackUsage.snapshot(); },
   async getStatus() { return { tracks: {} }; },
   async setLastPlayed() { },
   async getLastPlayed() { return { trackId: null }; },

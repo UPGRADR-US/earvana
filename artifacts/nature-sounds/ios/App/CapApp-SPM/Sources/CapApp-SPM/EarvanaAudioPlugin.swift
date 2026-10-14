@@ -24,6 +24,9 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setPlayDuration", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopAll", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getPlaybackUsage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "configureDevelopmentFreeview", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDevelopmentFreeview", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLastPlayed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getLastPlayed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "playTestTone", returnType: CAPPluginReturnPromise),
@@ -58,6 +61,7 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
 
     public override func load() {
         super.load()
+        DevelopmentFreeview.shared.subscribed = { MainActor.assumeIsolated { SubscriptionManager.shared.isSubscribed } }
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAudioInterruption),
@@ -79,13 +83,20 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             guard let self = self else { return }
             switch type {
             case .began:
-                break
+                PlaybackUsage.shared.interrupt()
+                self.loopPlayer?.yieldFreeviewToExistingAction()
+                self.outgoingPlayer?.yieldFreeviewToExistingAction()
             case .ended:
+                PlaybackUsage.shared.interruptionEnded()
                 guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
-                    self.ensureAudioSession()
-                    self.loopPlayer?.resumeEngineIfNeeded()
+                    if let id = self.activeTrackId, DevelopmentFreeview.shared.reject(id) {
+                        self.loopPlayer?.finishFreeviewInstance()
+                    } else {
+                        self.ensureAudioSession()
+                        self.loopPlayer?.resumeEngineIfNeeded()
+                    }
                 }
             @unknown default:
                 break
@@ -183,7 +194,11 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
-            if SubscriptionManager.shared.isTrackLocked(trackId) {
+            if DevelopmentFreeview.shared.reject(trackId) {
+                call.reject("Freeview allowance exhausted for this session", "FREEVIEW_EXHAUSTED")
+                return
+            }
+            if !DevelopmentFreeview.shared.enabled && SubscriptionManager.shared.isTrackLocked(trackId) {
                 call.reject("This sound requires Premium Earphoria", "PREMIUM_REQUIRED")
                 return
             }
@@ -213,8 +228,17 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                     notchFreq: self.notchFreq,
                     boostFreq: self.boostFreq
                 )
+                player.observePlayback(trackID: trackId)
                 self.loopPlayer = player
                 self.activeTrackId = trackId
+                player.onFreeviewStopped = { [weak self, weak player] in
+                    guard let self = self, let player = player else { return }
+                    if self.loopPlayer === player {
+                        self.loopPlayer = nil; self.activeTrackId = nil
+                    } else if self.outgoingPlayer === player { self.outgoingPlayer = nil }
+                    self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
+                }
+                player.observeFreeview(trackID: trackId)
                 self.applyTherapyToPlayer()
                 if let outgoing {
                     self.outgoingPlayer = outgoing
@@ -395,6 +419,24 @@ public class EarvanaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             self.notifyListeners("statusChange", data: ["tracks": self.buildStatus()])
             call.resolve()
         }
+    }
+
+    @objc func configureDevelopmentFreeview(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            DevelopmentFreeview.shared.configure(call.getBool("enabled") ?? false)
+            self.getDevelopmentFreeview(call)
+        }
+    }
+    @objc func getDevelopmentFreeview(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let policy = DevelopmentFreeview.shared
+            call.resolve(["enabled": policy.enabled, "available": policy.available,
+                          "exhaustedTrackIds": Array(policy.exhausted)])
+        }
+    }
+
+    @objc func getPlaybackUsage(_ call: CAPPluginCall) {
+        call.resolve(["secondsByTrack": PlaybackUsage.shared.snapshot()])
     }
 
     @objc func getStatus(_ call: CAPPluginCall) {

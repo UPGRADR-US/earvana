@@ -983,7 +983,7 @@ html, body { background: #000; }
 }
 .eh-top-banner-logo {
   top: 6cqw;
-  left: 6cqw;
+  left: 8cqw;
   /* 55% is only the horizontal cap. The second limit preserves optical
      top/bottom breathing room while allowing the logo to approach that cap
      slightly sooner than the strict left-rim fit. */

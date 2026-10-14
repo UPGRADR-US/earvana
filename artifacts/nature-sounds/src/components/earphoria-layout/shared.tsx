@@ -9,15 +9,15 @@ function flashClickable(target: EventTarget | null) {
   window.setTimeout(() => button.classList.remove("on-click"), 110);
 }
 export const categories = [
-  { id: "oceans", prefix: "ocean", name: "Oceans", image: "TR_tn_oceans.png", tracks: ["high-tide beach", "low-tide beach", "low-tide bay", "waterlaps cove", "waterlaps cove cine"], trackIds: ["ocean_high_tide_beach","ocean_low_tide_beach","ocean_low_tide_bay","ocean_waterlaps_cove","ocean_waterlaps_cove_cine"] },
-  { id: "rains", prefix: "rain", name: "Rains", image: "TR_tn_rains.png", tracks: ["lite drizzle", "lite shower", "downpour", "quiet storm", "rolling thunderstorm"], trackIds: ["rain_lite_drizzle","rain_lite_shower","rain_downpour","rain_quiet_storm","rain_rolling_thunderstorm"] },
-  { id: "streams", prefix: "stream", name: "Streams", image: "TR_tn_streams.png", tracks: ["fountain", "mountain spring", "gentle brook", "cascading river"], trackIds: ["stream_fountain","stream_mountain_spring","stream_gentle_brook","stream_cascading_river"] },
-  { id: "forests", prefix: "forest", name: "Forests", image: "TR_tn_forests.png", tracks: ["dusk calm", "night chorus", "amazon jungle"], trackIds: ["forest_dusk_calm","forest_night_chorus","forest_amazon_jungle"] },
-  { id: "fields", prefix: "field", name: "Fields", image: "TR_tn_fields.png", tracks: ["dusk meadow", "midnight wetlands"], trackIds: ["field_dusk_meadow","field_midnight_wetlands"] },
-  { id: "gardens", prefix: "garden", name: "Gardens", image: "TR_tn_gardens.png", tracks: ["tranquil koi pond", "spa moon garden", "morning melody"], trackIds: ["garden_tranquil_koi_pond","garden_spa_moon_garden","garden_morning_melody"] },
-  { id: "fire", prefix: "fire", name: "Fire", image: "TR_tn_fire.png", tracks: ["chalet stone hearth", "campside firepit", "ceremonial bonfire"], trackIds: ["fire_chalet_stone_hearth","fire_campside_firepit","fire_ceremonial_bonfire"] },
-  { id: "winds", prefix: "wind", name: "Winds", image: "TR_tn_winds.png", tracks: ["light breeze", "gusty winds", "whistling chinook"], trackIds: ["wind_light_breeze","wind_gusty_winds","wind_whistling_chinook"] },
-  { id: "noise", prefix: "noise", name: "Noise", image: "TR_tn_noise.png", tracks: ["white wave", "white-static", "pink wave", "pink-static", "green wave", "green-static", "brown wave", "brown-static", "black wave"], trackIds: ["noise_white_wave","noise_white_static","noise_pink_wave","noise_pink_static","noise_green_wave","noise_green_static","noise_brown_wave","noise_brown_static","noise_black_wave"] },
+  { id: "oceans", prefix: "ocean", name: "oceans", image: "TR_tn_oceans.png", tracks: ["high-tide beach", "low-tide beach", "low-tide bay", "waterlaps cove", "waterlaps cove cine"], trackIds: ["ocean_high_tide_beach","ocean_low_tide_beach","ocean_low_tide_bay","ocean_waterlaps_cove","ocean_waterlaps_cove_cine"] },
+  { id: "rains", prefix: "rain", name: "rains", image: "TR_tn_rains.png", tracks: ["lite drizzle", "lite shower", "downpour", "quiet storm", "rolling thunderstorm"], trackIds: ["rain_lite_drizzle","rain_lite_shower","rain_downpour","rain_quiet_storm","rain_rolling_thunderstorm"] },
+  { id: "streams", prefix: "stream", name: "streams", image: "TR_tn_streams.png", tracks: ["fountain", "mountain spring", "gentle brook", "cascading river"], trackIds: ["stream_fountain","stream_mountain_spring","stream_gentle_brook","stream_cascading_river"] },
+  { id: "forests", prefix: "forest", name: "forests", image: "TR_tn_forests.png", tracks: ["dusk calm", "night chorus", "amazon jungle"], trackIds: ["forest_dusk_calm","forest_night_chorus","forest_amazon_jungle"] },
+  { id: "fields", prefix: "field", name: "fields", image: "TR_tn_fields.png", tracks: ["dusk meadow", "golden pond", "midnight bayou", "ozark chorus"], trackIds: ["field_dusk_meadow","field_golden_pond","field_midnight_bayou","field_ozark_chorus"] },
+  { id: "gardens", prefix: "garden", name: "gardens", image: "TR_tn_gardens.png", tracks: ["tranquil koi pond", "spa moon garden", "morning melody", "prayer fountain"], trackIds: ["garden_tranquil_koi_pond","garden_spa_moon_garden","garden_morning_melody","garden_prayer_fountain"] },
+  { id: "fire", prefix: "fire", name: "fire", image: "TR_tn_fire.png", tracks: ["firelight", "chalet stone hearth", "campside firepit", "ceremonial bonfire"], trackIds: ["fire_firelight","fire_chalet_stone_hearth","fire_campside_firepit","fire_ceremonial_bonfire"] },
+  { id: "winds", prefix: "wind", name: "winds", image: "TR_tn_winds.png", tracks: ["light breeze", "gusty winds", "whistling chinook"], trackIds: ["wind_light_breeze","wind_gusty_winds","wind_whistling_chinook"] },
+  { id: "noise", prefix: "noise", name: "noise", image: "TR_tn_noise.png", tracks: ["white wave", "white-static", "pink wave", "pink-static", "green wave", "green-static", "brown wave", "brown-static", "black wave"], trackIds: ["noise_white_wave","noise_white_static","noise_pink_wave","noise_pink_static","noise_green_wave","noise_green_static","noise_brown_wave","noise_brown_static","noise_black_wave"] },
 ];
 
 export function useClock() {
@@ -146,14 +146,23 @@ export function PlayingEqBars({ className = "" }: { className?: string }) {
   </svg>;
 }
 
-export function TrackList({ categoryIndex, selected, playing, paused, recommendedTrackIds, lockedTrackIds, onSelect }: { categoryIndex: number; selected: number; playing: boolean; paused: boolean; recommendedTrackIds: ReadonlySet<string>; lockedTrackIds?: ReadonlySet<string>; onSelect: (i: number) => void }) {
+export function TrackList({ categoryIndex, selected, playing, paused, recommendedTrackIds, lockedTrackIds, exhaustedTrackIds, freeviewCountdownByTrack, freeviewPlayingTrackId, freeviewPausedTrackId, onSelect }: { categoryIndex: number; selected: number; playing: boolean; paused: boolean; recommendedTrackIds: ReadonlySet<string>; lockedTrackIds?: ReadonlySet<string>; exhaustedTrackIds?: ReadonlySet<string>; freeviewCountdownByTrack?: Readonly<Record<string, string>>; freeviewPlayingTrackId?: string | null; freeviewPausedTrackId?: string | null; onSelect: (i: number) => void }) {
   const category = categories[categoryIndex];
-  return <div className="eh-tracks" data-testid="track-list">{category.tracks.map((name, i) =>
-    <button className={`eh-track ${selected === i ? `selected ${playing ? "playing" : paused ? "paused" : "idle"}` : ""}`} key={name} onClick={() => onSelect(i)} data-testid={`track-${i}`}>
-      {selected === i && <img className="eh-track-highlight" src={`${APP_ASSET}TrackHilite-${playing ? "Green" : "Yellow"}.png`} alt=""/>}
+  return <div className="eh-tracks" data-testid="track-list">{category.tracks.map((name, i) => {
+    const exhausted = exhaustedTrackIds?.has(category.trackIds[i]) ?? false;
+    const freeviewMode = freeviewCountdownByTrack !== undefined;
+    const currentFreeview = freeviewMode && playing && freeviewPlayingTrackId === category.trackIds[i] && !exhausted;
+    const countdown = freeviewMode ? exhausted ? ":00" : freeviewCountdownByTrack[category.trackIds[i]] ?? (currentFreeview ? ":60" : null) : null;
+    const showCountdown = !!countdown;
+    const pausedFreeview = freeviewMode && paused && !playing && !exhausted && freeviewPausedTrackId === category.trackIds[i] && showCountdown;
+    return <button className={`eh-track ${freeviewMode ? "eh-freeview-row" : ""} ${exhausted ? "eh-freeview-exhausted" : freeviewMode ? "eh-freeview-active" : ""} ${showCountdown ? "eh-freeview-has-countdown" : ""} ${selected === i ? `selected ${playing ? "playing" : paused ? "paused" : "idle"}` : ""}`} key={name} onClick={() => onSelect(i)} data-testid={`track-${i}`}>
+      {currentFreeview && <img className="eh-track-highlight eh-freeview-playing-art eh-freeview-pulsing-art" src={`${APP_ASSET}TrackHilite-Green.png`} data-testid="freeview-playing-highlight" alt=""/>}
+      {pausedFreeview && <img className="eh-track-highlight eh-freeview-paused-art" src={`${APP_ASSET}TrackHilite-Yellow.png`} data-testid="freeview-paused-highlight" alt=""/>}
+      {!freeviewMode && selected === i && !exhausted && <img className="eh-track-highlight" src={`${APP_ASSET}TrackHilite-${playing ? "Green" : "Yellow"}.png`} alt=""/>}
       <span><strong>{category.prefix}</strong><b className="eh-colon">:</b>{name}{recommendedTrackIds.has(category.trackIds[i]) && <span className="eh-recommendation-asterisk" aria-label="Recommended for your RingMatch frequency">*</span>}{lockedTrackIds?.has(category.trackIds[i]) && <span className="eh-track-lock" aria-label="Premium — locked">🔒</span>}</span>
-      {selected === i && playing && <PlayingEqBars className="eh-track-playing-animation"/>}
-    </button>)}</div>;
+      {showCountdown && <output className={`eh-freeview-track-countdown${exhausted ? " is-exhausted" : currentFreeview || pausedFreeview ? " is-current" : ""}`} data-testid="freeview-track-countdown" aria-label={`Remaining listening allowance for ${category.prefix}: ${name}`}>{countdown}</output>}
+      {(freeviewMode ? currentFreeview : selected === i && playing) && <PlayingEqBars className="eh-track-playing-animation"/>}
+    </button>; })}</div>;
 }
 
 export function Volume({ value, onChange, className = "", style }: { value: number; onChange: (n: number) => void; className?: string; style?: React.CSSProperties }) {

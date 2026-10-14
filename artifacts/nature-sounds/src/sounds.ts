@@ -29,7 +29,7 @@ export const FREE_TRACK_ID = "ocean_high_tide_beach";
 export const CATEGORIES: SoundCategory[] = [
   {
     id: "oceans",
-    name: "Oceans",
+    name: "oceans",
     thumbnail: "sounds/TR_tn_oceans.png",
     tracks: [
       { id: "ocean_high_tide_beach",  name: "ocean: high-tide beach",  file: "sounds/ocean-HighTideBeach.mp3",  icon: "Waves", defaultVolume: 0.561 },
@@ -41,7 +41,7 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "rains",
-    name: "Rains",
+    name: "rains",
     thumbnail: "sounds/TR_tn_rains.png",
     tracks: [
       { id: "rain_lite_drizzle",          name: "rain: lite drizzle",          file: "sounds/rain-LiteDrizzle.mp3",          icon: "CloudRain", defaultVolume: 0.530 },
@@ -53,7 +53,7 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "streams",
-    name: "Streams",
+    name: "streams",
     thumbnail: "sounds/TR_tn_streams.png",
     tracks: [
       { id: "stream_fountain",        name: "stream: fountain",        file: "sounds/stream-Fountain.mp3",        icon: "Droplets", defaultVolume: 0.397 },
@@ -64,7 +64,7 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "forests",
-    name: "Forests",
+    name: "forests",
     thumbnail: "sounds/TR_tn_forests.png",
     tracks: [
       { id: "forest_dusk_calm",     name: "forest: dusk calm",     file: "sounds/forest-DuskCalm.mp3",     icon: "TreePine" },
@@ -74,28 +74,32 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "fields",
-    name: "Fields",
+    name: "fields",
     thumbnail: "sounds/TR_tn_fields.png",
     tracks: [
       { id: "field_dusk_meadow",       name: "field: dusk meadow",       file: "sounds/field-DuskMeadow.mp3",       icon: "Leaf" },
-      { id: "field_midnight_wetlands", name: "field: midnight wetlands", file: "sounds/field-MidnightWetlands.mp3", icon: "Leaf" },
+      { id: "field_golden_pond", name: "field: golden pond", file: "sounds/field-goldenpond.mp3", icon: "Leaf" },
+      { id: "field_midnight_bayou", name: "field: midnight bayou", file: "sounds/field-midnightbayou.mp3", icon: "Leaf" },
+      { id: "field_ozark_chorus", name: "field: ozark chorus", file: "sounds/field-ozarkchorus.mp3", icon: "Leaf" },
     ],
   },
   {
     id: "gardens",
-    name: "Gardens",
+    name: "gardens",
     thumbnail: "sounds/TR_tn_gardens.png",
     tracks: [
       { id: "garden_tranquil_koi_pond", name: "garden: tranquil koi pond", file: "sounds/garden-TranquilKoiPond.mp3", icon: "Leaf" },
       { id: "garden_spa_moon_garden",   name: "garden: spa moon garden",   file: "sounds/garden-SpaMoonGarden.mp3",   icon: "Leaf" },
       { id: "garden_morning_melody",    name: "garden: morning melody",    file: "sounds/garden-MorningMelody.mp3",    icon: "Leaf" },
+      { id: "garden_prayer_fountain", name: "garden: prayer fountain", file: "sounds/garden-PrayerFountain.mp3", icon: "Leaf", defaultVolume: 0.397164 },
     ],
   },
   {
     id: "fire",
-    name: "Fire",
+    name: "fire",
     thumbnail: "sounds/TR_tn_fire.png",
     tracks: [
+      { id: "fire_firelight", name: "fire: firelight", file: "sounds/fire-firelight.mp3", icon: "Flame", defaultVolume: 0.561009 },
       { id: "fire_chalet_stone_hearth", name: "fire: chalet stone hearth", file: "sounds/fire-ChaletStoneHearth.mp3", icon: "Flame" },
       { id: "fire_campside_firepit",    name: "fire: campside firepit",    file: "sounds/fire-CampsideFirepit.mp3",    icon: "Flame" },
       { id: "fire_ceremonial_bonfire",  name: "fire: ceremonial bonfire",  file: "sounds/fire-CeremonialBonfire.mp3",  icon: "Flame" },
@@ -103,7 +107,7 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "winds",
-    name: "Winds",
+    name: "winds",
     thumbnail: "sounds/TR_tn_winds.png",
     tracks: [
       { id: "wind_light_breeze",     name: "wind: light breeze",     file: "sounds/wind-LightBreeze.mp3",     icon: "Wind", defaultVolume: 0.630 },
@@ -113,7 +117,7 @@ export const CATEGORIES: SoundCategory[] = [
   },
   {
     id: "noise",
-    name: "Noise",
+    name: "noise",
     thumbnail: "sounds/TR_tn_noise.png",
     tracks: [
       { id: "noise_white_wave",    name: "noise: white wave",   file: "sounds/noise-WhiteWave.mp3",   icon: "Radio" },

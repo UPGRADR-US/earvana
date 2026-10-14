@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';
+const ts=createRequire(import.meta.url)('typescript');const exports={};
+const source=fs.readFileSync(new URL('../src/lib/freeviewStatus.ts',import.meta.url),'utf8');
+vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,require(){throw Error('Read-only contract must not import accounting/billing');}});
+const status=Object.freeze({sessionId:'process1',enabled:true,subscriberStatus:'inactive',activeTrackId:'A',selectedTrackId:'A',playbackState:'playing',tracks:Object.freeze({A:Object.freeze({remainingSeconds:40,hasBeenPlayed:true,exhausted:false,expirationPhase:'none'})}),lifecycle:Object.freeze([])});
+assert(exports.freeviewBarState(status).isCountingDown);
+for(const state of ['paused','stopped','interrupted','loading'])assert(!exports.freeviewBarState({...status,playbackState:state}).isCountingDown);
+for(const subscriberStatus of ['active','unknown','loading'])assert.equal(exports.freeviewBarState({...status,subscriberStatus}),null);
+assert.equal(exports.freeviewBarState({...status,enabled:false}),null);
+const expired={...status,tracks:{A:{remainingSeconds:0,hasBeenPlayed:true,exhausted:true,expirationPhase:'fading'}},lifecycle:[{id:'event1',trackId:'A',playbackInstanceId:'player1',phase:'expiration-midpoint'}]};
+const presentation=exports.freeviewBarState(expired);assert(!presentation.isCountingDown);assert(presentation.midpointExpirationTrackIds.has('process1:event1'));
+assert(exports.freeviewBarState({...expired,sessionId:'process2'}).midpointExpirationTrackIds.has('process2:event1'));
+for(const [remaining,text] of [[60,':60'],[59,':59'],[9,':09'],[0,':00']])assert.equal(exports.formatRemainingAllowance(remaining),text);
+assert.equal(status.tracks.A.remainingSeconds,40);
+console.log('PASS read-only contract, subscriber/policy readiness gating, active/paused/interrupted states, stable session-qualified lifecycle IDs and countdown display; no accounting/billing imports.');

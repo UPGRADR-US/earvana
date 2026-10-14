@@ -1,0 +1,75 @@
+/* Scoped to the explicit local development CTA prototype. */
+.eh-sub-preview-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: safe center; justify-content: center; padding: max(24px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); overflow: auto; font-family: Figtree, sans-serif; }
+.eh-sub-preview-scene { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.eh-sub-preview-panel { position: relative; flex: none; width: min(94%, 620px, calc((100dvh - 80px) * 1474 / 2106)); min-width: 280px; aspect-ratio: 1474 / 2106; container-type: inline-size; color: #f5fff6; transform: scale(.9); transform-origin: center; isolation: isolate; }
+.eh-sub-preview-art { display: block; width: 100%; height: auto; filter: none; pointer-events: none; }
+/* The PNG has translucent sides: effects use an unfilled outline, never its interior alpha.
+   Corner radius follows the visible ~130px source corners; tiny vertical bleed matches the cropped arcs. */
+.eh-sub-preview-panel::before { content: ""; position: absolute; inset: -.5cqw 0; z-index: -1; pointer-events: none; border-radius: 8.8cqw; border: 1px solid rgba(223,255,0,.9); background: transparent; box-shadow: 0 0 2px 1px rgba(223,255,0,.8), 0 0 9px 2px rgba(223,255,0,.32), 0 12px 24px 2px rgba(0,0,0,.62); }
+.eh-sub-preview-close { position: absolute; top: 2%; left: 3%; width: max(44px, 8cqw); height: max(44px, 8cqw); border: 0; border-radius: 50%; background: transparent; color: #fff; font: 400 8cqw/1 Figtree, sans-serif; cursor: pointer; }
+.eh-sub-preview-trial { position: absolute; top: 38%; left: 5%; width: 90%; text-align: center; color: #00ffe4; font-size: 5cqw; line-height: 1.13; font-weight: 400; }
+.eh-sub-preview-trial strong { font-weight: 700; }
+.eh-sub-preview-trial b { display: inline-block; margin-top: 1cqw; font-size: 7cqw; font-weight: 750; color: #54ff91; }
+.eh-sub-preview-plans { position: absolute; top: 57%; left: 8%; width: 84%; display: grid; grid-template-columns: 1fr 1fr; gap: 3%; text-align: center; }
+.eh-sub-preview-card { position: relative; width: 100%; aspect-ratio: 658 / 302; display: block; border: 0; padding: 0; background: transparent; color: #f4fff3; cursor: pointer; }
+.eh-sub-preview-card img { display: block; width: 100%; height: auto; }
+.eh-sub-preview-card span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; line-height: 1.08; gap: .6cqw; }
+.eh-sub-preview-card b { font-size: 3.7cqw; font-weight: 600; }
+.eh-sub-preview-card strong { font-size: 5.7cqw; font-weight: 750; }
+.eh-sub-preview-card small { font-size: 3cqw; color: #baff94; }
+.eh-sub-preview-card.is-tapped { filter: drop-shadow(0 0 8px #bdff68); outline: 2px solid #e9ff9e; border-radius: 12%; }
+.eh-sub-preview-value { padding-top: 1.5cqw; color: #00ffe4; font-size: 3.5cqw; line-height: 1.12; font-weight: 600; }
+.eh-sub-preview-bottom { position: absolute; top: 81%; left: 8%; width: 84%; text-align: center; font-size: max(11px, 2.8cqw); line-height: 1.25; }
+.eh-sub-preview-bottom p { margin: 0 0 1cqw; }
+.eh-sub-preview-links { display: flex; align-items: center; justify-content: center; gap: 1cqw; }
+.eh-sub-preview-links button { background: none; border: 0; color: #9cfff1; font: inherit; min-height: 32px; padding: 0 1cqw; text-decoration: underline; cursor: pointer; }
+.eh-sub-preview-links small { display: block; font-size: max(9px, 2.3cqw); }
+.eh-sub-preview-note { position: absolute; top: 27cqw; left: 0; width: 100%; font-size: max(10px, 2.6cqw); color: #efffd4; }
+.eh-sub-preview-panel button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.eh-sub-preview-legal { position: absolute; inset: 10% 5% 5%; padding: 4cqw; border-radius: 4cqw; background: #123b43; color: #fff; display: flex; flex-direction: column; font-size: max(12px, 3cqw); }
+.eh-sub-preview-legal button { min-height: 44px; background: #235b56; color: white; border: 1px solid #9cfff1; }
+.eh-sub-preview-legal h2 { margin: 2cqw 0; }
+.eh-sub-preview-legal div { overflow: auto; white-space: pre-wrap; line-height: 1.5; }
+@media (max-height: 400px) { .eh-sub-preview-overlay { align-items: flex-start; } }
+
+/* Compact only the live RingMatch offer; automatic scrolling remains available when a viewport needs it. */
+.eh-sub-preview-content { display: contents; }
+.eh-sub-preview-ringmatch .eh-sub-preview-content { display: block; position: absolute; top: 50%; bottom: 3%; left: 7%; width: 86%; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #b9de42 transparent; padding: 0 1cqw .3cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-trial { position: static; width: 100%; }
+.eh-sub-preview-ringmatch .eh-sub-preview-plans { position: static; width: 94%; margin-left: auto; margin-right: auto; margin-top: 1.4cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-bottom { position: static; width: 100%; margin-top: 1.4cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-note { position: static; margin-top: .6cqw; }
+
+.eh-sub-preview-ringmatch .eh-sub-preview-trial { line-height: 1.02; }
+.eh-sub-preview-ringmatch .eh-sub-preview-trial b { margin-top: .3cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-value { padding-top: .7cqw; line-height: 1.02; }
+.eh-sub-preview-ringmatch .eh-sub-preview-bottom { line-height: 1.12; }
+.eh-sub-preview-ringmatch .eh-sub-preview-bottom p { margin-bottom: .5cqw; }
+
+.eh-sub-preview-ringmatch .eh-sub-preview-trial { font-size: 4.4cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-trial b { font-size: 6.5cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-value { font-size: max(9px, 2.7cqw); white-space: nowrap; }
+.eh-sub-preview-ringmatch .eh-sub-preview-bottom { margin-top: .7cqw; }
+.eh-sub-preview-ringmatch .eh-sub-preview-links button { min-height: 28px; }
+
+/* RingMatch 2b invitation: independently styled live letterforms; no artwork transform. */
+.eh-sub-preview-ringmatch .eh-rm-experience { font-family: Figtree, sans-serif; font-size: 6cqw; line-height: 1.08; }
+.eh-rm-experience-line { display: flex; align-items: baseline; justify-content: center; gap: 1.25cqw; padding-inline: 2cqw; }
+.eh-rm-experience-word { font-weight: 300; color: #60ff00; }
+.eh-rm-brand { position: relative; display: inline-block; padding-right: .4em; font-weight: 750; color: #aaff28; }
+.eh-rm-trademark { position: absolute; top: -.05em; right: .18em; font-size: 38%; line-height: 1; font-weight: 400; }
+.eh-rm-free-line { margin-top: 1.1cqw; color: #efffff; font-size: 4.8cqw; font-weight: 300; letter-spacing: .08em; }
+.eh-sub-preview-ringmatch .eh-sub-preview-plans { margin-top: 3cqw; }
+
+/* Stage 6D: transform only letterforms; preserve widths, layout boxes and baseline alignment. */
+.eh-rm-experience-line { transform: scaleY(.8); transform-origin: center bottom; }
+.eh-rm-free-line { transform: scaleY(.8); transform-origin: center; }
+.eh-rm-free-word { font-weight: 700; }
+/* 4.4cqw adds about 18px at the current ~450px panel, including its .9 presentation scale. */
+.eh-sub-preview-ringmatch .eh-sub-preview-bottom { margin-top: 5.1cqw; }
+
+/* Stage 6E: consistent, subdued bottom copy in both development popup variants. */
+.eh-sub-preview-bottom > p:not(.eh-sub-preview-note) { color: #C5C9C8; }
+.eh-sub-preview-links button { color: #A9D9D4; }
+.eh-sub-preview-note,
+.eh-sub-preview-links small { color: #A0A8A5; }

@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TRACKS, SoundTrack } from "../sounds";
+import { playbackUsage } from "../lib/playbackUsage";
+import { developmentFreeview, isFreeviewExhaustion } from "../lib/developmentFreeview";
+import { FreeviewInstance } from "../lib/freeviewInstance";
 
 // Long equal-power crossfades (30–45s) hide loop seams on nature recordings.
 // Cap is applied per-track via effectiveXfade() so short clips stay safe.
@@ -63,6 +66,11 @@ export type PlayOptions = {
 // for seamless equal-power crossfade looping.
 // ─────────────────────────────────────────────────────────────────────────────
 class TrackEngine {
+  private usageToken: object = {};
+  private freeview: FreeviewInstance | null = null;
+  onFreeviewStopped?: () => void;
+  yieldFreeview() { this.freeview?.yieldToExistingAction(); }
+  cancelExistingTimerFade() { if (this.isPlaying) this.freeview?.cancelExistingTimerFade(); }
   id: string;
   url: string;
   context: AudioContext;
@@ -153,6 +161,7 @@ class TrackEngine {
 
   play(fadeInDuration = FADE_IN_DURATION) {
     if (this.isPlaying || !this.buffer) return;
+    if (developmentFreeview.reject(this.id)) throw new Error("FREEVIEW_EXHAUSTED");
     const startOffset = this.hasResumablePause() ? this.resumeOffset! : this.loopStart;
     this.clearResumePosition();
     this.isPlaying = true;
@@ -163,7 +172,17 @@ class TrackEngine {
     const gain = this.context.createGain();
     gain.gain.value = 1;
     source.connect(gain);
-    gain.connect(this.trackGain);
+    if (developmentFreeview.enabled) {
+      const instanceToken = {};
+      this.usageToken = instanceToken;
+      const freeview = new FreeviewInstance(this.id, this.context, this.trackGain, instanceToken, () => {
+        if (this.usageToken !== instanceToken) return;
+        this.isPlaying = false;
+        if (this.timeoutId !== null) { clearTimeout(this.timeoutId); this.timeoutId = null; }
+        this.onFreeviewStopped?.();
+      });
+      this.freeview = freeview; gain.connect(freeview.gain);
+    } else { this.usageToken = {}; this.freeview = null; gain.connect(this.trackGain); }
 
     const now = this.context.currentTime;
     // Force gain to 0 imperatively before any scheduling — prevents a blip if
@@ -179,6 +198,8 @@ class TrackEngine {
     const firstSegmentDuration = Math.max(this.regionEnd() - startOffset, 0.05);
     const firstXfade = Math.min(this.effectiveXfade(), firstSegmentDuration / 3);
     source.start(startTime, startOffset, firstSegmentDuration);
+    playbackUsage.begin(this.usageToken, this.id, this.context, startTime, startTime + firstSegmentDuration);
+    this.freeview?.source(source, startTime, startTime + firstSegmentDuration);
     this.slotStartTime[0] = startTime;
     this.slotStartOffset[0] = startOffset;
     this.sources[0] = source;
@@ -213,8 +234,10 @@ class TrackEngine {
     inGain.gain.setValueAtTime(0, crossStart);
     inGain.gain.setValueCurveAtTime(EQUAL_POWER_IN, curveStart, xfade);
     inSource.connect(inGain);
-    inGain.connect(this.trackGain);
+    inGain.connect(this.freeview?.gain ?? this.trackGain);
     inSource.start(crossStart, this.loopStart, this.regionDuration());
+    playbackUsage.source(this.usageToken, crossStart, crossStart + this.regionDuration());
+    this.freeview?.source(inSource, crossStart, crossStart + this.regionDuration());
     this.slotStartTime[inSlot] = crossStart;
     this.slotStartOffset[inSlot] = this.loopStart;
 
@@ -250,6 +273,8 @@ class TrackEngine {
   //   LEGACY_TRACK_REPLACEMENT_FADE   → non-audition track replacement
   //   TRACK_SWITCH_CROSSFADE          → outgoing audition crossfade
   pause(immediate = false, fadeDuration = STOP_FADE_DURATION, preservePosition = !immediate) {
+    this.yieldFreeview();
+    const fadingFreeview = this.freeview;
     if (preservePosition && this.isPlaying && this.buffer) {
       this.resumeOffset = this.currentPlaybackOffset();
       this.pausedAtMs = Date.now();
@@ -270,6 +295,7 @@ class TrackEngine {
     // the gentle-ramp branch unreachable even when audio is at full volume.
     const fromGain = this.currentGain;
 
+    playbackUsage.tail(this.usageToken, immediate || fromGain <= 0.001 ? 0 : fadeDuration);
     if (immediate || fromGain <= 0.001) {
       // Hard cut — stop sources immediately and clamp gain to 0.
       for (let i = 0; i < 2; i++) {
@@ -280,6 +306,7 @@ class TrackEngine {
         this.gains[i]   = null;
       }
       this.trackGain.gain.setValueAtTime(0, now);
+      fadingFreeview?.dispose();
       return;
     }
 
@@ -304,6 +331,8 @@ class TrackEngine {
       try {
         this.trackGain.gain.cancelScheduledValues(ctx.currentTime);
         this.trackGain.gain.setValueAtTime(0, ctx.currentTime);
+        playbackUsage.tail(this.usageToken, 0);
+        fadingFreeview?.dispose();
       } catch { /* context may be closed/suspended */ }
     }, (fadeDuration + 0.15) * 1000);
   }
@@ -505,6 +534,7 @@ export function useAudioEngine(): AudioEngineState {
 
   // ── Playback controls ───────────────────────────────────────────────────
   const play = useCallback(async (trackId: string, options?: PlayOptions) => {
+    if (developmentFreeview.reject(trackId)) throw new Error("FREEVIEW_EXHAUSTED");
     initContext();
     const ctx = contextRef.current!;
     const mg  = masterGainRef.current!;
@@ -570,6 +600,12 @@ export function useAudioEngine(): AudioEngineState {
         setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false } }));
         return;
       }
+      if (developmentFreeview.reject(trackId)) {
+        throw new Error("FREEVIEW_EXHAUSTED");
+      }
+      engine.onFreeviewStopped = () => {
+        setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isPlaying: false, isPaused: false, isLoading: false } }));
+      };
       if (isCrossfade) {
         // Start the outgoing ramp at the same moment the incoming track starts.
         // This is intentionally separate from pause() and the timer stop path.
@@ -600,12 +636,15 @@ export function useAudioEngine(): AudioEngineState {
       }
     } catch (e) {
       console.error("[earvana] Failed to play track", trackId, e);
-      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: true } }));
+      setTracksState(s => ({ ...s, [trackId]: { ...s[trackId], isLoading: false, hasError: !isFreeviewExhaustion(e) } }));
+      if (isFreeviewExhaustion(e)) throw e;
     }
   }, [initContext, tracksState, acquireWakeLock]);
 
   const resume = useCallback(async () => {
-    if (lastPlayedIdRef.current) await play(lastPlayedIdRef.current);
+    if (lastPlayedIdRef.current) {
+      try { await play(lastPlayedIdRef.current); } catch (error) { if (!isFreeviewExhaustion(error)) throw error; }
+    }
   }, [play]);
 
   const pause = useCallback((trackId: string) => {
@@ -677,6 +716,7 @@ export function useAudioEngine(): AudioEngineState {
   }, [releaseWakeLock]);
 
   const startFadeOut = useCallback((durationSeconds: number) => {
+    Object.values(enginesRef.current).forEach(engine => engine.yieldFreeview());
     const fg  = fadeGainRef.current;
     const ctx = contextRef.current;
     if (!fg || !ctx) return;
@@ -687,6 +727,7 @@ export function useAudioEngine(): AudioEngineState {
   }, []);
 
   const cancelFade = useCallback(() => {
+    Object.values(enginesRef.current).forEach(engine => engine.cancelExistingTimerFade());
     const fg  = fadeGainRef.current;
     const ctx = contextRef.current;
     if (!fg || !ctx) return;

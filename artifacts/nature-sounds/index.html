@@ -21,14 +21,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="earphoria" />
     <meta name="theme-color" content="#0a1f1a" />
-    <!-- Preload the images that must paint before anything else is visible -->
-    <link rel="preload" href="/TR-bg.png" as="image" />
-    <link rel="preload" href="/TopBanner20_1786146771580.png" as="image" />
-    <link rel="preload" href="/CPanl_bar_btm.png" as="image" />
-    <link rel="preload" href="/PLAYbase.png" as="image" />
-    <link rel="preload" href="/PLAYyellow.png" as="image" />
-    <link rel="preload" href="/ringmatch_butt_norm.png" as="image" />
-    <link rel="preload" href="/Settings_Sprocket.png" as="image" />
+    <!-- Critical visible homepage artwork; URLs match the shared readiness loader. -->
+    <link rel="preload" href="%BASE_URL%earphoria-redesign/published-home-bg.png" as="image" fetchpriority="high" />
+    <link rel="preload" href="%BASE_URL%earphoria-redesign/TopBannerBase25.png" as="image" fetchpriority="high" />
+    <link rel="preload" href="%BASE_URL%earphoria-redesign/TopBannerLogo25.png" as="image" fetchpriority="high" />
     <script>
       (function() {
         try {

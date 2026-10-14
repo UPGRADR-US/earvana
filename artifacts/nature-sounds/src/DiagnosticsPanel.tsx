@@ -183,8 +183,8 @@ const BandRow = memo(function BandRow({
   const hasActive   = activeBandLabel === band.label;
 
   return (
-    <div>
-      <div style={{
+    <div className="ringmatch-frequency-band">
+      <div className="ringmatch-frequency-parent" style={{
         position: "relative",
         display: "flex", alignItems: "center", justifyContent: "flex-start",
         minHeight: 34, paddingLeft: 100, gap: 5,
@@ -192,7 +192,7 @@ const BandRow = memo(function BandRow({
 
         {/* EXPAND / collapse button — floats in the left padding so band name never shifts */}
         {(isPlaying || isExpanded || isBlinking) && (
-          <button
+          <button className="ringmatch-frequency-expand"
             onClick={() => {
               if (isExpanded) { onStopTone(); onSetExpandedBand(null); }
               else            { onBandExpand(band.label); }
@@ -237,7 +237,7 @@ const BandRow = memo(function BandRow({
 
       </div>
 
-      <div style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.375s cubic-bezier(0.5,0,1,1)" }}>
+      <div className="ringmatch-frequency-children" style={{ display: "grid", gridTemplateRows: isExpanded ? "1fr" : "0fr", transition: "grid-template-rows 0.375s cubic-bezier(0.5,0,1,1)" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>
         {getSubBands(band).map(sf => {
           const sfPlaying = playingFreq === sf;
@@ -246,7 +246,7 @@ const BandRow = memo(function BandRow({
           const sfActive  = sfNotched || sfBoosted;
 
           return (
-            <div key={sf} style={{
+            <div key={sf} className="ringmatch-frequency-child" style={{
               display: "flex", alignItems: "center", justifyContent: "flex-start", minHeight: 32, gap: 4,
               paddingLeft: 106,
               borderRadius: sfActive ? 5 : 0,
@@ -272,7 +272,7 @@ const BandRow = memo(function BandRow({
               </button>
 
               {auditionedFreq === sf && !sfActive && (
-                <button onClick={() => onSelectClick(sf)} data-testid={`select-frequency-${sf}`}
+                <button className="ringmatch-frequency-select" onClick={() => onSelectClick(sf)} data-testid={`select-frequency-${sf}`}
                   style={{ display: "flex", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 4, flexShrink: 0 }}>
                   <span style={{ ...KALLISTO, fontWeight: 700, fontSize: "clamp(10px,2.5vw,12px)", color: "#ffcc00", letterSpacing: "0.07em" }}>SELECT</span>
                   <Chevron color="#ffcc00" />
@@ -299,6 +299,8 @@ const BandRow = memo(function BandRow({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
+  /** Local web Freeview boundary; returning true defers the untouched original SELECT path. */
+  developmentSelectBoundary?: (frequency: number, resume: () => void) => boolean;
   onClose:      () => void;
   onStartTest?: () => void;
   showInstructionsInitially: boolean;
@@ -315,15 +317,12 @@ interface Props {
 
 export function DiagnosticsPanel({
   onClose, onStartTest, showInstructionsInitially, selectedFrequency, onSelectedFrequencyChange, onResetRingMatch,
-  onNotch, currentNotch, onBoost, currentBoost,
+  onNotch, currentNotch, onBoost, currentBoost, developmentSelectBoundary,
 }: Props) {
-  const initialSelectedFrequency = selectedFrequency ?? currentNotch ?? currentBoost;
+  const initialSelectedFrequency = developmentSelectBoundary ? null : selectedFrequency ?? currentNotch ?? currentBoost;
 
-  // First open after launch starts with instructions. Any selected frequency
-  // starts on Status, regardless of whether notching is active.
-  const [page, setPage] = useState<1 | 2 | "confirm" | "confirm2" | "stat">(() =>
-    initialSelectedFrequency !== null ? "stat" : showInstructionsInitially ? 1 : 2
-  );
+  // Saved frequencies open the original Status popup; otherwise begin with instructions.
+  const [page, setPage] = useState<1 | 2 | "confirm" | "confirm2" | "stat">(initialSelectedFrequency !== null ? "stat" : 1);
   // the frequency anchored in the stat window (persists across mode changes)
   const [statFreq,       setStatFreq]       = useState<number | null>(initialSelectedFrequency);
   const [playingFreq,    setPlayingFreq]     = useState<number | null>(null);
@@ -337,6 +336,7 @@ export function DiagnosticsPanel({
   const [instructionsFromStatus, setInstructionsFromStatus] = useState(false);
   // Caution overlay: shows once when entering page 2 via START TEST
   const [showCaution,    setShowCaution]    = useState(false);
+  const [cautionAcknowledged, setCautionAcknowledged] = useState(false);
 
   const activeBandLabel = useMemo(() => {
     const active = currentNotch ?? currentBoost;
@@ -431,6 +431,10 @@ export function DiagnosticsPanel({
 
   // SELECT: remember the frequency immediately; notching remains optional.
   const handleSelectClick = (freq: number) => {
+    if (developmentSelectBoundary?.(freq, () => completeFrequencySelection(freq))) { stopTone(); return; }
+    completeFrequencySelection(freq);
+  };
+  const completeFrequencySelection = (freq: number) => {
     stopTone();
     setStatFreq(freq);
     onSelectedFrequencyChange(freq);
@@ -447,12 +451,13 @@ export function DiagnosticsPanel({
     else { onBoost(freq); onNotch(null); }
   };
 
-  // "repeat test >>" → go back to p2
+  // Repeat Test uses the existing instruction transition, then the usual volume warning.
   const handleRepeatTest = () => {
     setStatDismissing(true);
     setTimeout(() => {
       setStatDismissing(false);
-      stopTone(); setPage(2); setP2Anchored(false); setBlinkingBand(null);
+      setCautionAcknowledged(false);
+      handleShowInstructions();
     }, 200);
   };
 
@@ -564,6 +569,16 @@ export function DiagnosticsPanel({
             0 0 18px rgba(255, 204, 0, 0.72),
             inset 0 0 10px rgba(255, 204, 0, 0.32);
         }
+        /* Local web layout: only parent labels determine the centered group width. */
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-viewport { left: 12px !important; right: 12px !important; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-group { width: max-content; margin-inline: auto; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-sizer { display: flex; gap: 5px; height: 0; visibility: hidden; pointer-events: none; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-band { width: 0; min-width: 100%; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-parent { padding-left: 0 !important; width: max-content; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-expand { left: auto !important; right: calc(100% + 8px); }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-children { width: max-content; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-child { padding-left: 12px !important; }
+        .ringmatch-frequency-layout-preview .ringmatch-frequency-select { margin-left: 12px !important; }
         @media (max-height: 760px) {
           .ringmatch-confirm-overlay {
             align-items: flex-start !important;
@@ -581,7 +596,7 @@ export function DiagnosticsPanel({
         className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
       {/* Shadow + animation wrapper — main panel (p1 / p2) */}
-      <div onClick={e => e.stopPropagation()} style={{
+      <div className={import.meta.env.DEV && !isNativeAudio ? "ringmatch-frequency-layout-preview" : undefined} onClick={e => e.stopPropagation()} style={{
         position: "absolute",
         top:    "max(calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 22px), clamp(48px,7.5vh,70px))",
         left:   "max(calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 22px), clamp(22px,5cqw,34px))",
@@ -707,7 +722,7 @@ export function DiagnosticsPanel({
                 onPointerDown={() => setStartPressed(true)}
                 onPointerUp={() => setStartPressed(false)}
                 onPointerLeave={() => setStartPressed(false)}
-                onClick={() => { onStartTest?.(); setPage(2); setTimeout(() => setShowCaution(true), 380); }}
+                onClick={() => { onStartTest?.(); setCautionAcknowledged(false); setPage(2); setTimeout(() => setShowCaution(true), 380); }}
                 style={{
                   alignSelf: "center", flexShrink: 0,
                   marginTop: "clamp(14px,3svh,22px)",
@@ -808,7 +823,7 @@ export function DiagnosticsPanel({
             </div>
 
             {/* Band list scrollable area — padded so rows clear both dividers */}
-            <div style={{
+            <div className="ringmatch-frequency-viewport" inert={!cautionAcknowledged || showCaution} style={{
               position: "absolute",
               top: "calc(24% + 10px)", bottom: "17%",
               left: 33, right: 38,
@@ -819,7 +834,8 @@ export function DiagnosticsPanel({
               flexDirection: "column",
               justifyContent: p2Anchored ? "flex-start" : "center",
             }}>
-              <div style={{ padding: "clamp(28px,4.5svh,42px) 0" }}>
+              <div className="ringmatch-frequency-group" style={{ padding: "clamp(28px,4.5svh,42px) 0" }}>
+                {import.meta.env.DEV && !isNativeAudio && <div className="ringmatch-frequency-sizer" aria-hidden="true"><span style={{ ...LIST_TXT, fontSize: "clamp(17px,4.3cqw,20px)", fontWeight: 700 }}>upper-treble</span></div>}
                 {BANDS.map(band => (
                   <BandRow
                     key={band.label}
@@ -922,7 +938,7 @@ export function DiagnosticsPanel({
                   {/* Got it button */}
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
                     <button
-                      onClick={() => setShowCaution(false)}
+                      onClick={() => { setShowCaution(false); setCautionAcknowledged(true); }}
                       style={{
                         display: "flex", alignItems: "center", gap: 7,
                         background: "linear-gradient(135deg, rgba(0,60,20,0.97) 0%, rgba(0,90,30,0.93) 100%)",

@@ -1,0 +1,131 @@
+/* Approved artwork and effects are rendered only by the development Freeview UI. */
+.eh-freeview-test-shell { position: relative; z-index: 3; flex: 0 0 auto; width: 100%; }
+.eh-freeview-test-bar {
+  position: relative;
+  width: 100%;
+  isolation: isolate;
+  /* Full width is already the maximum; add 25% vertical room without stretching art. */
+  aspect-ratio: 2045 / 320;
+  opacity: 1;
+  color: #e1fbff;
+  font-family: Figtree, sans-serif;
+}
+.eh-freeview-art-effects { position: absolute; inset: 0; z-index: 0; isolation: isolate; opacity: 1; }
+.eh-freeview-cta-arrows { display: inline-block; font-size: calc(1em + 4pt); font-weight: 700; color: #FFD800; opacity: 1; animation: none; }
+/* One inherited animation value keeps bar and visible active rows exactly in phase. */
+@property --eh-freeview-pulse {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+.eh-freeview-pulsing-art { opacity: var(--eh-freeview-pulse, 1); }
+.eh-freeview-subscribe { opacity: 1; }
+.eh-freeview-bar-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.eh-freeview-live-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2875cqw;
+  /* Compress individual letterforms below; leave chevron and artwork untouched. */
+  transform: none;
+  transform-origin: center;
+  font-family: Figtree, sans-serif;
+}
+.eh-freeview-main-line { display: flex; justify-content: center; gap: 2cqw; font-size: 4.4cqw; font-weight: 300; line-height: 1.02; }
+.eh-freeview-main-line output { font-variant-numeric: tabular-nums; }
+.eh-freeview-subscribe { padding: 0; border: 0; background: none; color: #00FFE4; font-family: Figtree, sans-serif; font-size: calc(3.5cqw + 2.5pt); font-weight: 300; line-height: 1; display: flex; align-items: center; gap: .5cqw; cursor: pointer; }
+.eh-freeview-art-effects::before,
+.eh-freeview-art-effects::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.eh-freeview-art-effects::before { box-shadow: none; } /* v5 includes its own shadow. */
+.eh-freeview-fresh-test { position: absolute; top: calc(100% + 2px); right: 2cqw; font: 400 clamp(9px, 2cqw, 11px) Figtree, sans-serif; padding: 2px 5px; border: 0; border-radius: 3px; background: rgba(3, 26, 34, .75); color: #c7f5ff; cursor: pointer; }
+/* Freeview presentation only; original highlight and moving-bar geometry remain intact. */
+.eh-track .eh-freeview-playing-art { animation: none; transition: none; opacity: var(--eh-freeview-pulse, 1); }
+.eh-track.eh-freeview-active > span { color: #fff; opacity: 1; animation: none; transition: none; }
+.eh-track.eh-freeview-exhausted > span { color: #85898e; opacity: .85; text-shadow: 0 0 1px #85898e; animation: none; transition: none; }
+.eh-freeview-track-countdown {
+  position: absolute; z-index: 2; top: 50%;
+  right: calc(4% + clamp(12.138px, 3.468cqw, 19.074px) + 1cqw);
+  transform: translateY(-50%) scaleY(.85); color: #fff; font-family: Figtree, sans-serif;
+  font-size: .95em; font-variant-numeric: tabular-nums; line-height: 1;
+  animation: none; transition: none; opacity: 1;
+  pointer-events: none;
+}
+.eh-freeview-track-countdown.is-current { animation: none; opacity: var(--eh-freeview-pulse, 1); }
+.eh-track.eh-freeview-has-countdown > span { padding-right: calc(4% + clamp(12.138px, 3.468cqw, 19.074px) + 6ch); }
+@media (prefers-reduced-motion: reduce) { .eh-app.is-freeview-counting-down, .eh-freeview-track-countdown { animation: none; } }
+/* Development-only overrides: every existing blink reads the one root phase. */
+.eh-development-master-blink .eh-control.paused .eh-control-art img,
+.eh-development-master-blink .eh-track.selected.paused .eh-track-highlight,
+.eh-development-master-blink .eh-control[data-testid="button-timer"] .eh-timer-status.timer-completed,
+.eh-development-master-blink .duration-readout.timer-completed {
+  animation: none; opacity: calc(1 - .78 * var(--eh-master-dim, 0));
+}
+.eh-development-master-blink .eh-control.paused small {
+  animation: none; opacity: calc(1 - .75 * var(--eh-master-dim, 0));
+}
+.eh-development-master-blink .eh-control[data-testid="button-timer"] .eh-timer-status.final-minute,
+.eh-development-master-blink .duration-readout.final-minute {
+  animation: none; opacity: calc(1 - .75 * var(--eh-master-dim, 0));
+}
+.eh-development-master-blink .eh-category-card.playing:not(.centered) {
+  animation: none;
+  border-color: rgba(0,255,100,calc(.8 - .64 * var(--eh-master-dim, 0)));
+  box-shadow: inset 0 0 0 2px rgba(0,255,80,calc(.4 - .32 * var(--eh-master-dim, 0))),
+    0 0 calc(14px - 9px * var(--eh-master-dim, 0)) calc(3px - 2px * var(--eh-master-dim, 0)) rgba(0,255,80,calc(.5 - .36 * var(--eh-master-dim, 0)));
+}
+.eh-development-master-blink .eh-category-card.paused-off-course {
+  animation: none;
+  border-color: rgba(255,220,25,calc(.9 - .72 * var(--eh-master-dim, 0)));
+  box-shadow: inset 0 0 0 2px rgba(255,220,25,calc(.42 - .34 * var(--eh-master-dim, 0))),
+    0 0 calc(14px - 9px * var(--eh-master-dim, 0)) calc(3px - 2px * var(--eh-master-dim, 0)) rgba(255,210,20,calc(.52 - .37 * var(--eh-master-dim, 0)));
+}
+/* Original home controls use inline animation names; retain their endpoint ranges. */
+.eh-development-master-blink [style*="carouselRingBlink"] { animation: none !important; opacity: calc(1 - .55 * var(--eh-master-dim, 0)); }
+.eh-development-master-blink [style*="trackBlink"] { animation: none !important; opacity: calc(1 - .78 * var(--eh-master-dim, 0)); }
+
+.eh-freeview-track-countdown.is-exhausted { color: #85898e; opacity: .85; text-shadow: 0 0 1px #85898e; animation: none; transition: none; }
+
+/* Only the genuine paused track in the visible category gets the original yellow art. */
+.eh-development-master-blink .eh-track .eh-freeview-paused-art,
+.eh-development-master-blink .eh-track.selected.paused .eh-freeview-paused-art {
+  animation: none; transition: none; opacity: var(--eh-freeview-pulse, 1);
+}
+
+.eh-freeview-test-shell.is-expiration-emphasis { z-index: 100; }
+.eh-freeview-subscribe-words { color: #FFD800; font-weight: 700; display: inline-block; transform-origin: center; white-space: nowrap; }
+
+.eh-freeview-subscribe-words strong { font-weight: 700; }
+.eh-freeview-subscribe-light { font-weight: 300; }
+
+/* Whole CTA row shares the existing root phase; artwork and top line stay steady. */
+.eh-freeview-test-bar.is-counting-down .eh-freeview-subscribe { opacity: var(--eh-freeview-pulse, 1); }
+.eh-freeview-test-shell.is-expiration-emphasis .eh-freeview-subscribe { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .eh-freeview-test-bar.is-counting-down .eh-freeview-subscribe { opacity: 1; }
+}
+
+/* After expiration emphasis, only the chevron inherits the existing master phase. */
+.eh-freeview-test-shell.is-post-expiration .eh-freeview-test-bar:not(.is-counting-down) .eh-freeview-cta-arrows { opacity: var(--eh-freeview-pulse, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .eh-freeview-test-shell.is-post-expiration .eh-freeview-test-bar:not(.is-counting-down) .eh-freeview-cta-arrows { opacity: 1; }
+}
+
+/* 85% of the previous 80% letter height; horizontal size and layout boxes unchanged. */
+.eh-freeview-main-line { transform: scaleY(.68); transform-origin: center; }
+.eh-freeview-subscribe-words > strong,
+.eh-freeview-subscribe-light { display: inline-block; transform: scaleY(.68); transform-origin: center; }
+
+/* V5 bar body is y=50..306. Old 256px art sat at y=32 in the 320px frame.
+   Move the 388px image up 18 source pixels, preserving body size and text anchors. */
+.eh-freeview-bar-art-v5 { inset: auto; left: 0; top: -5.625%; width: 100%; height: auto; }

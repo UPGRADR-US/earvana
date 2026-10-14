@@ -260,3 +260,14 @@ img, video {
     0 0 22px #00ff55,
     0 0 34px rgba(0, 255, 51, .95) !important;
 }
+/* Body portals share the same outer column as the home/FAQ without changing its sizing. */
+.earphoria-overlay-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  contain: layout;
+  container-type: inline-size;
+  isolation: isolate;
+  pointer-events: none;
+}
+.earphoria-overlay-host > * { pointer-events: auto; }

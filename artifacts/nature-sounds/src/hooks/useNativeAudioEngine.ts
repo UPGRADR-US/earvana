@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { EarvanaAudio } from "../plugins/EarvanaAudio";
 import { TRACKS } from "../sounds";
+import { getDevelopmentFreeview, isFreeviewExhaustion } from "../lib/developmentFreeview";
 import type { PlayOptions } from "./useWebAudioEngine";
 
 const PAUSE_EXPIRY_MS = 10 * 60 * 1000;
@@ -64,6 +65,7 @@ export function useNativeAudioEngine(): AudioEngineState {
   // Listen for native status-change events from the plugin
   useEffect(() => {
     let listenerHandle: any;
+    getDevelopmentFreeview().catch(() => {});
     EarvanaAudio.addListener("statusChange", (data) => {
       const status = data.tracks as Record<string, any>;
       setTracksState(prev => {
@@ -172,17 +174,18 @@ export function useNativeAudioEngine(): AudioEngineState {
       });
     } catch (e) {
       console.error("[NativeAudio] play failed", e);
-      const premiumBlocked = /PREMIUM_REQUIRED/i.test(String(e));
+      const premiumBlocked = /PREMIUM_REQUIRED/i.test(String(e)) || isFreeviewExhaustion(e);
       setTracksState(s => ({
         ...s,
         [trackId]: { ...s[trackId], isLoading: false, hasError: !premiumBlocked, isPlaying: false },
       }));
+      if (isFreeviewExhaustion(e)) throw e;
     }
   }, [tracksState]);
 
   const resume = useCallback(async () => {
     if (lastPlayedIdRef.current) {
-      await play(lastPlayedIdRef.current);
+      try { await play(lastPlayedIdRef.current); } catch (error) { if (!isFreeviewExhaustion(error)) throw error; }
     } else {
       await EarvanaAudio.resume();
     }

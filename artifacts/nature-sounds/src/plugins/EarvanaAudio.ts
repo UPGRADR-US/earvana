@@ -21,6 +21,9 @@ export interface EarvanaAudioPlugin {
   startFadeOut(options: { durationSeconds: number }): Promise<void>;
   cancelFade(): Promise<void>;
   stopAll(): Promise<void>;
+  configureDevelopmentFreeview(options: { enabled: boolean }): Promise<{ enabled: boolean; available: boolean; exhaustedTrackIds: string[] }>;
+  getDevelopmentFreeview(): Promise<{ enabled: boolean; available: boolean; exhaustedTrackIds: string[] }>;
+  getPlaybackUsage(): Promise<{ secondsByTrack: Record<string, number> }>;
   getStatus(): Promise<{ tracks: Record<string, { isPlaying: boolean; isLoading: boolean; hasError: boolean; volume: number }> }>;
   setLastPlayed(options: { trackId: string }): Promise<void>;
   getLastPlayed(): Promise<{ trackId: string | null }>;

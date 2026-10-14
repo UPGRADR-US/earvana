@@ -48,6 +48,7 @@ export interface InitializeResult {
 export interface PaywallResult {
   presented: boolean;
   isSubscribed: boolean;
+  productAvailable?: boolean;
 }
 
 export interface EarphoriaBillingPlugin {

@@ -86,11 +86,19 @@ public class EarphoriaBillingPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func presentPaywall(_ call: CAPPluginCall) {
         Task { @MainActor in
-            if SubscriptionManager.shared.isSubscribed || !SubscriptionManager.shared.catalogAvailable {
+            if SubscriptionManager.shared.isSubscribed {
                 call.resolve([
                     "presented": false,
                     "isSubscribed": true,
                     "productAvailable": SubscriptionManager.shared.catalogAvailable,
+                ])
+                return
+            }
+            if !SubscriptionManager.shared.catalogAvailable {
+                call.resolve([
+                    "presented": false,
+                    "isSubscribed": false,
+                    "productAvailable": false,
                 ])
                 return
             }

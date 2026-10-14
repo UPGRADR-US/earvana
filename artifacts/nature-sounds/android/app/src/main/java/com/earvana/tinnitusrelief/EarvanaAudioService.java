@@ -69,6 +69,46 @@ public class EarvanaAudioService extends Service {
     private Thread durationThread;
     private StatusChangeListener statusListener;
     private boolean foregroundStarted = false;
+    boolean freeviewSubscribed() {
+        // Same native cache used by SubscriptionBillingManager; no billing redesign.
+        return getSharedPreferences("earphoria_billing", MODE_PRIVATE).getBoolean("is_subscribed", false);
+    }
+    boolean freeviewRejects(String trackId) { return DevelopmentFreeview.reject(trackId, freeviewSubscribed()); }
+    private final Runnable freeviewTick = new Runnable() {
+        @Override public void run() {
+            boolean subscribed = freeviewSubscribed();
+            DevelopmentFreeview.refresh(subscribed);
+            boolean bypass = !DevelopmentFreeview.enabled() || subscribed;
+            PCMPlayer current = loopPlayer;
+            if (current != null) current.observeFreeview(bypass, freeviewRejects(current.observedTrackID()), () -> {
+                if (loopPlayer == current) {
+                    loopPlayer = null;
+                    synchronized (loadingTracks) { if (loadingTracks.isEmpty()) activeTrackId = null; }
+                }
+                boolean preparing;
+                synchronized (loadingTracks) { preparing = !loadingTracks.isEmpty(); }
+                if (loopPlayer == null && outgoingPlayer == null && !preparing) {
+                    // Mirror resource cleanup only after this instance has finished.
+                    if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+                    updateNotification(false);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
+                        audioManager.abandonAudioFocusRequest(audioFocusRequest);
+                    } else if (audioManager != null) audioManager.abandonAudioFocus(afChangeListener);
+                    try { stopForeground(STOP_FOREGROUND_REMOVE); } catch (Exception ignored) {}
+                    foregroundStarted = false;
+                    mainHandler.removeCallbacks(freeviewTick);
+                    stopSelf();
+                }
+                notifyStatus();
+            });
+            // Outgoing players are already stopping. Refresh latches their usage only.
+            if (outgoingPlayer != null && bypass) outgoingPlayer.observeFreeview(true, false, null);
+            if (DevelopmentFreeview.enabled()) mainHandler.postDelayed(this, 20);
+        }
+    };
+    public void configureFreeviewObservation() {
+        mainHandler.removeCallbacks(freeviewTick); freeviewTick.run();
+    }
 
     public interface StatusChangeListener {
         void onStatusChanged();
@@ -82,7 +122,10 @@ public class EarvanaAudioService extends Service {
 
     private final AudioManager.OnAudioFocusChangeListener afChangeListener = focusChange -> {
         switch (focusChange) {
-            case AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseActiveTrack();
+            case AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                PlaybackUsage.interrupt();
+                pauseActiveTrack();
+            }
             default -> {}
         }
     };
@@ -108,6 +151,7 @@ public class EarvanaAudioService extends Service {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Earvana::AudioWakeLock");
         createNotificationChannel();
+        if (DevelopmentFreeview.enabled()) configureFreeviewObservation();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_PLAY);
@@ -123,6 +167,7 @@ public class EarvanaAudioService extends Service {
 
     @Override
     public void onDestroy() {
+        mainHandler.removeCallbacks(freeviewTick);
         loadGeneration.incrementAndGet();
         releasePlayer();
         try {
@@ -204,6 +249,7 @@ public class EarvanaAudioService extends Service {
     public void playTrack(String trackId, String filePath, String trackName,
                           float loopStart, Float loopEnd, float crossfade, float volume,
                           boolean auditionCrossfade, float auditionSeconds) {
+        if (freeviewRejects(trackId)) return;
         Log.d(TAG, "PlayTrack (PCM stereo): " + trackId + " audition=" + auditionCrossfade);
 
         final int gen = loadGeneration.incrementAndGet();
@@ -259,9 +305,18 @@ public class EarvanaAudioService extends Service {
                                         player.stopImmediate();
                                         return;
                                     }
+                                    if (freeviewRejects(trackId)) {
+                                        player.stopImmediate();
+                                        synchronized (loadingTracks) { loadingTracks.remove(trackId); }
+                                        activeTrackId = loopPlayer != null ? loopPlayer.observedTrackID() : null;
+                                        notifyStatus(); return;
+                                    }
                                     PCMPlayer previous = loopPlayer;
+                                    player.observeTrack(trackId);
+                                    player.setFreeviewAuthorization(() -> DevelopmentFreeview.enabled() && !freeviewSubscribed());
                                     loopPlayer = player;
                                     player.play(keepOutgoing ? auditionSeconds : 1.5f);
+                                    if (DevelopmentFreeview.enabled()) configureFreeviewObservation();
                                     if (keepOutgoing && previous != null) {
                                         outgoingPlayer = previous;
                                         previous.pause(auditionSeconds, () -> {
@@ -436,6 +491,7 @@ public class EarvanaAudioService extends Service {
 
     public void stopAllTracks() {
         Log.d(TAG, "StopAllTracks");
+        mainHandler.removeCallbacks(freeviewTick);
         loadGeneration.incrementAndGet();
         if (durationThread != null) {
             durationThread.interrupt();

@@ -10,6 +10,44 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PCMPlayer {
     private static final String TAG = "PCMPlayer";
+    private final Object usageID = new Object();
+    private String usageTrackID;
+    private volatile float freeviewLevel = 1f;
+    private volatile float freeviewInitialLevel = 1f;
+    private java.util.function.BooleanSupplier freeviewStillRequired = () -> true;
+    public void setFreeviewAuthorization(java.util.function.BooleanSupplier required) { freeviewStillRequired = required; }
+    private volatile long freeviewStartNanos;
+    private volatile boolean freeviewYielding;
+    private Runnable freeviewFinished;
+    private final android.os.Handler freeviewHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable freeviewStop = () -> {
+        synchronized (PCMPlayer.this) {
+            if (freeviewStartNanos == 0 || freeviewYielding || !this.isPlaying || this.isPaused) return;
+            if (!freeviewStillRequired.getAsBoolean()) {
+                freeviewStartNanos = 0; freeviewLevel = 1; return;
+            }
+            freeviewLevel = 0; freeviewStartNanos = 0;
+            stopImmediate(); // only this PCMPlayer; does not cancel any legacy fade
+        }
+        if (freeviewFinished != null) freeviewFinished.run();
+    };
+    public synchronized void observeFreeview(boolean bypass, boolean exhausted, Runnable finished) {
+        if (bypass) {
+            freeviewHandler.removeCallbacks(freeviewStop); freeviewStartNanos = 0; freeviewLevel = 1;
+        } else if (exhausted && isPlaying && !isPaused && !freeviewYielding && freeviewStartNanos == 0) {
+            freeviewFinished = finished;
+            freeviewInitialLevel = freeviewLevel;
+            freeviewStartNanos = System.nanoTime();
+            freeviewHandler.postDelayed(freeviewStop, DevelopmentFreeview.FADE_MILLISECONDS); // independent 1.000-second completion
+        }
+    }
+    private void yieldFreeviewToExistingAction() {
+        freeviewYielding = true;
+        freeviewHandler.removeCallbacks(freeviewStop); freeviewStartNanos = 0;
+        // Freeze only our own multiplier; never change the existing fade state.
+    }
+    public String observedTrackID() { return usageTrackID; }
+    public void observeTrack(String trackID) { usageTrackID = trackID; }
 
     private final int sampleRate;
     private final int channels;
@@ -168,6 +206,7 @@ public class PCMPlayer {
         }
 
         audioTrack.play();
+        if (usageTrackID != null) PlaybackUsage.begin(usageID, usageTrackID);
         playThread = new Thread(this::audioLoop, "PCMPlayer-Thread");
         playThread.setPriority(Thread.MAX_PRIORITY);
         playThread.start();
@@ -178,6 +217,8 @@ public class PCMPlayer {
             if (onFinished != null) onFinished.run();
             return;
         }
+        yieldFreeviewToExistingAction();
+        PlaybackUsage.tail(usageID, fadeSeconds);
         isPaused = true;
 
         if (fadeSeconds <= 0) {
@@ -207,6 +248,8 @@ public class PCMPlayer {
      * never blocks the caller for more than a short join.
      */
     public synchronized void stopImmediate() {
+        yieldFreeviewToExistingAction();
+        PlaybackUsage.end(usageID);
         isPlaying = false;
         isPaused = false;
 
@@ -277,11 +320,13 @@ public class PCMPlayer {
     }
 
     public synchronized void startFadeOut(float durationSeconds) {
+        yieldFreeviewToExistingAction();
         targetTimerFadeLevel = 0.0001f;
         timerFadeLevelStep = -(1.0f - targetTimerFadeLevel) / (durationSeconds * sampleRate);
     }
 
     public synchronized void cancelFade() {
+        if (isPlaying && !isPaused) freeviewYielding = false;
         timerFadeLevel = 1.0f;
         targetTimerFadeLevel = 1.0f;
         timerFadeLevelStep = 0.0f;
@@ -305,6 +350,7 @@ public class PCMPlayer {
     private void audioLoop() {
         short[] pcm = samples;
         if (pcm == null || pcm.length < 4) {
+            PlaybackUsage.end(usageID);
             isPlaying = false;
             return;
         }
@@ -353,6 +399,8 @@ public class PCMPlayer {
                 int xStart = xfadeStartFrame;
                 int need = frame + 1;
                 if (frame >= xStart) need = Math.max(need, endFrame);
+                boolean usageWaiting = isPlaying && ready < need && !decodeComplete;
+                if (usageWaiting) PlaybackUsage.suspend(usageID, true);
                 while (isPlaying && ready < need && !decodeComplete) {
                     try {
                         Thread.sleep(4);
@@ -362,6 +410,7 @@ public class PCMPlayer {
                     }
                     ready = framesReady.get();
                 }
+                if (usageWaiting) PlaybackUsage.suspend(usageID, false);
                 if (!isPlaying) break;
 
                 float volScale = currentTrackVol * currentMasterVol * currentFadeMult * currentTimerFade;
@@ -412,6 +461,12 @@ public class PCMPlayer {
                 if (l > 1f) l = 1f; else if (l < -1f) l = -1f;
                 if (r > 1f) r = 1f; else if (r < -1f) r = -1f;
 
+                // Independent final envelope after legacy DSP, limiting and clipping.
+                long previewStart = freeviewStartNanos;
+                if (previewStart != 0) {
+                    freeviewLevel = freeviewInitialLevel * DevelopmentFreeview.envelopeLevel((System.nanoTime() - previewStart) / 1e9);
+                }
+                l *= freeviewLevel; r *= freeviewLevel;
                 outputBuffer[f * 2] = (short) (l * 32767.0f);
                 outputBuffer[f * 2 + 1] = (short) (r * 32767.0f);
                 writtenFrames++;
@@ -440,6 +495,7 @@ public class PCMPlayer {
                 if (written < 0) break;
             }
         }
+        PlaybackUsage.end(usageID);
         Log.d(TAG, "Playback thread exiting.");
     }
 }

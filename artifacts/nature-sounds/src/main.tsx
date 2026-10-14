@@ -1,3 +1,5 @@
+// Run the development-only fresh-session request before App imports its usage observer.
+import "./lib/freeviewTestBootstrap";
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import App from "./App";
@@ -26,4 +28,14 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Opt-in local visual test: enable before mounting any playback controls.
+// Production builds and native apps never use this URL switch.
+async function mount() {
+  if (import.meta.env.DEV && !Capacitor.isNativePlatform() &&
+      new URLSearchParams(window.location.search).get("freeviewTest") === "1") {
+    const { configureDevelopmentFreeview } = await import("./lib/developmentFreeview");
+    await configureDevelopmentFreeview(true);
+  }
+  createRoot(document.getElementById("root")!).render(<App />);
+}
+void mount();

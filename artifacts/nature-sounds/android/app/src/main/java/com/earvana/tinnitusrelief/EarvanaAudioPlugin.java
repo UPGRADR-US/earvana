@@ -181,6 +181,9 @@ public class EarvanaAudioPlugin extends Plugin {
 
         final Float loopEndFinal = loopEnd;
         withService(call, service -> {
+            if (service.freeviewRejects(trackId)) {
+                call.reject("Freeview allowance exhausted for this session", "FREEVIEW_EXHAUSTED"); return;
+            }
             service.playTrack(trackId, filePath, trackName, loopStart, loopEndFinal, crossfade, volume,
                     audition, auditionSeconds);
             // Resolve immediately so the WebView stays responsive while decode runs
@@ -310,6 +313,36 @@ public class EarvanaAudioPlugin extends Plugin {
             service.stopAllTracks();
             call.resolve();
         });
+    }
+
+    private boolean developmentFreeviewAvailable() {
+        return (getContext().getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
+    @PluginMethod
+    public void configureDevelopmentFreeview(PluginCall call) {
+        DevelopmentFreeview.configure(developmentFreeviewAvailable(), call.getBoolean("enabled", false));
+        withService(call, service -> {
+            service.configureFreeviewObservation(); getDevelopmentFreeview(call);
+        });
+    }
+    @PluginMethod
+    public void getDevelopmentFreeview(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("available", developmentFreeviewAvailable());
+        result.put("enabled", DevelopmentFreeview.enabled());
+        result.put("exhaustedTrackIds", new com.getcapacitor.JSArray(java.util.Arrays.asList(DevelopmentFreeview.exhausted())));
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void getPlaybackUsage(PluginCall call) {
+        JSObject seconds = new JSObject();
+        for (Map.Entry<String, Double> entry : PlaybackUsage.snapshot().entrySet()) {
+            seconds.put(entry.getKey(), entry.getValue());
+        }
+        JSObject result = new JSObject();
+        result.put("secondsByTrack", seconds);
+        call.resolve(result);
     }
 
     @PluginMethod

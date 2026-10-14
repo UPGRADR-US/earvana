@@ -3,9 +3,17 @@ import { CategoryCarousel, Console, TrackList, A } from "./shared";
 import { TimerOverlay } from "./TimerOverlay";
 import { InfoFaq } from "./InfoFaq";
 import "./earphoria.css";
+import { FreeviewTestBar, useFreeviewTestSnapshot } from "./FreeviewTestBar";
 
 export function UpdatedHome() {
+  const [freeviewSelectedTrackId, setFreeviewSelectedTrackId] = useState<string | null>(null);
+  const [freeviewPlayingTrackId, setFreeviewPlayingTrackId] = useState<string | null>(null);
   const [category, setCategory] = useState(0), [selected, setSelected] = useState(-1), [playing, setPlaying] = useState(false), [paused, setPaused] = useState(false);
+  const freeview = useFreeviewTestSnapshot(playing && freeviewPlayingTrackId ? freeviewPlayingTrackId : freeviewSelectedTrackId);
+  const freeviewCounting = !!freeview && playing && freeview.isCountingDown && !!freeviewPlayingTrackId && !freeview.exhaustedTrackIds.has(freeviewPlayingTrackId);
+  // Presentation derives only from read-only cumulative usage; no visual timer consumes audio time.
+  const freeviewBarPulsing = freeviewCounting || !!(freeview && freeviewSelectedTrackId && freeview.exhaustedTrackIds.has(freeviewSelectedTrackId));
+  const freeviewVisualPulsing = !!freeview && (freeviewBarPulsing || freeview.usedTrackIds.size > 0);
   const [durationStep, setDurationStep] = useState(10), [timeRemaining, setTimeRemaining] = useState(0), [timerCompleted, setTimerCompleted] = useState(false), [ringOpen, setRingOpen] = useState(false), [notchedFreq, setNotchedFreq] = useState<number | null>(null), [boostedFreq, setBoostedFreq] = useState<number | null>(null), [overlay, setOverlay] = useState<"timer"|"timer-closing"|"info"|null>(null), [volume, setVolume] = useState(72);
   const [timerTweakSignal, setTimerTweakSignal] = useState(0);
   const [recommendedTrackIds, setRecommendedTrackIds] = useState<Set<string>>(new Set());
@@ -59,6 +67,10 @@ export function UpdatedHome() {
     const receiveState = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== window.parent) return;
       if (event.data?.type !== "earphoria-redesign-state") return;
+      if (import.meta.env.DEV) {
+        setFreeviewSelectedTrackId(event.data.freeviewSelectedTrackId ?? null);
+        setFreeviewPlayingTrackId(event.data.freeviewPlayingTrackId ?? null);
+      }
       setCategory(event.data.categoryIndex);
       const nextPlayingCategory = Number.isInteger(event.data.playingCategoryIndex) ? event.data.playingCategoryIndex : -1;
       setPlayingCategory(nextPlayingCategory);
@@ -131,16 +143,17 @@ export function UpdatedHome() {
     && category !== lastPlayingCategoryRef.current
       ? lastPlayingCategoryRef.current
       : -1;
-  return <main className="eh-app" data-testid="updated-home"><div className={`eh-bg home-jib${playing ? " is-playing" : ""}`} style={{ backgroundImage: `url("${A}published-home-bg.png")`, ["--eh-jib-state" as string]: playing ? "running" : "paused" }}/>
+  return <main className={`eh-app${freeviewVisualPulsing ? ` is-freeview-counting-down${freeviewBarPulsing ? " is-freeview-bar-pulsing" : ""}` : ""}`} data-testid="updated-home"><div className={`eh-bg home-jib${playing ? " is-playing" : ""}`} style={{ backgroundImage: `url("${A}published-home-bg.png")`, ["--eh-jib-state" as string]: playing ? "running" : "paused" }}/>
     <header className="eh-top-banner-separated" aria-label="earphoria tinnitus relief">
       <div className="eh-top-banner-pane">
-        <img className="eh-top-banner-base" src={`${A}TopBannerBase24.png`} alt=""/>
-        <img className="eh-top-banner-logo" src={`${A}TopBannerLogo23.png`} alt="earphoria tinnitus relief — immersive nature soundscapes"/>
+        <img className="eh-top-banner-base" src={`${A}TopBannerBase25.png`} alt=""/>
+        <img className="eh-top-banner-logo" style={{ scale: "1.15", transformOrigin: "center center" }} src={`${A}TopBannerLogo25.png`} alt="earphoria tinnitus relief — immersive nature soundscapes"/>
         <img className="eh-top-banner-badge" src={`${A}TopBannerRMbadge23.png`} alt="RingMatch Technology"/>
       </div>
     </header>
+    {freeview && <FreeviewTestBar snapshot={freeview} isPlaying={playing} onSubscribe={() => send("open-freeview-subscription")}/>}
     <CategoryCarousel selected={category} playingIndex={carouselPlayingCategory} pausedOffCourseIndex={pausedOffCourseCategory} resumeIndex={lastPlayingCategoryRef.current} resumeSignal={resumeCarouselSignal} isPlaying={playing} onSelect={selectCategory} onActivateFirst={activateFirstTrack}/>
-    <section className="eh-workspace"><TrackList categoryIndex={category} selected={selected} playing={playing} paused={paused} recommendedTrackIds={recommendedTrackIds} lockedTrackIds={lockedTrackIds} onSelect={selectTrack}/></section>
+    <section className="eh-workspace"><TrackList categoryIndex={category} selected={selected} playing={playing} paused={paused} recommendedTrackIds={recommendedTrackIds} lockedTrackIds={lockedTrackIds} exhaustedTrackIds={freeview?.exhaustedTrackIds} freeviewCountdownByTrack={freeview?.countdownByTrack} freeviewPlayingTrackId={freeview ? freeviewPlayingTrackId : null} freeviewPausedTrackId={freeview && paused ? freeviewSelectedTrackId : null} onSelect={selectTrack}/></section>
     <Console playing={playing} paused={paused} timerCompleted={timerCompleted} onPlay={play} onPause={pause} timerOn={durationStep < 10} timeRemaining={timeRemaining} ringOpen={ringOpen} ringMatchSelected={ringMatchSelected} notchedFreq={notchedFreq} boostedFreq={boostedFreq} hasEqPreset={hasEqPreset} eqEnabled={eqEnabled} onToggleEq={() => send("toggle-eq")} onTimer={() => setOverlay("timer")} onRing={() => send("open-ringmatch")} onInfo={() => setOverlay("info")} onSettings={() => send("open-settings")} volume={volume} setVolume={changeVolume}/>
     {(overlay === "timer" || overlay === "timer-closing") && <TimerOverlay onClose={() => setOverlay("timer-closing")} isClosing={overlay === "timer-closing"} timerCompleted={timerCompleted} durationStep={durationStep} timeRemaining={timeRemaining} isPlaying={playing} onDurationChange={(nextStep) => { setTimerTweakSignal(signal => signal + 1); send("set-duration", { durationStep: nextStep }); }} onAdjust={(deltaSeconds) => { setTimerTweakSignal(signal => signal + 1); send("adjust-timer", { deltaSeconds }); }}/>}
     {overlay === "info" && <InfoFaq onClose={() => setOverlay(null)}/>}

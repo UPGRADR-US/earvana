@@ -6,6 +6,60 @@ final class CrossfadeLoopPlayer {
     private static let eqFrequencies: [Float] = [100, 330, 1000, 3300, 10000]
     private static let eqQValues: [Float] = [0.9, 1.0, 1.0, 1.0, 0.9]
 
+    private let usageID = UUID()
+    deinit { PlaybackUsage.shared.end(usageID) }
+    private var freeviewLevel: Float = 1
+    private var freeviewTimer: Timer?
+    private var freeviewYielding = false
+    var onFreeviewStopped: (() -> Void)?
+    func observeFreeview(trackID: String) {
+        freeviewYielding = false
+        DevelopmentFreeview.shared.observe(usageID) { [weak self] _, bypass in
+            guard let self = self else { return }
+            if bypass { self.resetFreeviewEnvelope(); return }
+            if DevelopmentFreeview.shared.reject(trackID) { self.expireFreeview() }
+        }
+    }
+    private func resetFreeviewEnvelope() {
+        guard freeviewTimer != nil || freeviewLevel != 1 else { return }
+        freeviewTimer?.invalidate(); freeviewTimer = nil; freeviewLevel = 1
+        outputMixer.outputVolume = outputLevel
+    }
+    func yieldFreeviewToExistingAction() {
+        freeviewYielding = true
+        freeviewTimer?.invalidate(); freeviewTimer = nil
+        // Freeze only our envelope; never restart an existing fade or raise its gain.
+    }
+    private func expireFreeview() {
+        guard isPlaying, engine.isRunning, !freeviewYielding, freeviewTimer == nil else { return }
+        let start = ProcessInfo.processInfo.systemUptime
+        let initial = freeviewLevel
+        let timer = Timer(timeInterval: 0.01, repeats: true) { [weak self] timer in
+            guard let self = self else { timer.invalidate(); return }
+            if !DevelopmentFreeview.shared.enabled || DevelopmentFreeview.shared.subscribed() {
+                self.resetFreeviewEnvelope(); return
+            }
+            guard self.isPlaying, self.engine.isRunning, !self.freeviewYielding else {
+                timer.invalidate(); self.freeviewTimer = nil; return
+            }
+            let elapsed = ProcessInfo.processInfo.systemUptime - start
+            self.freeviewLevel = DevelopmentFreeview.envelopeLevel(elapsed: elapsed, initial: initial)
+            self.outputMixer.outputVolume = self.outputLevel
+            if elapsed >= DevelopmentFreeview.fadeSeconds { self.finishFreeviewInstance() }
+        }
+        freeviewTimer = timer; RunLoop.main.add(timer, forMode: .common)
+    }
+    func finishFreeviewInstance() {
+        freeviewTimer?.invalidate(); freeviewTimer = nil
+        DevelopmentFreeview.shared.remove(usageID)
+        PlaybackUsage.shared.end(usageID)
+        isPlaying = false
+        // Dedicated release: do not call pause/stop or cancel their envelopes/timers.
+        playerA.stop(); playerB.stop(); engine.stop(); engine.reset(); audioFile = nil
+        onFreeviewStopped?()
+    }
+    func observePlayback(trackID: String) { PlaybackUsage.shared.begin(usageID, track: trackID) }
+
     private let engine = AVAudioEngine()
     private let playerA = AVAudioPlayerNode()
     private let playerB = AVAudioPlayerNode()
@@ -50,7 +104,7 @@ final class CrossfadeLoopPlayer {
     }
 
     private var outputLevel: Float {
-        min(1, max(0, trackVolume * masterVolume * fadeMultiplier * timerFadeLevel))
+        min(1, max(0, trackVolume * masterVolume * fadeMultiplier * timerFadeLevel)) * freeviewLevel
     }
 
     private var activePlayer: AVAudioPlayerNode { currentSlot == 0 ? playerA : playerB }
@@ -139,6 +193,8 @@ final class CrossfadeLoopPlayer {
             completion?()
             return
         }
+        yieldFreeviewToExistingAction()
+        PlaybackUsage.shared.tail(usageID, seconds: immediate ? 0 : fadeSeconds)
         isPlaying = false
         cancelNativeTimer()
         cancelCrossfadeSchedule()
@@ -152,6 +208,7 @@ final class CrossfadeLoopPlayer {
             self.engine.stop()
             self.engine.reset()
             self.audioFile = nil
+            DevelopmentFreeview.shared.remove(self.usageID)
             completion?()
         }
 
@@ -167,6 +224,9 @@ final class CrossfadeLoopPlayer {
     }
 
     func stop(immediate: Bool = true) {
+        yieldFreeviewToExistingAction()
+        DevelopmentFreeview.shared.remove(usageID)
+        PlaybackUsage.shared.end(usageID)
         isPlaying = false
         cancelNativeTimer()
         cancelCrossfadeSchedule()
@@ -221,10 +281,12 @@ final class CrossfadeLoopPlayer {
             completion?()
             return
         }
+        yieldFreeviewToExistingAction()
         rampTimerFade(to: 0.0001, duration: duration, completion: completion)
     }
 
     func cancelFade() {
+        if isPlaying { freeviewYielding = false }
         timerFadeTimer?.invalidate()
         timerFadeTimer = nil
         timerFadeLevel = 1
@@ -271,6 +333,10 @@ final class CrossfadeLoopPlayer {
         }
         if !activePlayer.isPlaying {
             activePlayer.play()
+        }
+        if engine.isRunning {
+            if isPlaying { freeviewYielding = false }
+            PlaybackUsage.shared.resume(usageID)
         }
     }
 

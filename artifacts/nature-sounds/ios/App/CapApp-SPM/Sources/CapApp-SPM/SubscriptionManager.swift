@@ -32,7 +32,7 @@ public final class SubscriptionManager: ObservableObject {
     }
 
     /// False while App Store returns an empty catalog (Paid Apps Agreement pending, etc.).
-    /// Freemium locking stays off until a real product is available — otherwise testers are locked out.
+    /// This controls purchase availability only; entitlement is verified separately.
     public var catalogAvailable: Bool { monthlyProduct != nil }
 
     public func start() async {
@@ -167,7 +167,6 @@ public final class SubscriptionManager: ObservableObject {
     }
 
     public func isTrackLocked(_ trackID: String) -> Bool {
-        guard catalogAvailable else { return false }
         return trackID != Self.freeTrackID && !isSubscribed
     }
 
