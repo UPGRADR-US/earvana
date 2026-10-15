@@ -22,13 +22,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    /// iPhone stays portrait-locked. iPad matches Android tablets: both
-    /// orientations (portrait = full-bleed, landscape = 430px CSS column).
+    /// Keep the native app in portrait on both iPhone and iPad.
     func application(_ application: UIApplication,
                      supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            return .all
-        }
         return .portrait
     }
 

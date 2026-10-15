@@ -51,14 +51,8 @@ public class MainActivity extends BridgeActivity {
         int smallestWidth = getResources().getConfiguration().smallestScreenWidthDp;
         boolean isTablet = smallestWidth >= 600;
 
-        if (isTablet) {
-            // Tablets: both orientations. Landscape keeps the 430px phone column
-            // (CSS); portrait is full-screen. SENSOR_LANDSCAPE letterboxed the
-            // activity with black bars when the tablet was held in portrait.
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-        } else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        }
+        // Portrait-only on phones and tablets for this release.
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         registerPlugin(EarvanaAudioPlugin.class);
         registerPlugin(BillingPlugin.class);

@@ -65,9 +65,6 @@ class MyViewController: CAPBridgeViewController {
     // MARK: - Orientation
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            return .all
-        }
         return .portrait
     }
 
@@ -76,6 +73,6 @@ class MyViewController: CAPBridgeViewController {
     }
 
     override var shouldAutorotate: Bool {
-        return true
+        return false
     }
 }

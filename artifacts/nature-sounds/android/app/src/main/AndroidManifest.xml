@@ -16,8 +16,14 @@
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:screenOrientation="portrait"
             android:launchMode="singleTask"
             android:exported="true">
+
+            <!-- Honor portrait restrictions on Android 16 tablets (target SDK 36). -->
+            <property
+                android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+                android:value="true" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
